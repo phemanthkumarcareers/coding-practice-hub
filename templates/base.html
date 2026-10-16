@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Coding Practice Hub{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Monaco Editor Loader -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
@@ -18,7 +19,7 @@
 <body>
     <nav class="navbar">
         <a href="{{ url_for('dashboard.index') }}" class="brand">
-            <div class="brand-icon">CP</div>
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="width:30px; height:30px; border-radius:6px; object-fit:cover;">
             <span>Coding Practice Hub</span>
         </a>
 

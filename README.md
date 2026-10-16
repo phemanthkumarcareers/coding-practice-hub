@@ -41,6 +41,43 @@ Once completed, you can use **[http://coding-practice-hub:5000/](http://coding-p
 
 ---
 
+## 🏛️ Apache + mod_wsgi Deployment (VirtualHost)
+
+If deploying with an Apache HTTP Server using `mod_wsgi`, use the pre-configured [`apache_vhost.conf`](file:///c:/Users/PC/Hemanth/Learning/Practice/apache_vhost.conf) and WSGI entry point [`application.py`](file:///c:/Users/PC/Hemanth/Learning/Practice/application.py) / [`wsgi.py`](file:///c:/Users/PC/Hemanth/Learning/Practice/wsgi.py).
+
+### 1. WSGI Callable (`application.py`)
+```python
+from app import create_app
+
+# WSGI callable for mod_wsgi / Waitress / Gunicorn
+application = create_app()
+```
+
+### 2. Apache VirtualHost (`apache_vhost.conf`)
+Include in your Apache `httpd.conf`:
+```apache
+<VirtualHost *:80>
+    ServerName coding-practice-hub
+    ServerAlias www.coding-practice-hub coding-practice-hub.local
+    DocumentRoot "C:/Users/PC/Hemanth/Learning/Practice"
+
+    Alias /static "C:/Users/PC/Hemanth/Learning/Practice/static"
+    <Directory "C:/Users/PC/Hemanth/Learning/Practice/static">
+        Require all granted
+    </Directory>
+
+    WSGIScriptAlias / "C:/Users/PC/Hemanth/Learning/Practice/wsgi.py"
+
+    <Directory "C:/Users/PC/Hemanth/Learning/Practice">
+        <Files wsgi.py>
+            Require all granted
+        </Files>
+    </Directory>
+</VirtualHost>
+```
+
+---
+
 ## ⚡ Starting the Application
 
 ### 1-Click Windows Launcher:
