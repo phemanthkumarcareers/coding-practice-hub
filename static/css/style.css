@@ -556,13 +556,18 @@ html.sidebar-is-collapsed .app-sidebar,
   background: #ef4444;
 }
 
+html.sidebar-is-collapsed .sidebar-practice-section .sidebar-date-box,
+html.sidebar-is-collapsed .sidebar-practice-section .nav-section-label,
+html.sidebar-is-collapsed .tech-btn-name,
+html.sidebar-is-collapsed .tech-status-dot,
 .app-sidebar.collapsed .sidebar-practice-section .sidebar-date-box,
 .app-sidebar.collapsed .sidebar-practice-section .nav-section-label,
 .app-sidebar.collapsed .tech-btn-name,
 .app-sidebar.collapsed .tech-status-dot {
-  display: none;
+  display: none !important;
 }
 
+html.sidebar-is-collapsed .sidebar-tech-btn,
 .app-sidebar.collapsed .sidebar-tech-btn {
   justify-content: center;
   padding: 0.45rem 0;
@@ -738,72 +743,83 @@ html.sidebar-is-collapsed .app-sidebar,
   opacity: 1;
 }
 
-/* Collapsed Sidebar Adjustments */
-.sidebar-collapsed-themes {
-  display: none;
-}
-
+/* Collapsed Sidebar Theme Dropdown (Icons Only in Dropdown, Inside Sidebar) */
 html.sidebar-is-collapsed .theme-dropdown-container,
 .app-sidebar.collapsed .theme-dropdown-container {
+  display: flex !important;
+  justify-content: center;
+  width: 100%;
+}
+
+html.sidebar-is-collapsed .theme-dropdown-trigger,
+.app-sidebar.collapsed .theme-dropdown-trigger {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  border-radius: 8px;
+}
+
+html.sidebar-is-collapsed .theme-active-text,
+html.sidebar-is-collapsed .theme-trigger-arrow,
+.app-sidebar.collapsed .theme-active-text,
+.app-sidebar.collapsed .theme-trigger-arrow {
   display: none !important;
 }
 
-html.sidebar-is-collapsed .sidebar-collapsed-themes,
-.app-sidebar.collapsed .sidebar-collapsed-themes {
-  display: grid !important;
-  grid-template-columns: repeat(2, 26px);
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 0.2rem 0;
+html.sidebar-is-collapsed .theme-active-icon,
+.app-sidebar.collapsed .theme-active-icon {
+  font-size: 1.15rem;
+  margin: 0;
 }
 
-.collapsed-theme-btn {
-  display: inline-flex;
+html.sidebar-is-collapsed .theme-dropdown-menu,
+.app-sidebar.collapsed .theme-dropdown-menu {
+  bottom: calc(100% + 8px);
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  padding: 0.35rem 0.25rem !important;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  cursor: pointer;
+  gap: 0.3rem;
+  box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.45);
+}
+
+html.sidebar-is-collapsed .theme-menu-header,
+.app-sidebar.collapsed .theme-menu-header {
+  display: none !important;
+}
+
+html.sidebar-is-collapsed .theme-menu-item,
+.app-sidebar.collapsed .theme-menu-item {
+  width: 36px;
+  height: 34px;
   padding: 0;
-  font-size: 0.88rem;
-  line-height: 1;
-  position: relative;
-  overflow: hidden;
-  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
-              background-color 0.15s ease,
-              border-color 0.15s ease,
-              box-shadow 0.15s ease;
-  user-select: none;
-}
-
-.collapsed-theme-btn:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent-primary);
-  transform: translateY(-1px) scale(1.08);
-}
-
-.collapsed-theme-btn:active {
-  transform: scale(0.92) translateY(1px) !important;
-}
-
-.collapsed-theme-btn.active {
-  background: var(--accent-subtle);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 1.5px var(--accent-primary);
-}
-
-.collapsed-theme-icon {
-  font-size: 0.85rem;
-  line-height: 1;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  border-radius: 6px;
+}
+
+html.sidebar-is-collapsed .theme-item-label,
+html.sidebar-is-collapsed .theme-item-check,
+.app-sidebar.collapsed .theme-item-label,
+.app-sidebar.collapsed .theme-item-check {
+  display: none !important;
+}
+
+html.sidebar-is-collapsed .theme-item-icon,
+.app-sidebar.collapsed .theme-item-icon {
+  font-size: 1.05rem;
+  margin: 0;
 }
 
 html.sidebar-is-collapsed .sidebar-bottom,
@@ -822,6 +838,11 @@ html.sidebar-is-collapsed .sidebar-bottom,
   color: var(--text-muted);
   margin-top: 0.5rem;
   padding: 0 0.2rem;
+}
+
+html.sidebar-is-collapsed .sidebar-footer-info,
+.app-sidebar.collapsed .sidebar-footer-info {
+  display: none !important;
 }
 
 .footer-port-badge {
