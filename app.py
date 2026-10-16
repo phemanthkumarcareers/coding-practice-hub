@@ -1,8 +1,6 @@
 import os
 import sys
-import threading
 from flask import Flask
-from werkzeug.serving import run_simple
 from config import BASE_DIR
 from models.db import init_db
 from services.duckdb_service import duckdb_service
@@ -36,28 +34,15 @@ def create_app():
 
     return app
 
-def serve_on_port(application, port):
-    try:
-        run_simple("0.0.0.0", port, application, threaded=True)
-    except Exception as e:
-        print(f" * Notice: Port {port} could not be bound ({e})")
-
 if __name__ == "__main__":
     app = create_app()
+    port = int(os.environ.get("PORT", 5000))
 
     print("=" * 65)
     print(" [Coding Practice Hub] Local Daily Coding Practice Application")
-    print(" Active Access URLs:")
-    print("  -> http://localhost:5000/")
-    print("  -> http://localhost/")
-    print("  -> http://127.0.0.1:5000/")
-    print("  -> http://coding-practice-hub/ (requires hosts entry)")
-    print(" Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
+    print(f" * Local Application URL: http://localhost:{port}/")
+    print(f" * Alternative Loopback:  http://127.0.0.1:{port}/")
+    print(" * Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
     print("=" * 65)
 
-    # Start Port 80 in a background daemon thread
-    t80 = threading.Thread(target=serve_on_port, args=(app, 80), daemon=True)
-    t80.start()
-
-    # Serve Port 5000 on main thread
-    serve_on_port(app, 5000)
+    app.run(host="0.0.0.0", port=port, debug=False)

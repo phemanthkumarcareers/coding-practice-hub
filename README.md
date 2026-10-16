@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/images/logo.png" width="150" alt="Coding Practice Hub Logo" style="border-radius: 20px;">
+</p>
+
 # 🚀 Coding Practice Hub
 
 > **A Complete Local Daily Coding & Interview Practice Web Application**  
@@ -5,88 +9,36 @@
 
 ---
 
-## 🌐 Virtual Host & Local URLs
+## 🌐 Local Application URLs
 
-You can access the application using your custom virtual host name or standard localhost:
+Access your local application at port `5000`:
 
-| Section | Virtual Host URL (Custom Name) | Standard Localhost URL | Description |
-| :--- | :--- | :--- | :--- |
-| **🏠 Dashboard** | [http://coding-practice-hub:5000/](http://coding-practice-hub:5000/) *(or [http://coding-practice-hub/](http://coding-practice-hub/))* | [http://localhost:5000/](http://localhost:5000/) | Overview, 8 KPI cards, 6/6 daily progress & streak tracking |
-| **💻 Practice Workspace** | [http://coding-practice-hub:5000/practice](http://coding-practice-hub:5000/practice) | [http://localhost:5000/practice](http://localhost:5000/practice) | Monaco Editor workspace with 6 technology tabs & execution |
-| **📜 Practice History** | [http://coding-practice-hub:5000/history](http://coding-practice-hub:5000/history) | [http://localhost:5000/history](http://localhost:5000/history) | Calendar & table history, multi-criteria filters & grouping |
-| **📊 Datasets Manager** | [http://coding-practice-hub:5000/datasets](http://coding-practice-hub:5000/datasets) | [http://localhost:5000/datasets](http://localhost:5000/datasets) | Upload CSV/JSON/Parquet, DuckDB table explorer & code snippets |
-| **📈 Reports & Analytics** | [http://coding-practice-hub:5000/reports](http://coding-practice-hub:5000/reports) | [http://localhost:5000/reports](http://localhost:5000/reports) | Performance charts, completion/success rates, & activity trends |
-| **⚙️ Settings & Backup** | [http://coding-practice-hub:5000/settings](http://coding-practice-hub:5000/settings) | [http://localhost:5000/settings](http://localhost:5000/settings) | Environment status, execution timeouts, & 1-click backup/restore |
+👉 **[http://localhost:5000/](http://localhost:5000/)**  
+*(Alternative loopback: [http://127.0.0.1:5000/](http://127.0.0.1:5000/))*
 
----
+### 🗺 Application Routes
 
-## 🛠 Enabling the Virtual Host (`coding-practice-hub`)
-
-Windows requires a one-time administrator step to map the virtual host name `coding-practice-hub` to `127.0.0.1`:
-
-### Method 1: Using the 1-Click Script (Recommended)
-1. Open the project folder: `C:\Users\PC\Hemanth\Learning\Practice`
-2. **Right-click** on **`add_virtual_host.bat`**
-3. Select **"Run as administrator"** and approve the prompt.
-
-### Method 2: PowerShell (Run as Administrator)
-1. Press the **Windows Key**, type **PowerShell**, right-click it, and select **"Run as administrator"**.
-2. Run this command:
-```powershell
-Add-Content -Path C:\Windows\System32\drivers\etc\hosts -Value "`n127.0.0.1 coding-practice-hub`n127.0.0.1 coding-practice-hub.local"
-ipconfig /flushdns
-```
-
-Once completed, you can use **[http://coding-practice-hub:5000/](http://coding-practice-hub:5000/)** or **[http://coding-practice-hub/](http://coding-practice-hub/)** directly in your browser!
+| Section | Localhost URL | Description |
+| :--- | :--- | :--- |
+| **🏠 Dashboard** | [http://localhost:5000/](http://localhost:5000/) | Overview, 8 KPI cards, 6/6 daily progress & streak tracking |
+| **💻 Practice Workspace** | [http://localhost:5000/practice](http://localhost:5000/practice) | Monaco Editor workspace with 6 technology tabs & execution |
+| **📜 Practice History** | [http://localhost:5000/history](http://localhost:5000/history) | Calendar & table history, multi-criteria filters & grouping |
+| **📊 Datasets Manager** | [http://localhost:5000/datasets](http://localhost:5000/datasets) | Upload CSV/JSON/Parquet, DuckDB table explorer & code snippets |
+| **📈 Reports & Analytics** | [http://localhost:5000/reports](http://localhost:5000/reports) | Performance charts, completion/success rates, & activity trends |
+| **⚙️ Settings & Backup** | [http://localhost:5000/settings](http://localhost:5000/settings) | Environment status, execution timeouts, & 1-click backup/restore |
 
 ---
 
-## 🏛️ Apache + mod_wsgi Deployment (VirtualHost)
+## ⚡ Quick Start & Running the App
 
-If deploying with an Apache HTTP Server using `mod_wsgi`, use the pre-configured [`apache_vhost.conf`](file:///c:/Users/PC/Hemanth/Learning/Practice/apache_vhost.conf) and WSGI entry point [`application.py`](file:///c:/Users/PC/Hemanth/Learning/Practice/application.py) / [`wsgi.py`](file:///c:/Users/PC/Hemanth/Learning/Practice/wsgi.py).
+### Option 1: 1-Click Windows Launcher (Auto-opens browser)
+Double-click **`run.bat`** in the project folder. It will start the server and automatically launch **[http://localhost:5000/](http://localhost:5000/)** in your browser.
 
-### 1. WSGI Callable (`application.py`)
-```python
-from app import create_app
-
-# WSGI callable for mod_wsgi / Waitress / Gunicorn
-application = create_app()
-```
-
-### 2. Apache VirtualHost (`apache_vhost.conf`)
-Include in your Apache `httpd.conf`:
-```apache
-<VirtualHost *:80>
-    ServerName coding-practice-hub
-    ServerAlias www.coding-practice-hub coding-practice-hub.local
-    DocumentRoot "C:/Users/PC/Hemanth/Learning/Practice"
-
-    Alias /static "C:/Users/PC/Hemanth/Learning/Practice/static"
-    <Directory "C:/Users/PC/Hemanth/Learning/Practice/static">
-        Require all granted
-    </Directory>
-
-    WSGIScriptAlias / "C:/Users/PC/Hemanth/Learning/Practice/wsgi.py"
-
-    <Directory "C:/Users/PC/Hemanth/Learning/Practice">
-        <Files wsgi.py>
-            Require all granted
-        </Files>
-    </Directory>
-</VirtualHost>
-```
-
----
-
-## ⚡ Starting the Application
-
-### 1-Click Windows Launcher:
-Double-click **`run.bat`**. It will start Flask on both port `5000` and port `80`, and automatically launch your browser.
-
-### Via Command Line / Terminal:
+### Option 2: Via Terminal / PowerShell
 ```powershell
 python app.py
 ```
+Then open: **[http://localhost:5000/](http://localhost:5000/)**
 
 ---
 
@@ -106,13 +58,14 @@ Every calendar day is modeled as **one unified Daily Practice Session** containi
 
 ## 🛠 Technology Stack
 
-- **Backend**: Python 3.12.10, Flask (Dual-port serving on `5000` and `80`)
+- **Backend**: Python 3.12.10, Flask (served on port `5000`)
 - **Metadata & History**: SQLite (`database/app.db`) with normalized schema, foreign keys, and indexes
 - **SQL Practice Engine**: DuckDB (`database/practice.duckdb`) query engine with dataset auto-views
 - **Code Execution**: Isolated subprocess runner with configurable timeout protection
 - **Frontend**: Flask Jinja2 templates, HTML5, CSS3, Vanilla JavaScript
 - **Code Editor**: Monaco Editor (syntax highlighting, line numbers, automatic indentation, dark/light themes)
 - **Architecture Diagrams**: Live Mermaid.js rendering for System Design
+- **WSGI Callable**: Standard `application.py` / `wsgi.py` compatible with Apache `mod_wsgi`, Gunicorn, and Waitress
 
 ---
 
@@ -120,12 +73,13 @@ Every calendar day is modeled as **one unified Daily Practice Session** containi
 
 ```text
 Practice/
-├── app.py                     # Flask entry point (Dual-port 5000 and 80)
-├── add_virtual_host.bat       # Script to map virtual host coding-practice-hub in hosts file
+├── app.py                     # Flask entry point (Port 5000)
+├── application.py             # WSGI application callable
+├── wsgi.py                    # WSGI entrypoint
 ├── run.bat                    # 1-click launcher (starts server & opens browser)
 ├── config.py                  # Paths, constants, and default configurations
 ├── requirements.txt           # Python dependencies
-├── README.md                  # Comprehensive documentation & virtual host references
+├── README.md                  # Comprehensive documentation & URL references
 ├── database/
 │   ├── app.db                 # Auto-initialized SQLite database
 │   └── practice.duckdb        # Auto-initialized DuckDB database
@@ -146,14 +100,16 @@ Practice/
 │   ├── streak_service.py      # Streaks, consistency & 6/6 calculation
 │   └── backup_service.py      # Zip archive creation & restore
 ├── static/
+│   ├── images/
+│   │   └── logo.png           # Brand application logo
 │   ├── css/
 │   │   └── style.css          # Developer-tool dark/light themes, split resizer
 │   └── js/
 │       ├── app.js             # Global shortcuts (Ctrl+K), theme switcher, search modal
 │       └── practice.js        # Monaco controller, tab switcher, runner, autosave
 ├── templates/
-│   ├── base.html              # Developer-tool navigation shell & search modal
-│   ├── dashboard.html         # Dashboard overview & today's progress
+│   ├── base.html              # Shell layout with logo brand & favicon
+│   ├── dashboard.html         # Dashboard overview with logo branding
 │   ├── practice.html          # Resizable split workspace (Monaco 70% | Output 30%)
 │   ├── history.html           # Calendar & table history, multi-filters & grouping
 │   ├── tech_view.html         # Technology-specific browse views
