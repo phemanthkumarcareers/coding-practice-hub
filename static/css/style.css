@@ -739,22 +739,79 @@ html.sidebar-is-collapsed .app-sidebar,
 }
 
 /* Collapsed Sidebar Adjustments */
-.app-sidebar.collapsed .theme-dropdown-trigger {
-  justify-content: center;
-  padding: 0.5rem;
-}
-
-.app-sidebar.collapsed .theme-active-text,
-.app-sidebar.collapsed .theme-trigger-arrow {
+.sidebar-collapsed-themes {
   display: none;
 }
 
-.app-sidebar.collapsed .theme-dropdown-menu {
-  left: 100%;
-  right: auto;
-  bottom: 0;
-  width: 180px;
-  margin-left: 8px;
+html.sidebar-is-collapsed .theme-dropdown-container,
+.app-sidebar.collapsed .theme-dropdown-container {
+  display: none !important;
+}
+
+html.sidebar-is-collapsed .sidebar-collapsed-themes,
+.app-sidebar.collapsed .sidebar-collapsed-themes {
+  display: grid !important;
+  grid-template-columns: repeat(2, 26px);
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 0.2rem 0;
+}
+
+.collapsed-theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.88rem;
+  line-height: 1;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s cubic-bezier(0.2, 0.8, 0.2, 1),
+              background-color 0.15s ease,
+              border-color 0.15s ease,
+              box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.collapsed-theme-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px) scale(1.08);
+}
+
+.collapsed-theme-btn:active {
+  transform: scale(0.92) translateY(1px) !important;
+}
+
+.collapsed-theme-btn.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1.5px var(--accent-primary);
+}
+
+.collapsed-theme-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+html.sidebar-is-collapsed .sidebar-bottom,
+.app-sidebar.collapsed .sidebar-bottom {
+  padding: 0.5rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .sidebar-footer-info {

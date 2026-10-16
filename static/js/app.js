@@ -88,8 +88,8 @@ function applyThemeUI(themePref) {
         fav.href = logoUrl;
     }
 
-    // Update active highlight on theme items in dropdown & settings
-    document.querySelectorAll('.theme-menu-item, .theme-pick-btn').forEach(btn => {
+    // Update active highlight on theme items in dropdown, collapsed bar & settings
+    document.querySelectorAll('.theme-menu-item, .theme-pick-btn, .collapsed-theme-btn').forEach(btn => {
         const val = btn.getAttribute('data-theme-value');
         if (val === themePref) {
             btn.classList.add('active');
@@ -477,7 +477,7 @@ document.addEventListener('MSFullscreenChange', updateFullScreenUI);
 function initClickAnimations() {
     document.addEventListener('pointerdown', (e) => {
         const target = e.target.closest(
-            '.btn, .file-tab, .sidebar-link, .sidebar-tech-btn, .theme-dropdown-trigger, .theme-menu-item, .custom-modal-btn, .btn-new-file, .btn-open-files, .btn-file-explorer-toggle, .stat-card, .dashboard-tech-card, .btn-icon, .modal-close-btn'
+            '.btn, .file-tab, .sidebar-link, .sidebar-tech-btn, .theme-dropdown-trigger, .theme-menu-item, .collapsed-theme-btn, .custom-modal-btn, .btn-new-file, .btn-open-files, .btn-file-explorer-toggle, .stat-card, .dashboard-tech-card, .btn-icon, .modal-close-btn'
         );
         if (!target) return;
 
