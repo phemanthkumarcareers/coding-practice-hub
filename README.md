@@ -5,35 +5,54 @@
 
 ---
 
-## 🌐 Local Application URLs
+## 🌐 Custom Local Domain URL
 
-Once the server is running, access the application at any of these URLs in your web browser:
+Access your application directly via the custom local domain URL:
 
-| Section | Local URL | Description |
-| :--- | :--- | :--- |
-| **🏠 Dashboard** | [http://localhost:5000/](http://localhost:5000/) | Overview, 8 KPI cards, 6/6 daily progress & streak tracking |
-| **💻 Practice Workspace** | [http://localhost:5000/practice](http://localhost:5000/practice) | Monaco Editor workspace with 6 technology tabs & execution |
-| **📜 Practice History** | [http://localhost:5000/history](http://localhost:5000/history) | Calendar & table history, multi-criteria filters & grouping |
-| **📊 Datasets Manager** | [http://localhost:5000/datasets](http://localhost:5000/datasets) | Upload CSV/JSON/Parquet, DuckDB table explorer & code snippets |
-| **📈 Reports & Analytics** | [http://localhost:5000/reports](http://localhost:5000/reports) | Performance charts, completion/success rates, & activity trends |
-| **⚙️ Settings & Backup** | [http://localhost:5000/settings](http://localhost:5000/settings) | Environment status, execution timeouts, & 1-click backup/restore |
+👉 **[http://coding-practice-hub/](http://coding-practice-hub/)**
 
-*(Alternative loopback URL: [http://127.0.0.1:5000](http://127.0.0.1:5000))*
+*(Fallback / Alternative: [http://localhost:5000/](http://localhost:5000/))*
+
+### 🗺 Route Directory
+
+| Section | Custom Domain URL | Standard Localhost URL | Description |
+| :--- | :--- | :--- | :--- |
+| **🏠 Dashboard** | [http://coding-practice-hub/](http://coding-practice-hub/) | [http://localhost:5000/](http://localhost:5000/) | Overview, 8 KPI cards, 6/6 daily progress & streak tracking |
+| **💻 Practice Workspace** | [http://coding-practice-hub/practice](http://coding-practice-hub/practice) | [http://localhost:5000/practice](http://localhost:5000/practice) | Monaco Editor workspace with 6 technology tabs & execution |
+| **📜 Practice History** | [http://coding-practice-hub/history](http://coding-practice-hub/history) | [http://localhost:5000/history](http://localhost:5000/history) | Calendar & table history, multi-criteria filters & grouping |
+| **📊 Datasets Manager** | [http://coding-practice-hub/datasets](http://coding-practice-hub/datasets) | [http://localhost:5000/datasets](http://localhost:5000/datasets) | Upload CSV/JSON/Parquet, DuckDB table explorer & code snippets |
+| **📈 Reports & Analytics** | [http://coding-practice-hub/reports](http://coding-practice-hub/reports) | [http://localhost:5000/reports](http://localhost:5000/reports) | Performance charts, completion/success rates, & activity trends |
+| **⚙️ Settings & Backup** | [http://coding-practice-hub/settings](http://coding-practice-hub/settings) | [http://localhost:5000/settings](http://localhost:5000/settings) | Environment status, execution timeouts, & 1-click backup/restore |
 
 ---
 
-## ⚡ 1-Click Launch (Windows)
+## 🛠 One-Time Setup for `http://coding-practice-hub/` (Windows)
 
-You can launch the app and automatically open your browser in one click:
+To allow Windows to resolve `coding-practice-hub` to your local machine (`127.0.0.1`):
 
-### Option 1: Double-Click Batch Launcher
-Double-click `run.bat` in the project folder. It will start Flask and automatically launch [http://localhost:5000](http://localhost:5000) in your browser.
+### Option A: 1-Click Script (Recommended)
+Right-click **`setup_domain.bat`** in the project directory and choose **"Run as administrator"**.  
+*(This automatically adds `127.0.0.1 coding-practice-hub` to `C:\Windows\System32\drivers\etc\hosts` and flushes the DNS cache).*
 
-### Option 2: Run via Terminal / PowerShell
+### Option B: Manual Command (PowerShell as Administrator)
+Open PowerShell as Administrator and run:
+```powershell
+Add-Content -Path C:\Windows\System32\drivers\etc\hosts -Value "`n127.0.0.1 coding-practice-hub"
+ipconfig /flushdns
+```
+
+---
+
+## ⚡ Starting the Application
+
+### 1-Click Windows Launcher:
+Double-click **`run.bat`**. It will start Flask and automatically launch **[http://coding-practice-hub/](http://coding-practice-hub/)** in your browser.
+
+### Via Command Line / Terminal:
 ```powershell
 python app.py
 ```
-Then click or open: **[http://localhost:5000](http://localhost:5000)**
+*(By default, the server listens on port `80` so you can use `http://coding-practice-hub/` without specifying any port. You can also specify `--port 5000` if desired).*
 
 ---
 
@@ -53,7 +72,7 @@ Every calendar day is modeled as **one unified Daily Practice Session** containi
 
 ## 🛠 Technology Stack
 
-- **Backend**: Python 3.12.10, Flask (served on a single port `5000`)
+- **Backend**: Python 3.12.10, Flask
 - **Metadata & History**: SQLite (`database/app.db`) with normalized schema, foreign keys, and indexes
 - **SQL Practice Engine**: DuckDB (`database/practice.duckdb`) query engine with dataset auto-views
 - **Code Execution**: Isolated subprocess runner with configurable timeout protection
@@ -63,40 +82,13 @@ Every calendar day is modeled as **one unified Daily Practice Session** containi
 
 ---
 
-## 🚀 Setup & Installation Guide
-
-### 1. Prerequisites
-- **Python 3.12+** installed and available in PATH.
-- (Optional for PySpark): Java JDK 11 or 17 (set in `JAVA_HOME`). DuckDB, Python, DSA, and SQL practice work without Java.
-
-### 2. Setup Virtual Environment (Recommended)
-Open PowerShell or Command Prompt in this folder:
-
-```powershell
-# Create virtual environment
-python -m venv .venv
-
-# Activate virtual environment
-.venv\Scripts\activate
-
-# Install required dependencies
-pip install -r requirements.txt
-```
-
-### 3. Start the Server
-```powershell
-python app.py
-```
-Open **[http://localhost:5000](http://localhost:5000)** in your browser!
-
----
-
 ## 📂 Project Directory Structure
 
 ```text
 Practice/
-├── app.py                     # Flask entry point and blueprint registry
-├── run.bat                    # 1-click Windows launcher (starts app & opens browser)
+├── app.py                     # Flask entry point, intelligent port resolver (80/5000)
+├── setup_domain.bat           # 1-click script to map coding-practice-hub in hosts file
+├── run.bat                    # 1-click launcher (starts server & opens browser)
 ├── config.py                  # Paths, constants, and default configurations
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # Comprehensive documentation & URL references
