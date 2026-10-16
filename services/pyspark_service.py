@@ -88,7 +88,9 @@ class PySparkService:
             }
 
         start_time = time.time()
-        timeout = custom_timeout or int(get_setting("execution_timeout", DEFAULT_SETTINGS["execution_timeout"]))
+        user_timeout = int(get_setting("execution_timeout", DEFAULT_SETTINGS["execution_timeout"]))
+        # PySpark JVM initialization + driver and DAG execution requires more startup time than standard Python scripts
+        timeout = custom_timeout or max(90, user_timeout * 3)
         python_bin = get_setting("python_executable", sys.executable) or sys.executable
 
         run_id = uuid.uuid4().hex[:8]
@@ -107,6 +109,9 @@ class PySparkService:
         # Ensure PySpark invokes the active Python binary rather than Windows alias
         env["PYSPARK_PYTHON"] = python_bin
         env["PYSPARK_DRIVER_PYTHON"] = python_bin
+
+        # Speed up local Spark startup on Windows: skip web UI bind overhead and bind to localhost
+        env["PYSPARK_SUBMIT_ARGS"] = "--conf spark.ui.enabled=false --conf spark.driver.bindAddress=127.0.0.1 pyspark-shell"
 
         result = {
             "stdout": "",
@@ -129,8 +134,16 @@ class PySparkService:
             )
 
             result["stdout"] = proc.stdout
-            result["stderr"] = proc.stderr
-            result["status"] = "SUCCESS" if proc.returncode == 0 else "FAILED"
+            if proc.returncode == 0:
+                result["status"] = "SUCCESS"
+                # If execution succeeded, do not pollute output with JVM/winutils/log4j warnings unless actual traceback occurred
+                if proc.stderr and "Traceback" not in proc.stderr and "Exception" not in proc.stderr:
+                    result["stderr"] = ""
+                else:
+                    result["stderr"] = proc.stderr
+            else:
+                result["status"] = "FAILED"
+                result["stderr"] = proc.stderr
         except subprocess.TimeoutExpired as e:
             result["status"] = "FAILED"
             result["stdout"] = e.stdout or ""
