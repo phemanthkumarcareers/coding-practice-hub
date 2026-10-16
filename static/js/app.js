@@ -1,31 +1,125 @@
-// Global Application Utilities & Shortcuts
+// Global Application Utilities, Sidebar & Theming Engine
 
-// Theme Management
+// Theming Engine: supports 'system', 'light', 'dark', 'grey'
+const AVAILABLE_THEMES = ['system', 'light', 'dark', 'grey'];
+
+function resolveEffectiveTheme(pref) {
+    if (pref === 'system') {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return pref;
+}
+
 function initTheme() {
-    const savedTheme = localStorage.getItem('ch_theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    updateThemeIcon(savedTheme);
+    const savedPref = localStorage.getItem('ch_theme_preference') || 'dark';
+    applyThemeUI(savedPref);
+
+    // Watch system color scheme changes if system preference active
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            const currentPref = localStorage.getItem('ch_theme_preference');
+            if (currentPref === 'system') {
+                applyThemeUI('system');
+            }
+        });
+    }
 }
 
-function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('ch_theme', next);
-    updateThemeIcon(next);
+function setAppTheme(themePref) {
+    if (!AVAILABLE_THEMES.includes(themePref)) return;
+    localStorage.setItem('ch_theme_preference', themePref);
+    applyThemeUI(themePref);
+
+    // Persist setting to backend settings table asynchronously
+    try {
+        fetch('/api/settings/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ theme: themePref })
+        }).catch(err => console.debug('Settings auto-save notice:', err));
+    } catch (e) {}
+
+    showToast(`Theme updated to ${themePref.toUpperCase()}`, 'info', 1800);
+}
+
+function applyThemeUI(themePref) {
+    const effectiveTheme = resolveEffectiveTheme(themePref);
     
-    // Notify Monaco editor if active
+    // Apply dataset attribute on <html> element
+    document.documentElement.setAttribute('data-theme', effectiveTheme);
+    document.documentElement.setAttribute('data-theme-preference', themePref);
+
+    // Update active highlight on theme buttons
+    document.querySelectorAll('.theme-pick-btn').forEach(btn => {
+        const val = btn.getAttribute('data-theme-value');
+        if (val === themePref) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Update Settings page select if present
+    const settingSelect = document.getElementById('setting-theme');
+    if (settingSelect && settingSelect.value !== themePref) {
+        settingSelect.value = themePref;
+    }
+
+    // Update indicator icon in sidebar
+    const activeIconEl = document.getElementById('theme-active-icon');
+    if (activeIconEl) {
+        const icons = {
+            'system': '🖥️',
+            'light': '☀️',
+            'dark': '🌙',
+            'grey': '🩶'
+        };
+        activeIconEl.textContent = icons[themePref] || '🌓';
+    }
+
+    // Update Monaco editor theme if active
     if (window.monacoEditorInstance && window.monaco) {
-        window.monaco.editor.setTheme(next === 'dark' ? 'vs-dark' : 'vs');
+        const monacoTheme = effectiveTheme === 'light' ? 'vs' : 'vs-dark';
+        window.monaco.editor.setTheme(monacoTheme);
     }
 }
 
-function updateThemeIcon(theme) {
-    const btn = document.getElementById('theme-toggle-btn');
-    if (btn) {
-        btn.innerHTML = theme === 'dark' ? '☀️' : '🌙';
-        btn.title = `Switch to ${theme === 'dark' ? 'Light' : 'Dark'} mode`;
+// Sidebar Collapse / Expand Controller
+function initSidebar() {
+    const isCollapsed = localStorage.getItem('ch_sidebar_collapsed') === 'true';
+    const sidebar = document.getElementById('app-sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+
+    if (isCollapsed && sidebar) {
+        sidebar.classList.add('collapsed');
+        if (toggleBtn) toggleBtn.textContent = '▶';
     }
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('app-sidebar');
+    const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    if (!sidebar) return;
+
+    const isCurrentlyCollapsed = sidebar.classList.contains('collapsed');
+    const nextState = !isCurrentlyCollapsed;
+
+    if (nextState) {
+        sidebar.classList.add('collapsed');
+        if (toggleBtn) toggleBtn.textContent = '▶';
+    } else {
+        sidebar.classList.remove('collapsed');
+        if (toggleBtn) toggleBtn.textContent = '◀';
+    }
+
+    localStorage.setItem('ch_sidebar_collapsed', nextState);
+
+    // Relayout Monaco editor smoothly after sidebar width transition
+    setTimeout(() => {
+        if (window.monacoEditorInstance) {
+            window.monacoEditorInstance.layout();
+        }
+    }, 220);
 }
 
 // Global Toast Notifications
@@ -130,11 +224,7 @@ document.addEventListener('keydown', (e) => {
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    
-    const themeBtn = document.getElementById('theme-toggle-btn');
-    if (themeBtn) {
-        themeBtn.addEventListener('click', toggleTheme);
-    }
+    initSidebar();
 
     const searchInput = document.getElementById('global-search-input');
     if (searchInput) {

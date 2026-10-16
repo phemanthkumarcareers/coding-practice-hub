@@ -42,14 +42,30 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 
 ---
 
-## 💻 Practice Workspace Features
+## 💻 Layout & Navigation Features
 
-### 1. Vertical Split Stack (Full-Width Editor with Bottom Console)
+### 1. Left Vertical Sidebar (Maximized Screen Height & Collapsible)
+- **Top Navbar Replaced with Left Sidebar**: Eliminates the top navbar to free up the full vertical height of the screen (100vh) for code editing and result inspection.
+- **Collapsible Mini-Sidebar**: Click the `◀` / `▶` toggle button on the sidebar to collapse it into a compact 68px icon-only mode, maximizing horizontal screen space for wide monitors or split-screen coding.
+- **Integrated Sidebar Utilities**:
+  - Brand header & navigation links (Dashboard, Practice, History, Datasets, Reports, Settings).
+  - Quick Search trigger button (`Ctrl + K`).
+  - Dedicated bottom theme selector and local server status.
+
+### 2. App-Level Theming (System Default, Light, Dark, Grey)
+- **4 Theme Choices**:
+  - **🖥️ System Default**: Dynamically tracks your operating system's color scheme preferences (`prefers-color-scheme`) and switches automatically.
+  - **☀️ Light Theme**: Crisp, clean, high-contrast light theme with white editor and subtle grey borders.
+  - **🌙 Dark Theme**: Deep navy/slate developer dark theme with rich visual hierarchy.
+  - **🩶 Grey Theme**: Modern zinc/charcoal dark theme (inspired by Zed and JetBrains Fleet) with softer contrast.
+- **Live Monaco Synchronization**: Theme switches instantly update Monaco Editor between `vs` and `vs-dark`, and persist across browser sessions in `localStorage` and backend settings.
+
+### 3. Vertical Split Stack (Full-Width Editor with Bottom Console)
 - **Maximized Coding Width**: The Monaco Editor stretches across 100% of the pane width, ideal for extensive scripts, wide SQL joins, and complex classes.
 - **Draggable Horizontal Resizer**: Drag the horizontal divider bar between the code editor and bottom console to adjust the view heights dynamically.
 - **Integrated Console & Status**: Execution status badges, execution times in milliseconds, formatted output tables for SQL, and terminal stderr logs render in the dedicated console pane below the code.
 
-### 2. Multi-File Python Project Workspace
+### 4. Multi-File Python Project Workspace
 - **Multi-File Tab Bar**: Practice real-world project structures directly in the browser across Python, DSA, and Databricks.
 - **`+ New File` Creation**: Add helper modules such as `utils.py`, `models.py`, or `config.py`.
 - **Seamless Cross-Module Imports**: Subprocess runner executes all project files together in an isolated workspace, allowing statements like:
@@ -59,7 +75,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   ```
 - **File Management**: Switch tabs with a single click, delete files, and preserve editor code across all tabs.
 
-### 3. Multi-Database Creation & Context Selection in DuckDB / SQL
+### 5. Multi-Database Creation & Context Selection in DuckDB / SQL
 - **Active Database Selector**: Switch active database context from the top toolbar dropdown (e.g. `main`, `analytics_db`).
 - **Direct Table Querying**: When querying the currently active database, query tables directly without schema prefixes:
   ```sql

@@ -90,9 +90,11 @@
 
         <div>
             <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Default Theme:</label>
-            <select id="setting-theme" class="meta-select" style="width:100%;">
-                <option value="dark" {% if settings.get('theme') == 'dark' %}selected{% endif %}>Dark (VS Code Dark)</option>
-                <option value="light" {% if settings.get('theme') == 'light' %}selected{% endif %}>Light</option>
+            <select id="setting-theme" class="meta-select" style="width:100%;" onchange="setAppTheme(this.value)">
+                <option value="system" {% if settings.get('theme') == 'system' %}selected{% endif %}>🖥️ System Default (Follow OS)</option>
+                <option value="light" {% if settings.get('theme') == 'light' %}selected{% endif %}>☀️ Light Theme</option>
+                <option value="dark" {% if settings.get('theme') == 'dark' or not settings.get('theme') %}selected{% endif %}>🌙 Dark Theme (Deep Slate)</option>
+                <option value="grey" {% if settings.get('theme') == 'grey' %}selected{% endif %}>🩶 Grey Theme (Modern Zinc / Charcoal)</option>
             </select>
         </div>
     </div>
