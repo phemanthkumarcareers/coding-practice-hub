@@ -25,7 +25,6 @@ def practice_workspace():
     initial_practice_id = None
 
     if practice_id_arg:
-        # Load session for this practice
         p_row = conn.execute("SELECT * FROM practices WHERE id = ?", (practice_id_arg,)).fetchone()
         if p_row:
             s_row = conn.execute("SELECT * FROM daily_sessions WHERE id = ?", (p_row["session_id"],)).fetchone()
@@ -43,9 +42,11 @@ def practice_workspace():
 
     conn.close()
 
-    # Pre-select initial tech tab
     if not target_tech:
         target_tech = "SQL"
+
+    # Get databases for SQL selector
+    databases = duckdb_service.list_databases()
 
     return render_template(
         "practice.html",
@@ -53,8 +54,27 @@ def practice_workspace():
         technologies=TECHNOLOGIES,
         statuses=STATUSES,
         selected_tech=target_tech,
-        initial_practice_id=initial_practice_id
+        initial_practice_id=initial_practice_id,
+        databases=databases
     )
+
+@practice_bp.route("/api/practice/databases")
+def get_databases():
+    return jsonify({
+        "success": True,
+        "databases": duckdb_service.list_databases()
+    })
+
+@practice_bp.route("/api/practice/database/create", methods=["POST"])
+def create_database():
+    data = request.get_json() or {}
+    db_name = data.get("name", "")
+    res = duckdb_service.create_database(db_name)
+    if res.get("success"):
+        res["databases"] = duckdb_service.list_databases()
+        res["schemas"] = duckdb_service.get_explorer_schema()
+        return jsonify(res)
+    return jsonify(res), 400
 
 @practice_bp.route("/api/practice/save", methods=["POST"])
 def save_practice():
@@ -94,7 +114,6 @@ def save_practice():
         WHERE id = ?
     """, (title, difficulty, topic, tags, question, code, notes, status, extra_metadata, completed_at, practice_id))
 
-    # Retrieve session_id
     cursor.execute("SELECT session_id, technology FROM practices WHERE id = ?", (practice_id,))
     row = cursor.fetchone()
     conn.commit()
@@ -119,6 +138,9 @@ def run_practice():
     practice_id = data.get("id")
     code = data.get("code", "")
     technology = data.get("technology", "Python")
+    active_db = data.get("active_db", "main")
+    files = data.get("files")  # Multi-file support: {"main.py": "...", "utils.py": "..."}
+    entry_file = data.get("entry_file", "main.py")
 
     if not practice_id:
         return jsonify({"success": False, "error": "Practice ID required"}), 400
@@ -128,11 +150,11 @@ def run_practice():
     run_status = "SUCCESS"
     duration_ms = 0
     structured_result = None
+    updated_schemas = None
 
     if technology == "SQL":
-        # Make sure dataset views are up to date
         duckdb_service.sync_dataset_views()
-        res = duckdb_service.execute_query(code)
+        res = duckdb_service.execute_query(code, active_db=active_db)
         run_status = res["status"]
         duration_ms = res["duration_ms"]
         structured_result = res
@@ -140,11 +162,16 @@ def run_practice():
             error_text = res["error"]
             output_text = ""
         else:
-            # Build pretty ASCII table summary for text logs
             output_text = f"Executed in {duration_ms} ms. Rows returned: {res['row_count']}"
+        
+        # Refresh schemas so newly created tables/views show up immediately
+        updated_schemas = duckdb_service.get_explorer_schema()
 
-    elif technology == "Python" or technology == "DSA":
-        res = code_executor.execute_python(code, tech=technology)
+    elif technology in ("Python", "DSA"):
+        if files and isinstance(files, dict) and len(files) > 0:
+            res = code_executor.execute_python_project(files, entry_file=entry_file, tech=technology)
+        else:
+            res = code_executor.execute_python(code, tech=technology)
         run_status = res["status"]
         duration_ms = res["duration_ms"]
         output_text = res["stdout"]
@@ -161,12 +188,13 @@ def run_practice():
         subtype = data.get("extra_metadata", {}).get("subtype", "Python")
         if subtype == "SQL":
             duckdb_service.sync_dataset_views()
-            res = duckdb_service.execute_query(code)
+            res = duckdb_service.execute_query(code, active_db=active_db)
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             structured_result = res
             error_text = res.get("error", "")
             output_text = f"Databricks SQL simulated on DuckDB. Rows: {res['row_count']}"
+            updated_schemas = duckdb_service.get_explorer_schema()
         elif subtype in ["PySpark", "Structured Streaming", "Delta Lake"]:
             res = pyspark_service.execute_pyspark(code)
             run_status = res["status"]
@@ -174,14 +202,16 @@ def run_practice():
             output_text = res["stdout"]
             error_text = res["stderr"]
         else:
-            res = code_executor.execute_python(code, tech="databricks")
+            if files and isinstance(files, dict) and len(files) > 0:
+                res = code_executor.execute_python_project(files, entry_file=entry_file, tech="databricks")
+            else:
+                res = code_executor.execute_python(code, tech="databricks")
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             output_text = res["stdout"]
             error_text = res["stderr"]
 
     else:
-        # System Design doesn't execute code
         output_text = "System Design workspace updated."
         run_status = "SUCCESS"
 
@@ -194,8 +224,6 @@ def run_practice():
         VALUES (?, ?, ?, ?, ?, ?)
     """, (practice_id, code, output_text, error_text, run_status, duration_ms))
 
-    # Update practice latest execution details
-    # Do not downgrade COMPLETED to SUCCESS/FAILED if already completed, unless user changes it
     cursor.execute("SELECT status FROM practices WHERE id = ?", (practice_id,))
     cur_p = cursor.fetchone()
     new_status = cur_p["status"]
@@ -228,7 +256,8 @@ def run_practice():
         "output": output_text,
         "error": error_text,
         "structured_result": structured_result,
-        "practice_status": new_status
+        "practice_status": new_status,
+        "updated_schemas": updated_schemas
     })
 
 @practice_bp.route("/api/practice/executions/<int:practice_id>")

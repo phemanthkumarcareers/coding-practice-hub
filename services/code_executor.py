@@ -14,7 +14,7 @@ class CodeExecutor:
         pass
 
     def _sync_datasets_to_workspace(self, target_dir: Path):
-        """Copies or hardlinks all uploaded datasets to the execution workspace so they can be opened by filename."""
+        """Copies or links all uploaded datasets directly to the execution workspace."""
         try:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
@@ -30,43 +30,22 @@ class CodeExecutor:
         except Exception as e:
             print(f"Error syncing dataset files to workspace: {e}")
 
-    def _get_dataset_paths_code(self):
-        """Generates Python preamble dictionary exposing all uploaded datasets."""
-        try:
-            conn = sqlite3.connect(SQLITE_PATH)
-            conn.row_factory = sqlite3.Row
-            datasets = conn.execute("SELECT table_name, original_name, file_path, file_type FROM datasets").fetchall()
-            conn.close()
-
-            datasets_dict = {d["original_name"]: Path(d["file_path"]).as_posix() for d in datasets}
-            table_dict = {d["table_name"]: Path(d["file_path"]).as_posix() for d in datasets}
-            
-            preamble = (
-                "# === Preloaded Datasets Notice ===\n"
-                "# All uploaded files are available directly in your working directory by filename!\n"
-                "# Example: pd.read_csv('sample_employees.csv')\n"
-                f"DATASETS = {json.dumps({**datasets_dict, **table_dict}, indent=2)}\n"
-                "# =================================\n\n"
-            )
-            return preamble
-        except Exception:
-            return ""
-
-    def execute_python(self, code: str, tech: str = "python", custom_timeout: int = None) -> dict:
+    def execute_python_project(self, files: dict, entry_file: str = "main.py", tech: str = "python", custom_timeout: int = None) -> dict:
+        """
+        Executes a multi-file Python project.
+        files: dict mapping filename -> code content, e.g. {"main.py": "...", "utils.py": "..."}
+        entry_file: the file to execute (defaults to "main.py")
+        """
         start_time = time.time()
         timeout = custom_timeout or int(get_setting("execution_timeout", DEFAULT_SETTINGS["execution_timeout"]))
         python_bin = get_setting("python_executable", sys.executable) or sys.executable
 
         run_id = uuid.uuid4().hex[:8]
-        target_dir = WORKSPACE_DIR / tech.lower().replace(" ", "_")
+        target_dir = WORKSPACE_DIR / tech.lower().replace(" ", "_") / f"project_{run_id}"
         target_dir.mkdir(parents=True, exist_ok=True)
-        script_file = target_dir / f"run_{run_id}.py"
 
-        # Sync datasets to workspace directory
+        # Sync datasets directly into project folder so pd.read_csv('filename.csv') works everywhere
         self._sync_datasets_to_workspace(target_dir)
-
-        # Inject dataset dictionary helper preamble
-        full_code = self._get_dataset_paths_code() + code
 
         result = {
             "stdout": "",
@@ -77,12 +56,23 @@ class CodeExecutor:
         }
 
         try:
-            with open(script_file, "w", encoding="utf-8") as f:
-                f.write(full_code)
+            # Write all project files to directory
+            for fname, content in files.items():
+                safe_fname = Path(fname).name
+                file_path = target_dir / safe_fname
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
 
-            # Run in isolated subprocess
+            target_script = target_dir / entry_file
+            if not target_script.exists():
+                # Fallback to first python file in dict
+                py_files = [f for f in files.keys() if f.endswith(".py")]
+                entry_file = py_files[0] if py_files else "main.py"
+                target_script = target_dir / entry_file
+
+            # Run in isolated subprocess with cwd set to project folder
             proc = subprocess.run(
-                [python_bin, str(script_file)],
+                [python_bin, str(target_script)],
                 capture_output=True,
                 text=True,
                 timeout=timeout,
@@ -91,10 +81,7 @@ class CodeExecutor:
 
             result["stdout"] = proc.stdout
             result["stderr"] = proc.stderr
-            if proc.returncode != 0:
-                result["status"] = "FAILED"
-            else:
-                result["status"] = "SUCCESS"
+            result["status"] = "SUCCESS" if proc.returncode == 0 else "FAILED"
 
         except subprocess.TimeoutExpired as e:
             result["status"] = "FAILED"
@@ -106,12 +93,17 @@ class CodeExecutor:
             result["stderr"] = f"Execution system error: {str(e)}"
         finally:
             result["duration_ms"] = int((time.time() - start_time) * 1000)
+            # Clean up temporary execution directory
             try:
-                if script_file.exists():
-                    script_file.unlink()
+                if target_dir.exists():
+                    shutil.rmtree(target_dir, ignore_errors=True)
             except Exception:
                 pass
 
         return result
+
+    def execute_python(self, code: str, tech: str = "python", custom_timeout: int = None) -> dict:
+        """Backward-compatible single-file execution wrapper."""
+        return self.execute_python_project({"main.py": code}, entry_file="main.py", tech=tech, custom_timeout=custom_timeout)
 
 code_executor = CodeExecutor()

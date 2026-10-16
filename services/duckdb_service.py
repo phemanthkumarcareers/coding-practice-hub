@@ -3,8 +3,11 @@ import time
 import os
 import re
 from pathlib import Path
-from config import DUCKDB_PATH, SQLITE_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS
+from config import DUCKDB_PATH, SQLITE_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS, DATABASE_DIR
 import sqlite3
+
+USER_DBS_DIR = DATABASE_DIR / "user_dbs"
+USER_DBS_DIR.mkdir(parents=True, exist_ok=True)
 
 class DuckDBService:
     def __init__(self, db_path=None):
@@ -12,13 +15,71 @@ class DuckDBService:
 
     def get_connection(self):
         conn = duckdb.connect(self.db_path)
-        # Set file search path so files in uploads can be queried by relative filename directly
+        
+        # 1. Set file search path for uploads
         try:
             search_paths = f"{CSV_UPLOADS.as_posix()},{JSON_UPLOADS.as_posix()},{PARQUET_UPLOADS.as_posix()}"
             conn.execute(f"SET file_search_path='{search_paths}';")
         except Exception:
             pass
+
+        # 2. Automatically attach all user-created databases
+        try:
+            for db_file in USER_DBS_DIR.glob("*.duckdb"):
+                db_alias = db_file.stem
+                # Don't attach if name conflicts with reserved keywords
+                safe_alias = re.sub(r"[^a-zA-Z0-9_]", "_", db_alias).lower()
+                try:
+                    conn.execute(f"ATTACH IF NOT EXISTS '{db_file.as_posix()}' AS \"{safe_alias}\";")
+                except Exception as e:
+                    print(f"Error attaching {safe_alias}: {e}")
+        except Exception as e:
+            print(f"Error scanning user databases: {e}")
+
         return conn
+
+    def list_databases(self):
+        """Returns list of all available databases (main + attached user databases)."""
+        dbs = [{"name": "main", "display_name": "practice (main / default)", "is_default": True}]
+        for db_file in sorted(USER_DBS_DIR.glob("*.duckdb")):
+            alias = re.sub(r"[^a-zA-Z0-9_]", "_", db_file.stem).lower()
+            dbs.append({
+                "name": alias,
+                "display_name": alias,
+                "filename": db_file.name,
+                "size_kb": round(db_file.stat().st_size / 1024, 1),
+                "is_default": False
+            })
+        return dbs
+
+    def create_database(self, db_name: str) -> dict:
+        """Creates a new DuckDB database file and attaches it."""
+        clean_name = re.sub(r"[^a-zA-Z0-9_]", "_", db_name.strip()).lower()
+        if not clean_name:
+            return {"success": False, "error": "Invalid database name"}
+        if clean_name in ("main", "system", "temp"):
+            return {"success": False, "error": f"'{clean_name}' is a reserved database name"}
+
+        target_file = USER_DBS_DIR / f"{clean_name}.duckdb"
+        try:
+            # Initialize the database file
+            init_conn = duckdb.connect(str(target_file))
+            init_conn.execute("CREATE TABLE IF NOT EXISTS _info (created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);")
+            init_conn.close()
+
+            # Attach to current connection
+            conn = self.get_connection()
+            conn.execute(f"ATTACH IF NOT EXISTS '{target_file.as_posix()}' AS \"{clean_name}\";")
+            conn.close()
+
+            return {
+                "success": True,
+                "database": clean_name,
+                "filename": target_file.name,
+                "message": f"Database '{clean_name}' created successfully!"
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
 
     def sync_dataset_views(self):
         """Automatically create views in DuckDB for all uploaded datasets."""
@@ -42,19 +103,19 @@ class DuckDBService:
 
                 read_func = "read_csv_auto" if ftype == "csv" else ("read_parquet" if ftype == "parquet" else "read_json_auto")
 
-                # Register primary table_name view
+                # Register view for table_name
                 try:
                     conn_duck.execute(f"CREATE OR REPLACE VIEW \"{tbl}\" AS SELECT * FROM {read_func}('{fpath}');")
-                except Exception as e:
-                    print(f"Error registering view {tbl}: {e}")
+                except Exception:
+                    pass
 
-                # Register original file name view e.g. "sales.csv"
+                # Register view for original_name e.g. "sample_employees.csv"
                 try:
                     conn_duck.execute(f"CREATE OR REPLACE VIEW \"{orig_name}\" AS SELECT * FROM {read_func}('{fpath}');")
                 except Exception:
                     pass
 
-                # Register bare stem view e.g. sales
+                # Register view for clean_stem e.g. sample_employees
                 try:
                     conn_duck.execute(f"CREATE OR REPLACE VIEW \"{clean_stem}\" AS SELECT * FROM {read_func}('{fpath}');")
                 except Exception:
@@ -64,7 +125,7 @@ class DuckDBService:
         except Exception as e:
             print(f"Error syncing dataset views: {e}")
 
-    def execute_query(self, query, limit=500):
+    def execute_query(self, query: str, active_db: str = "main", limit: int = 500) -> dict:
         start_time = time.time()
         conn = self.get_connection()
         result = {
@@ -74,15 +135,22 @@ class DuckDBService:
             "duration_ms": 0,
             "status": "SUCCESS",
             "error": None,
-            "truncated": False
+            "truncated": False,
+            "active_database": active_db
         }
 
         # Auto-quote unquoted filename queries e.g. FROM sample_employees.csv -> FROM "sample_employees.csv"
-        # DuckDB interprets unquoted . as schema.table
         processed_query = re.sub(r"\bFROM\s+([a-zA-Z0-9_]+\.(?:csv|parquet|json))\b", r'FROM "\1"', query, flags=re.IGNORECASE)
         processed_query = re.sub(r"\bJOIN\s+([a-zA-Z0-9_]+\.(?:csv|parquet|json))\b", r'JOIN "\1"', processed_query, flags=re.IGNORECASE)
 
         try:
+            # Set active database context if other than main
+            if active_db and active_db.lower() != "main":
+                try:
+                    conn.execute(f"USE \"{active_db.lower()}\";")
+                except Exception as e:
+                    print(f"Could not switch to db {active_db}: {e}")
+
             rel = conn.sql(processed_query)
             if rel is not None:
                 columns = rel.columns
@@ -121,37 +189,51 @@ class DuckDBService:
         return result
 
     def get_explorer_schema(self):
-        """Inspect DuckDB tables, views, and schemas for the table explorer."""
+        """Inspect all databases, user tables, views, and columns across all attached databases."""
         conn = self.get_connection()
         schema_info = []
+
         try:
-            tables_rel = conn.execute("""
-                SELECT table_name, table_type 
-                FROM information_schema.tables 
-                WHERE table_schema = 'main'
-                ORDER BY table_name;
-            """).fetchall()
+            # Get all databases
+            dbs = conn.execute("SHOW DATABASES;").fetchall()
+            db_names = [d[0] for d in dbs if d[0] not in ('system', 'temp')]
 
-            for tbl, tbl_type in tables_rel:
-                cols_rel = conn.execute(f"""
-                    SELECT column_name, data_type 
-                    FROM information_schema.columns 
-                    WHERE table_name = '{tbl}' AND table_schema = 'main'
-                    ORDER BY ordinal_position;
-                """).fetchall()
-
-                count = None
+            for db in db_names:
                 try:
-                    count = conn.execute(f"SELECT count(*) FROM \"{tbl}\"").fetchone()[0]
-                except Exception:
-                    pass
+                    tables = conn.execute(f"""
+                        SELECT table_name, table_type 
+                        FROM information_schema.tables 
+                        WHERE table_catalog = '{db}' AND table_schema = 'main'
+                        ORDER BY table_name;
+                    """).fetchall()
 
-                schema_info.append({
-                    "name": tbl,
-                    "type": tbl_type,
-                    "row_count": count,
-                    "columns": [{"name": c[0], "type": c[1]} for c in cols_rel]
-                })
+                    for tbl, tbl_type in tables:
+                        cols = conn.execute(f"""
+                            SELECT column_name, data_type 
+                            FROM information_schema.columns 
+                            WHERE table_catalog = '{db}' AND table_name = '{tbl}' AND table_schema = 'main'
+                            ORDER BY ordinal_position;
+                        """).fetchall()
+
+                        cnt = None
+                        try:
+                            # If database is main, direct select, otherwise db.tbl
+                            ref = f'"{tbl}"' if db == 'main' or db == 'practice' else f'"{db}"."{tbl}"'
+                            cnt = conn.execute(f"SELECT count(*) FROM {ref}").fetchone()[0]
+                        except Exception:
+                            pass
+
+                        schema_info.append({
+                            "database": db,
+                            "name": tbl,
+                            "type": tbl_type,
+                            "row_count": cnt,
+                            "columns": [{"name": c[0], "type": c[1]} for c in cols],
+                            "qualified_name": f"{db}.{tbl}" if db != 'main' else tbl
+                        })
+                except Exception as e:
+                    print(f"Error inspecting db {db}: {e}")
+
         except Exception as e:
             print(f"Error exploring schema: {e}")
         finally:
@@ -160,7 +242,7 @@ class DuckDBService:
         return schema_info
 
     def get_databases_overview(self):
-        """Returns overview of both SQLite and DuckDB databases."""
+        """Returns overview of both SQLite and DuckDB databases (including user-created ones)."""
         overview = {
             "sqlite": {
                 "name": "SQLite Application Database",
@@ -170,10 +252,12 @@ class DuckDBService:
                 "tables": []
             },
             "duckdb": {
-                "name": "DuckDB Analytical Practice Database",
+                "name": "DuckDB Practice Database",
                 "filename": "practice.duckdb",
                 "path": str(DUCKDB_PATH),
                 "size_kb": round(DUCKDB_PATH.stat().st_size / 1024, 1) if DUCKDB_PATH.exists() else 0,
+                "databases_count": 1 + len(list(USER_DBS_DIR.glob("*.duckdb"))),
+                "attached_dbs": self.list_databases(),
                 "views": []
             }
         }
@@ -191,18 +275,10 @@ class DuckDBService:
         except Exception as e:
             print(f"SQLite overview error: {e}")
 
-        # Query DuckDB views & counts
+        # Query DuckDB views & tables across all attached databases
         try:
-            conn_dk = self.get_connection()
-            views = conn_dk.execute("SELECT table_name, table_type FROM information_schema.tables WHERE table_schema='main'").fetchall()
-            for v_name, v_type in views:
-                cnt = None
-                try:
-                    cnt = conn_dk.execute(f"SELECT count(*) FROM \"{v_name}\"").fetchone()[0]
-                except Exception:
-                    pass
-                overview["duckdb"]["views"].append({"name": v_name, "type": v_type, "count": cnt})
-            conn_dk.close()
+            schemas = self.get_explorer_schema()
+            overview["duckdb"]["views"] = schemas
         except Exception as e:
             print(f"DuckDB overview error: {e}")
 

@@ -1,4 +1,4 @@
-// Practice Workspace Controller
+// Practice Workspace Controller - With Multi-File Python & Multi-Database SQL Support
 
 let activePracticeId = null;
 let activeTechnology = null;
@@ -7,8 +7,22 @@ let isDirty = false;
 let autoSaveTimer = null;
 let practicesMap = {}; // id -> practice object
 
-// Helper: Map tech to Monaco language
-function getMonacoLanguage(tech, subtype) {
+// Multi-File Project State (For Python / DSA / Databricks)
+let currentProjectFiles = { "main.py": "" };
+let activeFileName = "main.py";
+
+// Database Context State (For DuckDB SQL)
+let activeDatabaseName = "main";
+let availableDatabases = [];
+let cachedExplorerSchemas = [];
+
+// Helper: Map extension or tech to Monaco language
+function getLanguageForFile(filename, tech, subtype) {
+    if (filename.endsWith('.py')) return 'python';
+    if (filename.endsWith('.sql')) return 'sql';
+    if (filename.endsWith('.json')) return 'json';
+    if (filename.endsWith('.md')) return 'markdown';
+
     if (tech === 'SQL') return 'sql';
     if (tech === 'System Design') return 'markdown';
     if (tech === 'Databricks' && subtype === 'SQL') return 'sql';
@@ -55,6 +69,10 @@ function createOrUpdateEditor(code, language) {
 
         monacoEditor.onDidChangeModelContent(() => {
             isDirty = true;
+            // Update active file buffer
+            if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) {
+                currentProjectFiles[activeFileName] = monacoEditor.getValue();
+            }
             scheduleAutosave();
         });
 
@@ -73,6 +91,200 @@ function createOrUpdateEditor(code, language) {
         if (monacoEditor.getValue() !== code) {
             monacoEditor.setValue(code);
         }
+    }
+}
+
+// Multi-File Project Workspace Helpers
+function renderMultiFileTabs() {
+    const bar = document.getElementById('multi-file-tabs-bar');
+    if (!bar) return;
+
+    if (!('Python' === activeTechnology || 'DSA' === activeTechnology || 'Databricks' === activeTechnology)) {
+        bar.style.display = 'none';
+        return;
+    }
+
+    bar.style.display = 'flex';
+    bar.innerHTML = '';
+
+    Object.keys(currentProjectFiles).forEach(fname => {
+        const tab = document.createElement('div');
+        tab.className = `file-tab ${fname === activeFileName ? 'active' : ''}`;
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = fname;
+        titleSpan.onclick = () => switchActiveFile(fname);
+        tab.appendChild(titleSpan);
+
+        // Close/delete file button (don't delete if it's the only file or main.py)
+        if (Object.keys(currentProjectFiles).length > 1) {
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'file-tab-close';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.title = `Delete ${fname}`;
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                deleteProjectFile(fname);
+            };
+            tab.appendChild(closeBtn);
+        }
+
+        bar.appendChild(tab);
+    });
+
+    // "+ New File" Button
+    const newBtn = document.createElement('button');
+    newBtn.className = 'btn-new-file';
+    newBtn.innerHTML = '+ New File';
+    newBtn.onclick = promptNewFile;
+    bar.appendChild(newBtn);
+}
+
+function switchActiveFile(targetFileName) {
+    if (activeFileName === targetFileName) return;
+
+    // Save current content in buffer
+    if (monacoEditor) {
+        currentProjectFiles[activeFileName] = monacoEditor.getValue();
+    }
+
+    activeFileName = targetFileName;
+    const code = currentProjectFiles[activeFileName] || '';
+    const lang = getLanguageForFile(activeFileName, activeTechnology);
+
+    if (monacoEditor) {
+        createOrUpdateEditor(code, lang);
+    }
+
+    renderMultiFileTabs();
+}
+
+function promptNewFile() {
+    let name = prompt("Enter new file name (e.g. utils.py, helper.py, data.json):", "utils.py");
+    if (!name) return;
+    name = name.trim();
+    if (!name) return;
+
+    if (!name.includes('.')) {
+        name += '.py';
+    }
+
+    if (name in currentProjectFiles) {
+        showToast(`File '${name}' already exists.`, 'info');
+        switchActiveFile(name);
+        return;
+    }
+
+    let defaultContent = `# ${name}\n`;
+    if (name.endsWith('.py')) {
+        defaultContent = `# ${name}\n\ndef example_function():\n    return "Hello from ${name}"\n`;
+    }
+
+    currentProjectFiles[name] = defaultContent;
+    switchActiveFile(name);
+    isDirty = true;
+    scheduleAutosave();
+    showToast(`Created ${name}`, 'success');
+}
+
+function deleteProjectFile(filename) {
+    if (filename === 'main.py' && Object.keys(currentProjectFiles).length > 1) {
+        if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+    } else {
+        if (!confirm(`Delete ${filename}?`)) return;
+    }
+
+    delete currentProjectFiles[filename];
+    const remaining = Object.keys(currentProjectFiles);
+    activeFileName = remaining[0];
+    
+    const code = currentProjectFiles[activeFileName] || '';
+    const lang = getLanguageForFile(activeFileName, activeTechnology);
+    createOrUpdateEditor(code, lang);
+    renderMultiFileTabs();
+    isDirty = true;
+    scheduleAutosave();
+}
+
+// Database Selector & Creation (For DuckDB SQL)
+async function loadDatabasesList() {
+    try {
+        const res = await fetch('/api/practice/databases');
+        const data = await res.json();
+        if (data.success && data.databases) {
+            availableDatabases = data.databases;
+            const selectEl = document.getElementById('sql-active-db-select');
+            if (selectEl) {
+                selectEl.innerHTML = '';
+                availableDatabases.forEach(db => {
+                    const opt = document.createElement('option');
+                    opt.value = db.name;
+                    opt.textContent = `${db.name === 'main' ? 'practice (main / default)' : db.name}`;
+                    if (db.name === activeDatabaseName) opt.selected = true;
+                    selectEl.appendChild(opt);
+                });
+
+                selectEl.onchange = (e) => {
+                    activeDatabaseName = e.target.value;
+                    showToast(`Switched active database context to '${activeDatabaseName}'`, 'info');
+                };
+            }
+        }
+    } catch (e) {
+        console.error('Error loading databases:', e);
+    }
+}
+
+async function promptCreateDatabase() {
+    const dbName = prompt("Enter new database name (e.g. analytics, finance, warehouse):");
+    if (!dbName || !dbName.trim()) return;
+
+    try {
+        const res = await fetch('/api/practice/database/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: dbName.trim() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Database '${data.database}' created and attached!`, 'success');
+            activeDatabaseName = data.database;
+            await loadDatabasesList();
+            await refreshExplorerList();
+        } else {
+            showToast(data.error || 'Failed to create database', 'error');
+        }
+    } catch (err) {
+        showToast('Error creating database: ' + err.message, 'error');
+    }
+}
+
+async function createDatabaseFromExplorer() {
+    const input = document.getElementById('new-db-input');
+    if (!input || !input.value.trim()) {
+        showToast('Please enter a database name', 'error');
+        return;
+    }
+    const dbName = input.value.trim();
+
+    try {
+        const res = await fetch('/api/practice/database/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: dbName })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast(`Database '${data.database}' created!`, 'success');
+            input.value = '';
+            activeDatabaseName = data.database;
+            await loadDatabasesList();
+            await refreshExplorerList();
+        } else {
+            showToast(data.error || 'Failed to create database', 'error');
+        }
+    } catch (err) {
+        showToast('Error: ' + err.message, 'error');
     }
 }
 
@@ -121,12 +333,28 @@ async function switchTech(techName) {
         extra = {};
     }
 
+    // Restore multi-file project for Python / DSA / Databricks
+    if (techName in {'Python':1, 'DSA':1, 'Databricks':1}) {
+        if (extra.files && typeof extra.files === 'object' && Object.keys(extra.files).length > 0) {
+            currentProjectFiles = extra.files;
+            activeFileName = extra.active_file || Object.keys(extra.files)[0];
+        } else {
+            currentProjectFiles = { "main.py": p.code || "" };
+            activeFileName = "main.py";
+        }
+        renderMultiFileTabs();
+    } else {
+        const fileBar = document.getElementById('multi-file-tabs-bar');
+        if (fileBar) fileBar.style.display = 'none';
+    }
+
     // Toggle Specialized UI Panes
     setupSpecializedUI(techName, extra);
 
     // Update Editor
-    const lang = getMonacoLanguage(techName, extra.subtype);
-    createOrUpdateEditor(p.code || '', lang);
+    const initialCode = (techName in {'Python':1, 'DSA':1, 'Databricks':1}) ? (currentProjectFiles[activeFileName] || '') : (p.code || '');
+    const lang = getLanguageForFile(activeFileName, techName, extra.subtype);
+    createOrUpdateEditor(initialCode, lang);
 
     // Render Output
     renderOutput(p.latest_output, p.latest_error, p.duration_ms);
@@ -154,6 +382,7 @@ function setupSpecializedUI(tech, extra) {
     const systemDesignPreview = document.getElementById('system-design-preview-container');
     const standardOutput = document.getElementById('standard-output-container');
     const sqlExplorerBtn = document.getElementById('btn-toggle-sql-explorer');
+    const sqlDbToolbar = document.getElementById('sql-db-toolbar');
 
     // Default hide all
     if (dsaPanel) dsaPanel.style.display = 'none';
@@ -161,6 +390,7 @@ function setupSpecializedUI(tech, extra) {
     if (systemDesignPreview) systemDesignPreview.style.display = 'none';
     if (standardOutput) standardOutput.style.display = 'flex';
     if (sqlExplorerBtn) sqlExplorerBtn.style.display = 'none';
+    if (sqlDbToolbar) sqlDbToolbar.style.display = 'none';
 
     if (tech === 'DSA') {
         if (dsaPanel) {
@@ -180,10 +410,14 @@ function setupSpecializedUI(tech, extra) {
         if (standardOutput) standardOutput.style.display = 'none';
     } else if (tech === 'SQL') {
         if (sqlExplorerBtn) sqlExplorerBtn.style.display = 'inline-flex';
+        if (sqlDbToolbar) {
+            sqlDbToolbar.style.display = 'flex';
+            loadDatabasesList();
+        }
     }
 }
 
-// Gather extra metadata depending on active technology
+// Gather extra metadata
 function gatherExtraMetadata() {
     let extra = {};
     if (activeTechnology === 'DSA') {
@@ -194,6 +428,16 @@ function gatherExtraMetadata() {
     } else if (activeTechnology === 'Databricks') {
         extra.subtype = document.getElementById('databricks-subtype')?.value || 'PySpark';
     }
+
+    // Persist multi-file project if applicable
+    if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) {
+        if (monacoEditor) {
+            currentProjectFiles[activeFileName] = monacoEditor.getValue();
+        }
+        extra.files = currentProjectFiles;
+        extra.active_file = activeFileName;
+    }
+
     return extra;
 }
 
@@ -217,7 +461,12 @@ async function saveCurrentPractice(markCompleted = false) {
     const indicator = document.getElementById('autosave-indicator');
     if (indicator) indicator.textContent = 'Saving...';
 
-    const code = monacoEditor ? monacoEditor.getValue() : '';
+    // Update active file buffer
+    if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1} && monacoEditor) {
+        currentProjectFiles[activeFileName] = monacoEditor.getValue();
+    }
+
+    const code = monacoEditor ? (currentProjectFiles['main.py'] || monacoEditor.getValue()) : '';
     const currentPractice = practicesMap[activePracticeId];
     
     let targetStatus = currentPractice.status;
@@ -250,11 +499,9 @@ async function saveCurrentPractice(markCompleted = false) {
         const data = await res.json();
         if (data.success) {
             isDirty = false;
-            // Update local cache
             Object.assign(currentPractice, payload);
             updateStatusBadge(targetStatus);
             
-            // Update 6/6 counter in header
             if (data.completed_count !== undefined) {
                 const countBadge = document.getElementById('session-completion-badge');
                 if (countBadge) countBadge.textContent = `${data.completed_count} / 6`;
@@ -277,7 +524,11 @@ async function saveCurrentPractice(markCompleted = false) {
 async function runCurrentCode() {
     if (!activePracticeId) return;
 
-    // First ensure latest edits are saved
+    // Save active editor into currentProjectFiles buffer
+    if (monacoEditor && (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1})) {
+        currentProjectFiles[activeFileName] = monacoEditor.getValue();
+    }
+
     await saveCurrentPractice(false);
 
     updateStatusBadge('RUNNING');
@@ -292,6 +543,9 @@ async function runCurrentCode() {
         id: activePracticeId,
         technology: activeTechnology,
         code: code,
+        active_db: activeDatabaseName,
+        files: (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) ? currentProjectFiles : null,
+        entry_file: activeFileName,
         extra_metadata: gatherExtraMetadata()
     };
 
@@ -304,7 +558,6 @@ async function runCurrentCode() {
 
         const data = await res.json();
         
-        // Update local practice state
         const p = practicesMap[activePracticeId];
         p.latest_output = data.output;
         p.latest_error = data.error;
@@ -313,6 +566,12 @@ async function runCurrentCode() {
 
         updateStatusBadge(p.status);
         renderOutput(data.output, data.error, data.duration_ms, data.structured_result);
+
+        // Update live database tables if returned
+        if (data.updated_schemas) {
+            cachedExplorerSchemas = data.updated_schemas;
+            renderExplorerSchemaList(cachedExplorerSchemas);
+        }
 
         if (data.status === 'SUCCESS') {
             showToast(`Execution succeeded (${data.duration_ms}ms)`, 'success');
@@ -332,7 +591,7 @@ async function runCurrentCode() {
     }
 }
 
-// Render Output Panel
+// Render Output Console
 function renderOutput(stdout, stderr, durationMs, structuredResult) {
     const container = document.getElementById('output-console');
     if (!container) return;
@@ -343,11 +602,9 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
     container.innerHTML = '';
 
     if (structuredResult && structuredResult.columns && structuredResult.columns.length > 0) {
-        // Render Structured SQL Results Table
         const table = document.createElement('table');
         table.className = 'output-table';
 
-        // Header
         const thead = document.createElement('thead');
         const headerRow = document.createElement('tr');
         structuredResult.columns.forEach(col => {
@@ -358,7 +615,6 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
         thead.appendChild(headerRow);
         table.appendChild(thead);
 
-        // Body
         const tbody = document.createElement('tbody');
         structuredResult.rows.forEach(row => {
             const tr = document.createElement('tr');
@@ -378,10 +634,9 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
         summary.style.marginTop = '0.5rem';
         summary.style.fontSize = '0.8rem';
         summary.style.color = 'var(--text-secondary)';
-        summary.textContent = `Rows returned: ${structuredResult.row_count} ${structuredResult.truncated ? '(truncated for display)' : ''}`;
+        summary.textContent = `Rows returned: ${structuredResult.row_count} ${structuredResult.truncated ? '(truncated for display)' : ''} | DB Context: ${structuredResult.active_database || 'main'}`;
         container.appendChild(summary);
     } else {
-        // Plain text output
         if (stdout) {
             const outDiv = document.createElement('div');
             outDiv.textContent = stdout;
@@ -398,16 +653,15 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
     }
 
     if (!stdout && !stderr && (!structuredResult || !structuredResult.columns)) {
-        container.innerHTML = '<span style="color:var(--text-muted);">No output yet. Click Run to execute code.</span>';
+        container.innerHTML = '<span style="color:var(--text-muted);">Ready. Click Run to execute code.</span>';
     }
 }
 
-// Render System Design Preview (Markdown + Mermaid)
+// Render System Design Preview
 function renderSystemDesignPreview(markdownText) {
     const previewEl = document.getElementById('system-design-preview-container');
     if (!previewEl) return;
 
-    // Simple markdown renderer for headers, lists, code, mermaid
     let html = markdownText
         .replace(/^### (.*$)/gim, '<h3 style="margin-top:0.75rem; color:var(--accent-primary);">$1</h3>')
         .replace(/^## (.*$)/gim, '<h2 style="margin-top:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.25rem;">$1</h2>')
@@ -415,14 +669,12 @@ function renderSystemDesignPreview(markdownText) {
         .replace(/^\- (.*$)/gim, '<li style="margin-left:1.25rem;">$1</li>')
         .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
 
-    // Extract mermaid blocks
     html = html.replace(/```mermaid([\s\S]*?)```/gim, function(match, code) {
         return `<pre class="mermaid">${code.trim()}</pre>`;
     });
 
     previewEl.innerHTML = html;
 
-    // Run Mermaid renderer if library loaded
     if (window.mermaid) {
         try {
             mermaid.run({ nodes: previewEl.querySelectorAll('.mermaid') });
@@ -505,7 +757,7 @@ function restoreCodeSnapshot(execId) {
     }
 }
 
-// Split Resizer Logic
+// Vertical Split Resizer Logic (Editor on top, Console below)
 function initResizer() {
     const resizer = document.getElementById('workspace-resizer');
     const editorPane = document.getElementById('editor-pane');
@@ -517,18 +769,18 @@ function initResizer() {
     resizer.addEventListener('mousedown', (e) => {
         isResizing = true;
         resizer.classList.add('resizing');
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = 'row-resize';
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!isResizing) return;
         const containerRect = splitContainer.getBoundingClientRect();
-        const offsetLeft = e.clientX - containerRect.left;
-        const totalWidth = containerRect.width;
-        let percentage = (offsetLeft / totalWidth) * 100;
+        const offsetTop = e.clientY - containerRect.top;
+        const totalHeight = containerRect.height;
+        let percentage = (offsetTop / totalHeight) * 100;
 
-        // Boundaries: 30% to 85%
-        if (percentage < 30) percentage = 30;
+        // Boundaries: 20% to 85%
+        if (percentage < 20) percentage = 20;
         if (percentage > 85) percentage = 85;
 
         editorPane.style.flex = `0 0 ${percentage}%`;
@@ -545,7 +797,7 @@ function initResizer() {
     });
 }
 
-// DuckDB Table Explorer Drawer
+// DuckDB Table & Database Explorer
 async function toggleDuckDBExplorer() {
     const modal = document.getElementById('duckdb-explorer-modal');
     if (!modal) return;
@@ -556,45 +808,92 @@ async function toggleDuckDBExplorer() {
     }
 
     modal.style.display = 'flex';
+    await refreshExplorerList();
+}
+
+async function refreshExplorerList() {
     const container = document.getElementById('duckdb-explorer-list');
-    container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:1.5rem;">Loading DuckDB tables & views...</div>';
+    if (!container) return;
+    container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:1.5rem;">Inspecting databases, tables & views...</div>';
 
     try {
         const res = await fetch('/api/datasets/duckdb_explorer');
         const data = await res.json();
         
         if (!data.schemas || data.schemas.length === 0) {
-            container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:1.5rem;">No tables or views found. Upload a dataset in the Datasets tab to query it here!</div>';
+            container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:1.5rem;">No tables or views found. Upload a dataset or run a CREATE TABLE statement to see it here!</div>';
             return;
         }
 
-        container.innerHTML = data.schemas.map(s => `
-            <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:0.75rem; margin-bottom:0.6rem;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:600; font-family:var(--font-mono);">${s.name}</span>
-                    <span class="badge badge-NOT-STARTED">${s.type} ${s.row_count !== null ? `(${s.row_count} rows)` : ''}</span>
-                </div>
-                <div style="font-size:0.78rem; color:var(--text-secondary); margin-top:0.3rem;">
-                    ${s.columns.map(c => `<code>${c.name}</code> (${c.type})`).join(', ')}
-                </div>
-                <button class="btn btn-secondary btn-sm" style="margin-top:0.4rem;" onclick="insertTableQuery('${s.name}')">
-                    Insert SELECT query
-                </button>
-            </div>
-        `).join('');
+        cachedExplorerSchemas = data.schemas;
+        renderExplorerSchemaList(cachedExplorerSchemas);
     } catch (err) {
         container.innerHTML = `<div style="color:#f87171;">Error loading explorer: ${err.message}</div>`;
     }
 }
 
-function insertTableQuery(tableName) {
+function renderExplorerSchemaList(schemas) {
+    const container = document.getElementById('duckdb-explorer-list');
+    if (!container) return;
+
+    // Group schemas by database
+    const grouped = {};
+    schemas.forEach(s => {
+        const dbName = s.database || 'main';
+        if (!grouped[dbName]) grouped[dbName] = [];
+        grouped[dbName].push(s);
+    });
+
+    let html = '';
+    for (const [db, items] of Object.entries(grouped)) {
+        html += `
+            <div style="margin-bottom:1rem; border:1px solid var(--border-color); border-radius:6px; overflow:hidden;">
+                <div style="background:var(--bg-secondary); padding:0.5rem 0.85rem; font-weight:700; font-size:0.88rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span>🗄️ Database: <code style="color:var(--accent-primary);">${db}</code></span>
+                    <span style="font-size:0.75rem; color:var(--text-muted);">${items.length} object(s)</span>
+                </div>
+                <div style="padding:0.6rem; display:flex; flex-direction:column; gap:0.5rem; background:var(--bg-primary);">
+                    ${items.map(s => {
+                        const isMain = s.database === 'main';
+                        const querySnippet = isMain ? `SELECT * FROM "${s.name}" LIMIT 10;` : `SELECT * FROM "${s.database}"."${s.name}" LIMIT 10;`;
+                        return `
+                            <div style="background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:5px; padding:0.65rem;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <div>
+                                        <span style="font-weight:600; font-family:var(--font-mono);">${s.name}</span>
+                                        <span class="badge badge-NOT-STARTED" style="font-size:0.65rem; margin-left:0.35rem;">${s.type}</span>
+                                        ${s.row_count !== null ? `<span style="font-size:0.75rem; color:var(--text-muted); margin-left:0.4rem;">(${s.row_count} rows)</span>` : ''}
+                                    </div>
+                                    <button class="btn btn-secondary btn-sm" onclick="insertCustomQuery('${escapeJs(querySnippet)}')">
+                                        Insert Query
+                                    </button>
+                                </div>
+                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">
+                                    ${s.columns.map(c => `<code>${c.name}</code> (${c.type})`).join(', ')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    container.innerHTML = html;
+}
+
+function escapeJs(str) {
+    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+function insertCustomQuery(snippet) {
     if (monacoEditor) {
         const currentCode = monacoEditor.getValue();
-        const snippet = `\nSELECT * FROM "${tableName}" LIMIT 10;\n`;
-        monacoEditor.setValue(currentCode + snippet);
+        monacoEditor.setValue(currentCode + "\n" + snippet + "\n");
         document.getElementById('duckdb-explorer-modal').style.display = 'none';
         isDirty = true;
         scheduleAutosave();
+        showToast('Query snippet inserted into editor!', 'info');
     }
 }
 
@@ -608,12 +907,10 @@ window.addEventListener('beforeunload', (e) => {
 
 // Main Setup for Practice page
 async function initPracticePage(sessionData, initialTech) {
-    // Populate cache
     sessionData.practices.forEach(p => {
         practicesMap[p.id] = p;
     });
 
-    // Wire up Metadata inputs for auto-dirty tracking
     ['meta-title', 'meta-difficulty', 'meta-topic', 'meta-tags', 'meta-question', 'meta-notes'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -624,7 +921,6 @@ async function initPracticePage(sessionData, initialTech) {
         }
     });
 
-    // Specialized panel inputs
     ['dsa-constraints', 'dsa-time-complexity', 'dsa-space-complexity', 'dsa-test-cases', 'databricks-subtype'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -635,7 +931,6 @@ async function initPracticePage(sessionData, initialTech) {
         }
     });
 
-    // Buttons
     document.getElementById('btn-run')?.addEventListener('click', runCurrentCode);
     document.getElementById('btn-save')?.addEventListener('click', () => saveCurrentPractice(false));
     document.getElementById('btn-save-complete')?.addEventListener('click', () => saveCurrentPractice(true));
@@ -643,9 +938,8 @@ async function initPracticePage(sessionData, initialTech) {
     document.getElementById('btn-exec-history')?.addEventListener('click', openExecutionHistory);
     document.getElementById('btn-toggle-sql-explorer')?.addEventListener('click', toggleDuckDBExplorer);
 
-    // Reset Button
     document.getElementById('btn-reset')?.addEventListener('click', () => {
-        if (confirm('Are you sure you want to reset code to empty/default? This will not delete your past execution history.')) {
+        if (confirm('Reset code workspace? This will not delete past execution history.')) {
             if (monacoEditor) {
                 monacoEditor.setValue('-- Reset workspace\n');
                 isDirty = true;
@@ -654,7 +948,7 @@ async function initPracticePage(sessionData, initialTech) {
         }
     });
 
-    // Resizer
+    // Initialize Vertical Resizer
     initResizer();
 
     // Load Monaco

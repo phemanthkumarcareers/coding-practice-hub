@@ -30,8 +30,8 @@
             <span>All changes saved</span>
         </div>
 
-        <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" style="display:none;" title="DuckDB Tables & Views Explorer">
-            📊 Table Explorer
+        <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" style="display:none;" title="Databases, Tables & Views Explorer">
+            📊 Database & Table Explorer
         </button>
 
         <button id="btn-exec-history" class="btn btn-secondary btn-sm" title="View execution attempts history">
@@ -43,7 +43,7 @@
         </button>
 
         <button id="btn-clear-output" class="btn btn-secondary btn-sm" title="Clear console output">
-            ⌫ Clear
+            ⌫ Clear Output
         </button>
 
         <button id="btn-save" class="btn btn-secondary btn-sm" title="Save current changes (Ctrl+S)">
@@ -93,7 +93,7 @@
 </div>
 
 <!-- Collapsible Problem Statement & Notes Bar -->
-<details style="background:var(--bg-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:0.5rem 1rem; font-size:0.85rem;" open>
+<details style="background:var(--bg-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:0.5rem 1rem; font-size:0.85rem;">
     <summary style="cursor:pointer; color:var(--text-secondary); font-weight:600;">
         📝 Problem Statement & Practice Notes (Click to toggle)
     </summary>
@@ -151,24 +151,43 @@
     </div>
 </div>
 
-<!-- Resizable Split Container -->
+<!-- Resizable Vertical Split Container (Editor on Top, Console Below) -->
 <div class="split-container">
-    <!-- Left: Monaco Code Editor -->
+    <!-- Top: Full-Width Code Editor Pane -->
     <div id="editor-pane" class="editor-pane">
+        <!-- SQL Database Selector Toolbar (Active only for SQL) -->
+        <div id="sql-db-toolbar" class="db-selector-bar" style="display:none;">
+            <div style="display:flex; align-items:center; gap:0.6rem;">
+                <span style="font-weight:600; color:var(--text-secondary);">Active Database:</span>
+                <select id="sql-active-db-select" class="meta-select" style="min-width:180px;">
+                    <option value="main" selected>practice (main / default)</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="promptCreateDatabase()">+ Create Database</button>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">
+                Default DB queries: <code>SELECT * FROM table</code> | Other attached DBs: <code>SELECT * FROM db_name.table</code>
+            </div>
+        </div>
+
+        <!-- Multi-File Tabs Bar (For Python, DSA, Databricks) -->
+        <div id="multi-file-tabs-bar" class="file-tabs-bar" style="display:none;">
+            <!-- Dynamically populated e.g. [main.py] [utils.py x] [+ New File] -->
+        </div>
+
         <div class="pane-header">
-            <span>CODE EDITOR</span>
+            <span id="editor-title-label">CODE EDITOR</span>
             <span style="font-size:0.75rem; color:var(--text-muted);">Ctrl+Enter to Run | Ctrl+S to Save</span>
         </div>
         <div id="monaco-editor-container" class="editor-container"></div>
     </div>
 
-    <!-- Draggable Divider -->
-    <div id="workspace-resizer" class="resizer-handle" title="Drag to resize editor and output panes"></div>
+    <!-- Draggable Horizontal Resizer Divider -->
+    <div id="workspace-resizer" class="resizer-handle" title="Drag up/down to resize editor and console log"></div>
 
-    <!-- Right: Output or System Design Live Preview -->
+    <!-- Bottom: Output / Console Log Pane -->
     <div id="output-pane" class="output-pane">
         <div class="pane-header">
-            <span id="output-title">OUTPUT / CONSOLE</span>
+            <span id="output-title">CONSOLE LOG / OUTPUT</span>
             <span id="output-duration-badge" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);"></span>
         </div>
 
@@ -197,14 +216,22 @@
     </div>
 </div>
 
-<!-- DuckDB Table Explorer Modal -->
+<!-- DuckDB Multi-Database & Table Explorer Modal -->
 <div id="duckdb-explorer-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
-    <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-content" style="max-width: 750px;">
         <div class="modal-header">
-            <h3>DuckDB Database Explorer</h3>
+            <h3>Databases, Tables & Views Explorer</h3>
             <button class="modal-close-btn" onclick="document.getElementById('duckdb-explorer-modal').style.display='none'">&times;</button>
         </div>
-        <div class="modal-body" id="duckdb-explorer-list">
+        <div class="modal-body">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <input type="text" id="new-db-input" class="meta-input" placeholder="New Database Name e.g. analytics" style="width:220px;">
+                    <button class="btn btn-primary btn-sm" onclick="createDatabaseFromExplorer()">+ Create Database</button>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="refreshExplorerList()">🔄 Refresh</button>
+            </div>
+            <div id="duckdb-explorer-list"></div>
         </div>
     </div>
 </div>

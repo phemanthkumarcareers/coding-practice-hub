@@ -28,10 +28,14 @@ ENV/
 # Databases & local state (auto-created on startup)
 database/*.db
 database/*.duckdb
+database/user_dbs/*.duckdb
 !database/.gitkeep
+!database/user_dbs/.gitkeep
 
 # Subprocess temporary execution scripts
 workspace/*/*.py
+workspace/*/*.csv
+workspace/*/*
 !workspace/*/.gitkeep
 
 # Backups & Logs
