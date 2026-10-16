@@ -138,31 +138,39 @@
                 {% block sidebar_extra %}{% endblock %}
             </div>
 
-            <!-- Sidebar Bottom: Theming Options & System Controls -->
+            <!-- Sidebar Bottom: Minimized Theme Dropdown & System Controls -->
             <div class="sidebar-bottom">
-                <div class="theme-control-box">
-                    <div class="theme-control-header">
-                        <span class="theme-icon-indicator" id="theme-active-icon">🌓</span>
-                        <span class="theme-label">Theming</span>
+                <div class="theme-dropdown-container" id="theme-dropdown-container">
+                    <div class="theme-dropdown-menu" id="theme-dropdown-menu" style="display:none;">
+                        <div class="theme-menu-header">Select Theme</div>
+                        <button type="button" class="theme-menu-item" data-theme-value="system" onclick="setAppTheme('system')">
+                            <span class="theme-item-icon">🖥️</span>
+                            <span class="theme-item-label">System Default</span>
+                            <span class="theme-item-check" id="check-system">✓</span>
+                        </button>
+                        <button type="button" class="theme-menu-item" data-theme-value="light" onclick="setAppTheme('light')">
+                            <span class="theme-item-icon">☀️</span>
+                            <span class="theme-item-label">Light Theme</span>
+                            <span class="theme-item-check" id="check-light">✓</span>
+                        </button>
+                        <button type="button" class="theme-menu-item" data-theme-value="dark" onclick="setAppTheme('dark')">
+                            <span class="theme-item-icon">🌙</span>
+                            <span class="theme-item-label">Dark Theme</span>
+                            <span class="theme-item-check" id="check-dark">✓</span>
+                        </button>
+                        <button type="button" class="theme-menu-item" data-theme-value="grey" onclick="setAppTheme('grey')">
+                            <span class="theme-item-icon">🩶</span>
+                            <span class="theme-item-label">Grey (Zinc) Theme</span>
+                            <span class="theme-item-check" id="check-grey">✓</span>
+                        </button>
                     </div>
-                    <div class="theme-picker-group">
-                        <button class="theme-pick-btn" data-theme-value="system" onclick="setAppTheme('system')" title="System Default (Follow OS)">
-                            <span class="theme-btn-icon">🖥️</span>
-                            <span class="theme-btn-text">System</span>
-                        </button>
-                        <button class="theme-pick-btn" data-theme-value="light" onclick="setAppTheme('light')" title="Light Theme">
-                            <span class="theme-btn-icon">☀️</span>
-                            <span class="theme-btn-text">Light</span>
-                        </button>
-                        <button class="theme-pick-btn" data-theme-value="dark" onclick="setAppTheme('dark')" title="Dark Theme (Deep Slate)">
-                            <span class="theme-btn-icon">🌙</span>
-                            <span class="theme-btn-text">Dark</span>
-                        </button>
-                        <button class="theme-pick-btn" data-theme-value="grey" onclick="setAppTheme('grey')" title="Grey Theme (Modern Zinc / Charcoal)">
-                            <span class="theme-btn-icon">🩶</span>
-                            <span class="theme-btn-text">Grey</span>
-                        </button>
-                    </div>
+                    <button type="button" class="theme-dropdown-trigger" id="theme-dropdown-trigger" onclick="toggleThemeDropdown(event)" title="Theme: Click to switch themes">
+                        <span class="theme-trigger-content">
+                            <span class="theme-active-icon" id="theme-active-icon">🌙</span>
+                            <span class="theme-active-text" id="theme-active-label">Dark Theme</span>
+                        </span>
+                        <span class="theme-trigger-arrow" id="theme-dropdown-arrow">▴</span>
+                    </button>
                 </div>
 
                 <div class="sidebar-footer-info">

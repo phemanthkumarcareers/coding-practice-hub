@@ -94,11 +94,39 @@ function createOrUpdateEditor(code, language) {
 
 // Multi-File Project Workspace Helpers (Enabled for ALL technologies)
 let inlineRenamingFile = null;
+let openTabFileNames = ["main.py"];
+let isEditorExplorerOpen = false;
+let cachedFilesTree = null;
+
+function ensureOpenTabsConsistent() {
+    const existingFiles = Object.keys(currentProjectFiles);
+    if (existingFiles.length === 0) {
+        const defaultExt = activeTechnology === 'SQL' ? '.sql' : (activeTechnology === 'System Design' ? '.md' : '.py');
+        const defaultName = activeTechnology === 'SQL' ? 'query.sql' : (activeTechnology === 'System Design' ? 'architecture.md' : 'main.py');
+        currentProjectFiles[defaultName] = '';
+        openTabFileNames = [defaultName];
+        activeFileName = defaultName;
+        return;
+    }
+
+    // Filter open tabs to only valid existing files
+    openTabFileNames = openTabFileNames.filter(fname => fname in currentProjectFiles);
+    if (openTabFileNames.length === 0) {
+        openTabFileNames = [existingFiles[0]];
+    }
+
+    if (!activeFileName || !(activeFileName in currentProjectFiles)) {
+        activeFileName = openTabFileNames[0];
+    } else if (!openTabFileNames.includes(activeFileName)) {
+        openTabFileNames.push(activeFileName);
+    }
+}
 
 function renderMultiFileTabs() {
     const bar = document.getElementById('file-tabs-list') || document.getElementById('multi-file-tabs-bar');
     if (!bar) return;
 
+    ensureOpenTabsConsistent();
     bar.innerHTML = '';
 
     const getFileIcon = (fname) => {
@@ -109,10 +137,20 @@ function renderMultiFileTabs() {
         return '📄';
     };
 
-    Object.keys(currentProjectFiles).forEach(fname => {
+    // 1. "📁 Files" Toggle Button (Opens/Closes Left Folder Explorer Drawer)
+    const explorerBtn = document.createElement('button');
+    explorerBtn.type = 'button';
+    explorerBtn.className = `btn-file-explorer-toggle ${isEditorExplorerOpen ? 'active' : ''}`;
+    explorerBtn.innerHTML = '<span>📁 Files</span>';
+    explorerBtn.title = 'Toggle Folder-wise Files Explorer (View past sessions, saved files & templates)';
+    explorerBtn.onclick = toggleEditorExplorer;
+    bar.appendChild(explorerBtn);
+
+    // 2. Open Tab Pills
+    openTabFileNames.forEach(fname => {
         const tab = document.createElement('div');
         tab.className = `file-tab ${fname === activeFileName ? 'active' : ''}`;
-        tab.title = `${fname} (Click name to rename inline)`;
+        tab.title = `${fname} (Click name to rename inline | Right-click for options)`;
         tab.setAttribute('data-filename', fname);
 
         const iconSpan = document.createElement('span');
@@ -124,7 +162,7 @@ function renderMultiFileTabs() {
         titleSpan.className = 'file-tab-name';
         titleSpan.textContent = fname;
 
-        // Clicking the tab switches to the file
+        // Clicking tab switches active file
         tab.onclick = (e) => {
             if (e.target.tagName === 'INPUT') return;
             if (activeFileName !== fname) {
@@ -132,7 +170,7 @@ function renderMultiFileTabs() {
             }
         };
 
-        // Clicking or double-clicking the file name triggers inline rename mode (no popup!)
+        // Inline rename
         titleSpan.onclick = (e) => {
             e.stopPropagation();
             if (activeFileName !== fname) {
@@ -143,22 +181,25 @@ function renderMultiFileTabs() {
 
         tab.appendChild(titleSpan);
 
-        // Close/delete file button (don't delete if it's the only file)
-        if (Object.keys(currentProjectFiles).length > 1) {
-            const closeBtn = document.createElement('span');
-            closeBtn.className = 'file-tab-close';
-            closeBtn.innerHTML = '&times;';
-            closeBtn.title = `Delete ${fname}`;
-            closeBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteProjectFile(fname);
-            };
-            tab.appendChild(closeBtn);
-        }
+        // Remove Tab Button "×" (Removes tab from workspace, does NOT delete file)
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'file-tab-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.title = `Close tab (File remains saved in workspace)`;
+        closeBtn.onclick = (e) => {
+            e.stopPropagation();
+            removeTabFromWorkspace(fname);
+        };
+        tab.appendChild(closeBtn);
+
+        // Right-click context menu: Close Tab or Permanently Delete File
+        tab.oncontextmenu = (e) => {
+            e.preventDefault();
+            showTabContextMenu(e, fname);
+        };
 
         bar.appendChild(tab);
 
-        // If newly created, immediately initiate inline rename mode
         if (inlineRenamingFile === fname) {
             setTimeout(() => {
                 startInlineTabRename(fname, titleSpan, tab);
@@ -166,24 +207,519 @@ function renderMultiFileTabs() {
         }
     });
 
-    // "+ New File" Button - creates file directly without popup
+    // 3. "+ New File" Button
     const newBtn = document.createElement('button');
+    newBtn.type = 'button';
     newBtn.className = 'btn-new-file';
     newBtn.innerHTML = '<span>+ New File</span>';
-    newBtn.title = 'Create new file directly in workspace (no popup)';
+    newBtn.title = 'Create new file directly in workspace';
     newBtn.onclick = createNewFileTabDirect;
     bar.appendChild(newBtn);
+
+    // 4. "📂 Open File ▾" Dropdown (For loading saved files manually into tabs)
+    const openMenuContainer = document.createElement('div');
+    openMenuContainer.style.position = 'relative';
+    openMenuContainer.style.display = 'inline-flex';
+
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'btn-open-files';
+    openBtn.innerHTML = '<span>📂 Open File ▾</span>';
+    openBtn.title = 'Load existing saved files, folder library, or disk files';
+    openBtn.onclick = (e) => {
+        e.stopPropagation();
+        toggleOpenFilesDropdown(openMenuContainer);
+    };
+    openMenuContainer.appendChild(openBtn);
+    bar.appendChild(openMenuContainer);
+}
+
+// Remove Tab from editor view (File remains saved in currentProjectFiles)
+function removeTabFromWorkspace(filename) {
+    if (monacoEditor && activeFileName === filename) {
+        currentProjectFiles[filename] = monacoEditor.getValue();
+    }
+
+    if (openTabFileNames.length <= 1) {
+        showToast(`Cannot close only remaining tab. Use '+ New File' or load another file first.`, 'info', 2200);
+        return;
+    }
+
+    openTabFileNames = openTabFileNames.filter(f => f !== filename);
+
+    if (activeFileName === filename) {
+        activeFileName = openTabFileNames[openTabFileNames.length - 1];
+        const code = currentProjectFiles[activeFileName] || '';
+        const lang = getLanguageForFile(activeFileName, activeTechnology);
+        createOrUpdateEditor(code, lang);
+    }
+
+    renderMultiFileTabs();
+    refreshFilesTree();
+    isDirty = true;
+    scheduleAutosave();
+    showToast(`Closed tab '${filename}'. File is saved and can be reloaded anytime from 📂 Open File or 📁 Files.`, 'info', 2600);
+}
+
+// Permanently Delete File with in-app confirmation popup
+async function deleteProjectFilePermanently(filename) {
+    const isConfirmed = await showAppConfirm({
+        title: 'Delete File Permanently',
+        message: `Are you sure you want to permanently delete '${filename}'? This action cannot be undone.`,
+        confirmText: 'Delete Permanently',
+        isDanger: true,
+        icon: '🗑️'
+    });
+
+    if (!isConfirmed) return;
+
+    delete currentProjectFiles[filename];
+    openTabFileNames = openTabFileNames.filter(f => f !== filename);
+    ensureOpenTabsConsistent();
+
+    const code = currentProjectFiles[activeFileName] || '';
+    const lang = getLanguageForFile(activeFileName, activeTechnology);
+    createOrUpdateEditor(code, lang);
+
+    renderMultiFileTabs();
+    refreshFilesTree();
+    isDirty = true;
+    scheduleAutosave();
+    showToast(`Permanently deleted '${filename}'.`, 'info', 2200);
+}
+
+// Load / Open a saved file into an editor tab
+function openFileInTab(filename) {
+    if (!(filename in currentProjectFiles)) {
+        showToast(`File '${filename}' not found.`, 'error');
+        return;
+    }
+
+    if (!openTabFileNames.includes(filename)) {
+        openTabFileNames.push(filename);
+    }
+
+    switchActiveFile(filename);
+    closeOpenFilesDropdown();
+    showToast(`Loaded '${filename}' into editor tab`, 'info', 1600);
+}
+
+// Dropdown to load saved files or import external files
+function toggleOpenFilesDropdown(container) {
+    const existing = container.querySelector('.open-files-menu');
+    if (existing) {
+        existing.remove();
+        return;
+    }
+
+    // Close any other open dropdowns
+    document.querySelectorAll('.open-files-menu').forEach(el => el.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'open-files-menu';
+
+    // Header
+    const hdr = document.createElement('div');
+    hdr.className = 'open-files-menu-header';
+    hdr.textContent = 'Saved Files in Current Practice';
+    menu.appendChild(hdr);
+
+    const allFiles = Object.keys(currentProjectFiles);
+    if (allFiles.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.padding = '0.4rem 0.6rem';
+        empty.style.color = 'var(--text-muted)';
+        empty.style.fontSize = '0.78rem';
+        empty.textContent = 'No files created yet.';
+        menu.appendChild(empty);
+    } else {
+        allFiles.forEach(fname => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            const isOpen = openTabFileNames.includes(fname);
+            item.className = `open-files-item ${isOpen ? 'is-open' : ''}`;
+            item.innerHTML = `
+                <span>📄 ${fname}</span>
+                <span class="open-files-item-badge">${isOpen ? 'Open Tab' : '+ Open'}</span>
+            `;
+            item.onclick = (e) => {
+                e.stopPropagation();
+                openFileInTab(fname);
+                menu.remove();
+            };
+            menu.appendChild(item);
+        });
+    }
+
+    // Library & Import Actions
+    const actHdr = document.createElement('div');
+    actHdr.className = 'open-files-menu-header';
+    actHdr.style.marginTop = '0.4rem';
+    actHdr.textContent = 'Folders & Computer';
+    menu.appendChild(actHdr);
+
+    const folderLibBtn = document.createElement('button');
+    folderLibBtn.type = 'button';
+    folderLibBtn.className = 'open-files-item';
+    folderLibBtn.innerHTML = '<span>📁 Browse Folder Library</span><span class="open-files-item-badge">Explorer</span>';
+    folderLibBtn.onclick = (e) => {
+        e.stopPropagation();
+        menu.remove();
+        if (!isEditorExplorerOpen) toggleEditorExplorer();
+    };
+    menu.appendChild(folderLibBtn);
+
+    const importDiskBtn = document.createElement('button');
+    importDiskBtn.type = 'button';
+    importDiskBtn.className = 'open-files-item';
+    importDiskBtn.innerHTML = '<span>📥 Import File from Computer...</span><span class="open-files-item-badge">Browse</span>';
+    importDiskBtn.onclick = (e) => {
+        e.stopPropagation();
+        menu.remove();
+        document.getElementById('local-file-importer')?.click();
+    };
+    menu.appendChild(importDiskBtn);
+
+    container.appendChild(menu);
+
+    const closer = (e) => {
+        if (!container.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closer);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closer), 20);
+}
+
+function closeOpenFilesDropdown() {
+    document.querySelectorAll('.open-files-menu').forEach(el => el.remove());
+}
+
+// Right-click context menu on tabs
+function showTabContextMenu(e, filename) {
+    document.querySelectorAll('.tab-context-menu').forEach(el => el.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'open-files-menu tab-context-menu';
+    menu.style.position = 'fixed';
+    menu.style.top = `${e.clientY + 4}px`;
+    menu.style.left = `${e.clientX}px`;
+    menu.style.minWidth = '180px';
+    menu.style.zIndex = '9999';
+
+    const closeItem = document.createElement('button');
+    closeItem.type = 'button';
+    closeItem.className = 'open-files-item';
+    closeItem.innerHTML = '<span>✕ Close Tab (Keep Saved)</span>';
+    closeItem.onclick = () => {
+        menu.remove();
+        removeTabFromWorkspace(filename);
+    };
+    menu.appendChild(closeItem);
+
+    const delItem = document.createElement('button');
+    delItem.type = 'button';
+    delItem.className = 'open-files-item';
+    delItem.style.color = '#ef4444';
+    delItem.innerHTML = '<span>🗑️ Delete File Permanently...</span>';
+    delItem.onclick = () => {
+        menu.remove();
+        deleteProjectFilePermanently(filename);
+    };
+    menu.appendChild(delItem);
+
+    document.body.appendChild(menu);
+
+    const removeMenu = (evt) => {
+        if (!menu.contains(evt.target)) {
+            menu.remove();
+            document.removeEventListener('click', removeMenu);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', removeMenu), 20);
+}
+
+// Handle manual file import from disk
+function handleLocalFileImport(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        let fname = file.name;
+
+        // Avoid overwrite if duplicate
+        let counter = 1;
+        while (fname in currentProjectFiles) {
+            const dot = file.name.lastIndexOf('.');
+            const base = dot > 0 ? file.name.substring(0, dot) : file.name;
+            const ext = dot > 0 ? file.name.substring(dot) : '';
+            fname = `${base}_${counter}${ext}`;
+            counter++;
+        }
+
+        currentProjectFiles[fname] = content;
+        if (!openTabFileNames.includes(fname)) {
+            openTabFileNames.push(fname);
+        }
+        switchActiveFile(fname);
+        isDirty = true;
+        scheduleAutosave();
+        showToast(`Imported '${fname}' from computer!`, 'success');
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
+
+// Toggle folder-wise explorer inside the editor
+function toggleEditorExplorer() {
+    const drawer = document.getElementById('editor-explorer-drawer');
+    const headerBtn = document.getElementById('btn-toggle-file-explorer');
+    if (!drawer) return;
+
+    isEditorExplorerOpen = drawer.style.display === 'none' || !drawer.style.display;
+    if (isEditorExplorerOpen) {
+        drawer.style.display = 'flex';
+        headerBtn?.classList.add('active');
+        refreshFilesTree();
+    } else {
+        drawer.style.display = 'none';
+        headerBtn?.classList.remove('active');
+    }
+
+    renderMultiFileTabs();
+
+    setTimeout(() => {
+        if (monacoEditor) {
+            monacoEditor.layout();
+        }
+    }, 60);
+}
+
+// Folder-wise Files Explorer Loader & Renderer
+async function refreshFilesTree() {
+    const container = document.getElementById('explorer-tree-content');
+    if (!container || !isEditorExplorerOpen) return;
+
+    try {
+        const res = await fetch(`/api/practice/files/tree?tech=${encodeURIComponent(activeTechnology || 'SQL')}&practice_id=${activePracticeId || ''}`);
+        const data = await res.json();
+        cachedFilesTree = data;
+        renderFilesTreeDOM(data);
+    } catch (e) {
+        if (container) {
+            container.innerHTML = `<div style="padding:1rem; color:#ef4444; font-size:0.8rem;">Failed to load folder library: ${e.message}</div>`;
+        }
+    }
+}
+
+function renderFilesTreeDOM(treeData) {
+    const container = document.getElementById('explorer-tree-content');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Folder 1: Current Practice Files
+    const currentFolder = document.createElement('div');
+    currentFolder.className = 'folder-tree-node';
+    currentFolder.innerHTML = `
+        <div class="folder-tree-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'; this.querySelector('.folder-tree-chevron').classList.toggle('expanded');">
+            <div class="folder-tree-title">
+                <span class="folder-tree-chevron expanded">▸</span>
+                <span>📁 Current Practice Files (${Object.keys(currentProjectFiles).length})</span>
+            </div>
+            <button type="button" class="drawer-mini-btn" onclick="event.stopPropagation(); createNewFileTabDirect();" title="Add File">+ File</button>
+        </div>
+        <div class="folder-tree-items">
+            ${Object.keys(currentProjectFiles).map(fname => {
+                const isOpen = openTabFileNames.includes(fname);
+                const isActive = activeFileName === fname;
+                return `
+                    <div class="tree-file-row ${isActive ? 'is-active-tab' : ''}" onclick="openFileInTab('${fname}')">
+                        <div class="tree-file-left">
+                            <span>📄</span>
+                            <span>${fname}</span>
+                        </div>
+                        <div class="tree-file-actions">
+                            <span style="font-size:0.7rem; color:var(--text-muted);">${isOpen ? 'Open' : 'Saved'}</span>
+                            <button type="button" class="tree-file-action-icon" title="Permanently delete file" onclick="event.stopPropagation(); deleteProjectFilePermanently('${fname}');">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+    container.appendChild(currentFolder);
+
+    // Folder 2: Past Sessions & History (Folder per date)
+    if (treeData && treeData.past_sessions && treeData.past_sessions.length > 0) {
+        const pastParent = document.createElement('div');
+        pastParent.className = 'folder-tree-node';
+        pastParent.innerHTML = `
+            <div class="folder-tree-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'; this.querySelector('.folder-tree-chevron').classList.toggle('expanded');">
+                <div class="folder-tree-title">
+                    <span class="folder-tree-chevron">▸</span>
+                    <span>📁 Past ${activeTechnology} Sessions (${treeData.past_sessions.length})</span>
+                </div>
+            </div>
+            <div class="folder-tree-items" style="display:none;">
+                ${treeData.past_sessions.map(sess => `
+                    <div style="border-bottom:1px solid var(--border-subtle); padding-bottom:0.3rem; margin-bottom:0.3rem;">
+                        <div style="font-size:0.76rem; font-weight:700; color:var(--text-primary); margin-bottom:0.2rem; display:flex; justify-content:space-between;">
+                            <span>📅 ${sess.date}</span>
+                            <span style="font-weight:normal; color:var(--text-muted);">${sess.title}</span>
+                        </div>
+                        ${sess.files.map(f => `
+                            <div class="tree-file-row" onclick="importFileFromPastSession(${sess.practice_id}, '${f.name}')" title="Click to load this file into your workspace">
+                                <div class="tree-file-left">
+                                    <span>🗄️</span>
+                                    <span>${f.name}</span>
+                                </div>
+                                <div class="tree-file-actions">
+                                    <button type="button" class="tree-file-action-icon open-icon" title="Import/Load to current workspace">+ Load</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        container.appendChild(pastParent);
+    }
+
+    // Folder 3: Starter Templates & Snippets
+    if (treeData && treeData.starter_templates && treeData.starter_templates.length > 0) {
+        const tplParent = document.createElement('div');
+        tplParent.className = 'folder-tree-node';
+        tplParent.innerHTML = `
+            <div class="folder-tree-header" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'flex' : 'none'; this.querySelector('.folder-tree-chevron').classList.toggle('expanded');">
+                <div class="folder-tree-title">
+                    <span class="folder-tree-chevron">▸</span>
+                    <span>📁 Starter Templates & Snippets (${treeData.starter_templates.length})</span>
+                </div>
+            </div>
+            <div class="folder-tree-items" style="display:none;">
+                ${treeData.starter_templates.map(tpl => `
+                    <div class="tree-file-row" onclick="loadStarterTemplate('${tpl.name}')" title="${tpl.description} - Click to load">
+                        <div class="tree-file-left">
+                            <span>⭐</span>
+                            <div>
+                                <div style="font-weight:600;">${tpl.name}</div>
+                                <div style="font-size:0.7rem; color:var(--text-muted);">${tpl.description}</div>
+                            </div>
+                        </div>
+                        <div class="tree-file-actions">
+                            <button type="button" class="tree-file-action-icon open-icon" title="Load into workspace">+ Load</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        container.appendChild(tplParent);
+    }
+}
+
+// Import a file from past session into current workspace
+async function importFileFromPastSession(sourcePracticeId, fileName) {
+    try {
+        const res = await fetch('/api/practice/files/get_content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                source_practice_id: sourcePracticeId,
+                file_name: fileName,
+                tech: activeTechnology
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            let targetName = fileName;
+            let counter = 1;
+            while (targetName in currentProjectFiles) {
+                const dot = fileName.lastIndexOf('.');
+                const base = dot > 0 ? fileName.substring(0, dot) : fileName;
+                const ext = dot > 0 ? fileName.substring(dot) : '';
+                targetName = `${base}_copy${counter}${ext}`;
+                counter++;
+            }
+            currentProjectFiles[targetName] = data.content;
+            if (!openTabFileNames.includes(targetName)) {
+                openTabFileNames.push(targetName);
+            }
+            switchActiveFile(targetName);
+            refreshFilesTree();
+            isDirty = true;
+            scheduleAutosave();
+            showToast(`Loaded '${targetName}' from past session!`, 'success');
+        } else {
+            showToast(`Could not load file: ${data.error}`, 'error');
+        }
+    } catch (e) {
+        showToast(`Error importing file: ${e.message}`, 'error');
+    }
+}
+
+// Load a starter template
+async function loadStarterTemplate(templateName) {
+    try {
+        const res = await fetch('/api/practice/files/get_content', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                template_name: templateName,
+                tech: activeTechnology
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            let targetName = templateName;
+            let counter = 1;
+            while (targetName in currentProjectFiles) {
+                const dot = templateName.lastIndexOf('.');
+                const base = dot > 0 ? templateName.substring(0, dot) : templateName;
+                const ext = dot > 0 ? templateName.substring(dot) : '';
+                targetName = `${base}_${counter}${ext}`;
+                counter++;
+            }
+            currentProjectFiles[targetName] = data.content;
+            if (!openTabFileNames.includes(targetName)) {
+                openTabFileNames.push(targetName);
+            }
+            switchActiveFile(targetName);
+            refreshFilesTree();
+            isDirty = true;
+            scheduleAutosave();
+            showToast(`Loaded template '${targetName}'!`, 'success');
+        } else {
+            showToast(`Could not load template: ${data.error}`, 'error');
+        }
+    } catch (e) {
+        showToast(`Error loading template: ${e.message}`, 'error');
+    }
+}
+
+function filterExplorerTree(query) {
+    const q = (query || '').toLowerCase().trim();
+    document.querySelectorAll('.tree-file-row').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = (!q || text.includes(q)) ? 'flex' : 'none';
+    });
 }
 
 function switchActiveFile(targetFileName) {
     if (activeFileName === targetFileName) return;
 
     // Save current content in buffer
-    if (monacoEditor) {
+    if (monacoEditor && activeFileName) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
     activeFileName = targetFileName;
+    if (!openTabFileNames.includes(targetFileName)) {
+        openTabFileNames.push(targetFileName);
+    }
+
     const code = currentProjectFiles[activeFileName] || '';
     const lang = getLanguageForFile(activeFileName, activeTechnology);
 
@@ -192,6 +728,7 @@ function switchActiveFile(targetFileName) {
     }
 
     renderMultiFileTabs();
+    refreshFilesTree();
 }
 
 // Instant file creation: generates file directly with intelligent defaults, no modal popup
@@ -239,6 +776,9 @@ function createNewFileTabDirect() {
     }
 
     currentProjectFiles[newName] = defaultContent;
+    if (!openTabFileNames.includes(newName)) {
+        openTabFileNames.push(newName);
+    }
     inlineRenamingFile = newName;
     switchActiveFile(newName);
     isDirty = true;
@@ -302,10 +842,12 @@ function startInlineTabRename(oldFileName, titleSpan, tab) {
             return;
         }
 
-        // Rename key in currentProjectFiles
+        // Rename key in currentProjectFiles and openTabFileNames
         const content = currentProjectFiles[oldFileName] || (monacoEditor ? monacoEditor.getValue() : '');
         currentProjectFiles[newFileName] = content;
         delete currentProjectFiles[oldFileName];
+
+        openTabFileNames = openTabFileNames.map(f => f === oldFileName ? newFileName : f);
 
         if (activeFileName === oldFileName) {
             activeFileName = newFileName;
@@ -321,6 +863,7 @@ function startInlineTabRename(oldFileName, titleSpan, tab) {
         scheduleAutosave();
         showToast(`Renamed to '${newFileName}'`, 'success', 1800);
         renderMultiFileTabs();
+        refreshFilesTree();
     };
 
     // Clicking anywhere on the screen fires blur and automatically saves
@@ -338,33 +881,6 @@ function startInlineTabRename(oldFileName, titleSpan, tab) {
             titleSpan.style.display = '';
         }
     };
-}
-
-async function deleteProjectFile(filename) {
-    const isConfirmed = await showAppConfirm({
-        title: 'Delete File',
-        message: `Are you sure you want to delete '${filename}' from this practice? This action cannot be undone.`,
-        confirmText: 'Delete File',
-        isDanger: true,
-        icon: '🗑️'
-    });
-
-    if (!isConfirmed) return;
-
-    delete currentProjectFiles[filename];
-    const remaining = Object.keys(currentProjectFiles);
-    activeFileName = remaining[0] || (activeTechnology === 'SQL' ? 'query.sql' : 'main.py');
-    if (!currentProjectFiles[activeFileName]) {
-        currentProjectFiles[activeFileName] = '';
-    }
-    
-    const code = currentProjectFiles[activeFileName] || '';
-    const lang = getLanguageForFile(activeFileName, activeTechnology);
-    createOrUpdateEditor(code, lang);
-    renderMultiFileTabs();
-    isDirty = true;
-    scheduleAutosave();
-    showToast(`Deleted ${filename}`, 'info');
 }
 
 // Database Selector & Creation (For DuckDB SQL)
@@ -554,9 +1070,20 @@ async function switchTech(techName) {
 
     if (extra.files && typeof extra.files === 'object' && Object.keys(extra.files).length > 0) {
         currentProjectFiles = extra.files;
-        activeFileName = extra.active_file || Object.keys(extra.files)[0];
+        if (Array.isArray(extra.open_tabs) && extra.open_tabs.length > 0) {
+            openTabFileNames = extra.open_tabs.filter(f => f in currentProjectFiles);
+        } else {
+            openTabFileNames = Object.keys(extra.files);
+        }
+        if (openTabFileNames.length === 0) {
+            openTabFileNames = [Object.keys(extra.files)[0]];
+        }
+        activeFileName = (extra.active_file && (extra.active_file in currentProjectFiles))
+            ? extra.active_file
+            : openTabFileNames[0];
     } else {
         currentProjectFiles = { [defaultFile]: p.code || "" };
+        openTabFileNames = [defaultFile];
         activeFileName = defaultFile;
     }
     renderMultiFileTabs();
@@ -655,10 +1182,11 @@ function gatherExtraMetadata() {
     }
 
     // Persist multi-file project across all technologies
-    if (monacoEditor) {
+    if (monacoEditor && activeFileName) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
     extra.files = currentProjectFiles;
+    extra.open_tabs = openTabFileNames;
     extra.active_file = activeFileName;
 
     return extra;

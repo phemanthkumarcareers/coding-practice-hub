@@ -82,13 +82,23 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 - **No Native `alert()`, `confirm()`, or `prompt()`**: All destructive confirmations and database creations use sleek in-app modals (`#app-confirm-modal` and `#create-db-modal`).
 - **Confirmation Modals**: Destructive operations (resetting workspace code, deleting custom project files, removing uploaded datasets, restoring backups) use sleek modal dialogs with customizable confirmation and cancellation buttons.
 
-### 5. Multi-File Project Workspace for ALL Coding Terminals
+### 5. Multi-File Project Workspace & Folder-Wise Files Explorer for ALL Editors
 - **Universal Multi-File Tabs**: Practice real-world file structures directly in the browser across **all 6 technologies** (SQL, Python, PySpark, Databricks, DSA, and System Design).
-- **Instant `+ New File` Creation (Zero Popups)**: Clicking `+ New File` instantly generates a new tab with intelligent technology-specific defaults (`query_2.sql`, `module_2.py`, `notes_2.md`) and preloaded template content without annoying modal popups.
+- **Remove Tab vs Permanent Delete**:
+  - **Closing Tabs (`×`)**: Clicking `×` removes the tab from the active editor view without deleting the file from disk or the workspace. The file remains safely saved and can be reopened anytime.
+  - **Permanent Deletion**: Destructive deletion is accessed via right-click context menu, tab options, or the Files Drawer trash icon (`🗑️`), requiring confirmation via a custom in-app modal (zero browser popups).
+- **Manual File Loading (`📂 Open File ▾`)**: Quickly load any previously saved file into an active tab with one click, or import files from disk.
+- **Folder-Wise Files Explorer (`📁 Files`)**: An integrated collapsible file drawer on the left of Monaco editor organizing:
+  - 📁 **Current Practice Files**: All files in the active session with open/closed status.
+  - 📁 **Past Practice Sessions**: Historical folders grouped by session date for the active technology with one-click file loading.
+  - 📁 **Starter Templates & Code Library**: Curated code starters for SQL (joins, window functions, CTEs, DuckDB file queries), Python, PySpark, Databricks, DSA, and System Design.
+- **Instant `+ New File` Creation (Zero Popups)**: Clicking `+ New File` instantly generates a new tab with intelligent technology-specific defaults (`query_2.sql`, `module_2.py`, `notes_2.md`) and preloaded template content without modal popups.
 - **Inline Tab Renaming (Click-to-Rename, Blur-to-Save)**: Click any file tab name to edit it in place. No extra `X` or tick icons—simply click anywhere on the screen (or press `Enter`) to automatically commit the new filename. Pressing `Escape` cancels the rename.
 - **Problem Statement & Notes Accordion Bounds**: Minimized/maximized height constraints ensure the Problem Statement & Practice Notes section has a solid minimum height when opened while capping maximum expansion to protect editor vertical space.
 - **Streamlined IDE Tab Bar**: Clean, unified tab header with proper readable font sizing, context-aware file icons (`🗄️ .sql`, `🐍 .py`, `📝 .md`, `⚙️ .json`, `📄`), and zero horizontal scrollbar clutter.
 - **Integrated Window & Shortcut Controls**: Quick access to keyboard shortcuts (`Ctrl+Enter to Run | Ctrl+S to Save`), maximize (`🗖`), and full screen (`⛶`) integrated directly into the tab bar right header.
+- **Minimized Theme Dropdown**: A compact, elegant dropdown at the bottom of the sidebar displaying the current theme (System, Light, Dark, Grey) that lists options upward without consuming vertical screen space.
+- **Sidebar-Only Logo**: Brand logo is dedicated exclusively to the sidebar header, keeping page headers and workspace titles clean, focused, and distraction-free.
 
 ### 6. Hierarchical Database, Tables & Views Explorer
 - **Database Accordion / Dropdown**: Hierarchically groups all databases (`practice (main / default)` and user-created DuckDB databases in `database/user_dbs/`). Click any database header to expand/collapse its tables and views.

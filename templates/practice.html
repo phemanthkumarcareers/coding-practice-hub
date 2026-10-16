@@ -47,9 +47,6 @@
 <!-- Top Header & Actions -->
 <div class="workspace-header">
     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-        <a href="{{ url_for('dashboard.index') }}" title="Coding Practice Hub - Dashboard" class="main-content-logo-link">
-            <span class="app-logo-img main-content-logo" id="workspace-logo-img" style="width:28px; height:28px; border-radius:6px;" role="img" aria-label="Coding Practice Hub Logo"></span>
-        </a>
         <div class="active-tech-pill" id="header-active-tech-pill">
             <span id="header-tech-icon">🗄️</span>
             <span id="header-tech-name" style="font-weight:700;">SQL</span>
@@ -73,8 +70,12 @@
     </div>
 
     <div class="workspace-actions">
+        <button id="btn-toggle-file-explorer" class="btn btn-secondary btn-sm" onclick="toggleEditorExplorer()" title="Folder-wise Files Explorer & Saved Files Library">
+            📁 Files
+        </button>
+
         <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" title="Databases, Tables & Views Explorer">
-            📊 Explorer
+            📊 DB Explorer
         </button>
 
         <button id="btn-exec-history" class="btn btn-secondary btn-sm" title="View execution attempts history">
@@ -206,10 +207,13 @@
 <div class="split-container">
     <!-- Top: Full-Width Code Editor Pane -->
     <div id="editor-pane" class="editor-pane">
+        <!-- Hidden file input for manual disk import -->
+        <input type="file" id="local-file-importer" style="display:none;" onchange="handleLocalFileImport(event)" accept=".sql,.py,.json,.md,.txt">
+
         <!-- Unified IDE File Tabs & Action Controls Bar -->
         <div id="multi-file-tabs-bar" class="file-tabs-bar">
             <div id="file-tabs-list" class="file-tabs-list">
-                <!-- Dynamically populated e.g. [📄 main.py] [📄 utils.py x] [+ New File] -->
+                <!-- Dynamically populated e.g. [📁 Files] [📄 main.py x] [+ New File] [📂 Open File ▾] -->
             </div>
             <div class="editor-quick-controls">
                 <span class="editor-shortcut-hint">Ctrl+Enter to Run | Ctrl+S to Save</span>
@@ -217,7 +221,27 @@
                 <button type="button" class="pane-icon-btn btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
             </div>
         </div>
-        <div id="monaco-editor-container" class="editor-container"></div>
+
+        <!-- Editor Body (With Collapsible Left Folder Explorer Drawer) -->
+        <div class="editor-split-body" id="editor-split-body">
+            <div id="editor-explorer-drawer" class="editor-explorer-drawer" style="display:none;">
+                <div class="explorer-drawer-header">
+                    <span class="explorer-title">📁 Workspace Files</span>
+                    <div class="explorer-header-actions">
+                        <button type="button" class="drawer-mini-btn" onclick="createNewFileTabDirect()" title="New File in Current Practice">+ File</button>
+                        <button type="button" class="drawer-mini-btn" onclick="refreshFilesTree()" title="Refresh Folders">🔄</button>
+                        <button type="button" class="drawer-mini-btn" onclick="toggleEditorExplorer()" title="Close Files Explorer">&times;</button>
+                    </div>
+                </div>
+                <div class="explorer-drawer-search">
+                    <input type="text" id="explorer-filter-input" class="meta-input" placeholder="🔍 Filter files / folders..." oninput="filterExplorerTree(this.value)">
+                </div>
+                <div class="explorer-drawer-body" id="explorer-tree-content">
+                    <div style="padding:1rem; text-align:center; color:var(--text-muted); font-size:0.8rem;">Loading files & folders...</div>
+                </div>
+            </div>
+            <div id="monaco-editor-container" class="editor-container"></div>
+        </div>
     </div>
 
     <!-- Draggable Horizontal Resizer Divider -->

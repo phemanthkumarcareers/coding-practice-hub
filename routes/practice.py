@@ -275,3 +275,181 @@ def get_executions(practice_id):
     """, (practice_id,)).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
+# Starter Templates Catalog
+STARTER_TEMPLATES = {
+    "SQL": [
+        {
+            "name": "01_select_filter_joins.sql",
+            "description": "SELECT, INNER/LEFT JOIN & WHERE filtering",
+            "content": "-- Basic SELECT, JOIN & WHERE Filter Template\nSELECT \n    e.id, \n    e.name, \n    d.department_name, \n    e.salary\nFROM employees e\nLEFT JOIN departments d ON e.dept_id = d.id\nWHERE e.salary > 50000\nORDER BY e.salary DESC;\n"
+        },
+        {
+            "name": "02_window_functions_rank_lead_lag.sql",
+            "description": "ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD",
+            "content": "-- Window Functions: ROW_NUMBER, RANK, DENSE_RANK, LAG, LEAD\nSELECT \n    department, \n    employee_name, \n    salary,\n    ROW_NUMBER() OVER(PARTITION BY department ORDER BY salary DESC) as row_num,\n    DENSE_RANK() OVER(PARTITION BY department ORDER BY salary DESC) as dense_rank_val,\n    LAG(salary, 1, 0) OVER(PARTITION BY department ORDER BY salary) as prev_salary,\n    LEAD(salary, 1, 0) OVER(PARTITION BY department ORDER BY salary) as next_salary\nFROM salaries;\n"
+        },
+        {
+            "name": "03_cte_and_aggregations.sql",
+            "description": "Common Table Expressions (CTE) & Aggregations",
+            "content": "-- Common Table Expressions (CTE) & Aggregations\nWITH monthly_revenue AS (\n    SELECT \n        strftime(order_date, '%Y-%m') as order_month,\n        SUM(order_amount) as total_revenue,\n        COUNT(DISTINCT customer_id) as active_customers\n    FROM orders\n    GROUP BY 1\n)\nSELECT \n    order_month,\n    total_revenue,\n    active_customers,\n    ROUND(total_revenue / NULLIF(active_customers, 0), 2) as avg_revenue_per_user\nFROM monthly_revenue\nORDER BY order_month DESC;\n"
+        },
+        {
+            "name": "04_duckdb_direct_file_queries.sql",
+            "description": "Query CSV / Parquet datasets directly without loading",
+            "content": "-- DuckDB Direct File Queries\n-- Query any uploaded CSV/Parquet dataset directly:\nSELECT * FROM read_csv_auto('sample_data.csv') LIMIT 15;\n-- Or Parquet files:\n-- SELECT * FROM read_parquet('transactions.parquet') WHERE amount > 1000;\n"
+        }
+    ],
+    "Python": [
+        {
+            "name": "01_main_template.py",
+            "description": "Standard Python execution entry point",
+            "content": "# Python Entry Point\nimport sys\nimport json\nfrom datetime import datetime\n\ndef main():\n    print(\"Python Execution Workspace Started.\")\n    data = {\"timestamp\": datetime.now().isoformat(), \"version\": sys.version}\n    print(json.dumps(data, indent=2))\n\nif __name__ == '__main__':\n    main()\n"
+        },
+        {
+            "name": "02_data_processing_pandas.py",
+            "description": "Pandas Dataframe & Groupby Aggregations",
+            "content": "# Data Processing with Pandas\nimport pandas as pd\n\ndata = {\n    'id': [101, 102, 103, 104],\n    'category': ['Electronics', 'Clothing', 'Electronics', 'Home'],\n    'price': [299.99, 49.50, 899.00, 120.00],\n    'units_sold': [15, 80, 5, 22]\n}\n\ndf = pd.DataFrame(data)\ndf['revenue'] = df['price'] * df['units_sold']\nsummary = df.groupby('category').agg({'revenue': 'sum', 'units_sold': 'sum'})\nprint(summary)\n"
+        }
+    ],
+    "PySpark": [
+        {
+            "name": "01_pyspark_starter.py",
+            "description": "PySpark SparkSession & DataFrame Operations",
+            "content": "from pyspark.sql import SparkSession\nfrom pyspark.sql.functions import col, avg, count\n\nspark = SparkSession.builder \\\n    .appName(\"DailyPySparkPractice\") \\\n    .master(\"local[*]\") \\\n    .getOrCreate()\n\ndata = [(1, \"Alice\", \"Engineering\", 95000), (2, \"Bob\", \"Engineering\", 105000), (3, \"Charlie\", \"Marketing\", 70000)]\ncolumns = [\"id\", \"name\", \"dept\", \"salary\"]\n\ndf = spark.createDataFrame(data, schema=columns)\ndf.show()\n\ndf.groupBy(\"dept\").agg(avg(\"salary\").alias(\"avg_salary\"), count(\"*\").alias(\"total_heads\")).show()\nspark.stop()\n"
+        }
+    ],
+    "Databricks": [
+        {
+            "name": "01_databricks_starter.py",
+            "description": "Databricks Notebook & Delta Lake simulation",
+            "content": "# Databricks Local Simulation Workspace\nprint(\"Databricks Notebook Initialized.\")\n# Supports PySpark, Delta Lake patterns, and SQL simulations\n"
+        }
+    ],
+    "DSA": [
+        {
+            "name": "01_dsa_template.py",
+            "description": "Standard DSA algorithm template with test cases",
+            "content": "class Solution:\n    def solve(self, nums: list[int], target: int) -> list[int]:\n        seen = {}\n        for i, val in enumerate(nums):\n            comp = target - val\n            if comp in seen:\n                return [seen[comp], i]\n            seen[val] = i\n        return []\n\nif __name__ == '__main__':\n    s = Solution()\n    res = s.solve([2, 7, 11, 15], 9)\n    print(f\"Result: {res} | Expected: [0, 1]\")\n"
+        }
+    ],
+    "System Design": [
+        {
+            "name": "01_microservices_architecture.md",
+            "description": "Architecture notes with live Mermaid flowchart",
+            "content": "# System Architecture\n\n## 1. Requirements\n- High availability (99.99%)\n- Sub-50ms read latency\n\n## 2. Architecture Diagram\n```mermaid\nflowchart LR\n    Client[Client App] --> API[API Gateway]\n    API --> Cache[(Redis Cache)]\n    API --> Service[Core Microservice]\n    Service --> DB[(Primary Database)]\n```\n"
+        }
+    ]
+}
+
+@practice_bp.route("/api/practice/files/tree")
+def get_files_tree():
+    tech = request.args.get("tech", "SQL")
+    practice_id = request.args.get("practice_id", type=int)
+
+    conn = get_connection()
+
+    # Fetch past practices for this tech across daily sessions
+    rows = conn.execute("""
+        SELECT p.id, p.title, p.code, p.extra_metadata, p.updated_at, s.date as session_date
+        FROM practices p
+        JOIN daily_sessions s ON p.session_id = s.id
+        WHERE p.technology = ?
+        ORDER BY s.date DESC, p.id DESC
+        LIMIT 30
+    """, (tech,)).fetchall()
+
+    past_sessions = []
+    current_files_map = {}
+
+    for r in rows:
+        p_dict = dict(r)
+        extra = {}
+        try:
+            extra = json.loads(p_dict["extra_metadata"] or "{}")
+        except Exception:
+            extra = {}
+
+        p_files = extra.get("files", {})
+        if not p_files and p_dict["code"]:
+            default_fname = "query.sql" if tech == "SQL" else ("architecture.md" if tech == "System Design" else "main.py")
+            p_files = { default_fname: p_dict["code"] }
+
+        files_list = []
+        for fname, content in p_files.items():
+            files_list.append({
+                "name": fname,
+                "size": len(content or ""),
+                "snippet": (content or "")[:120]
+            })
+
+        if practice_id and p_dict["id"] == practice_id:
+            current_files_map = p_files
+        else:
+            if files_list:
+                past_sessions.append({
+                    "practice_id": p_dict["id"],
+                    "date": p_dict["session_date"],
+                    "title": p_dict["title"] or f"{tech} Practice",
+                    "files": files_list
+                })
+
+    conn.close()
+
+    starters = STARTER_TEMPLATES.get(tech, STARTER_TEMPLATES.get("SQL", []))
+
+    return jsonify({
+        "success": True,
+        "tech": tech,
+        "past_sessions": past_sessions,
+        "starter_templates": starters
+    })
+
+@practice_bp.route("/api/practice/files/get_content", methods=["POST"])
+def get_file_content():
+    data = request.get_json() or {}
+    source_practice_id = data.get("source_practice_id")
+    file_name = data.get("file_name", "")
+    template_name = data.get("template_name")
+    tech = data.get("tech", "SQL")
+
+    if template_name:
+        starters = STARTER_TEMPLATES.get(tech, [])
+        for t in starters:
+            if t["name"] == template_name:
+                return jsonify({
+                    "success": True,
+                    "file_name": t["name"],
+                    "content": t["content"]
+                })
+        return jsonify({"success": False, "error": "Template not found"}), 404
+
+    if source_practice_id:
+        conn = get_connection()
+        row = conn.execute("SELECT code, extra_metadata FROM practices WHERE id = ?", (source_practice_id,)).fetchone()
+        conn.close()
+        if not row:
+            return jsonify({"success": False, "error": "Practice not found"}), 404
+
+        extra = {}
+        try:
+            extra = json.loads(row["extra_metadata"] or "{}")
+        except Exception:
+            extra = {}
+
+        files = extra.get("files", {})
+        if file_name in files:
+            return jsonify({
+                "success": True,
+                "file_name": file_name,
+                "content": files[file_name]
+            })
+        elif row["code"]:
+            return jsonify({
+                "success": True,
+                "file_name": file_name or "main.py",
+                "content": row["code"]
+            })
+
+    return jsonify({"success": False, "error": "File not found"}), 404
+

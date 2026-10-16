@@ -42,6 +42,32 @@ function setAppTheme(themePref) {
     showToast(`Theme updated to ${themePref.toUpperCase()}`, 'info', 1800);
 }
 
+function toggleThemeDropdown(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('theme-dropdown-menu');
+    const container = document.getElementById('theme-dropdown-container');
+    if (!menu) return;
+
+    const isOpen = menu.style.display !== 'none';
+    if (isOpen) {
+        menu.style.display = 'none';
+        container?.classList.remove('open');
+    } else {
+        menu.style.display = 'flex';
+        container?.classList.add('open');
+    }
+}
+
+// Global outside-click closer for theme dropdown
+document.addEventListener('click', (e) => {
+    const container = document.getElementById('theme-dropdown-container');
+    const menu = document.getElementById('theme-dropdown-menu');
+    if (container && menu && !container.contains(e.target)) {
+        menu.style.display = 'none';
+        container.classList.remove('open');
+    }
+});
+
 function applyThemeUI(themePref) {
     const effectiveTheme = resolveEffectiveTheme(themePref);
     
@@ -62,8 +88,8 @@ function applyThemeUI(themePref) {
         fav.href = logoUrl;
     }
 
-    // Update active highlight on theme buttons
-    document.querySelectorAll('.theme-pick-btn').forEach(btn => {
+    // Update active highlight on theme items in dropdown & settings
+    document.querySelectorAll('.theme-menu-item, .theme-pick-btn').forEach(btn => {
         const val = btn.getAttribute('data-theme-value');
         if (val === themePref) {
             btn.classList.add('active');
@@ -78,17 +104,33 @@ function applyThemeUI(themePref) {
         settingSelect.value = themePref;
     }
 
-    // Update indicator icon in sidebar
+    // Update indicator icon and text in sidebar dropdown trigger
+    const icons = {
+        'system': '🖥️',
+        'light': '☀️',
+        'dark': '🌙',
+        'grey': '🩶'
+    };
+    const labels = {
+        'system': 'System Default',
+        'light': 'Light Theme',
+        'dark': 'Dark Theme',
+        'grey': 'Grey (Zinc)'
+    };
     const activeIconEl = document.getElementById('theme-active-icon');
     if (activeIconEl) {
-        const icons = {
-            'system': '🖥️',
-            'light': '☀️',
-            'dark': '🌙',
-            'grey': '🩶'
-        };
         activeIconEl.textContent = icons[themePref] || '🌓';
     }
+    const activeLabelEl = document.getElementById('theme-active-label');
+    if (activeLabelEl) {
+        activeLabelEl.textContent = labels[themePref] || 'Dark Theme';
+    }
+
+    // Close theme menu if open
+    const themeMenu = document.getElementById('theme-dropdown-menu');
+    const themeContainer = document.getElementById('theme-dropdown-container');
+    if (themeMenu) themeMenu.style.display = 'none';
+    if (themeContainer) themeContainer.classList.remove('open');
 
     // Update Monaco editor theme if active
     if (window.monacoEditorInstance && window.monaco) {
