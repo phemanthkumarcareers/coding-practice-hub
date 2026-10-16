@@ -47,6 +47,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 ### 1. Left Vertical Sidebar (Maximized Screen Height & Collapsible)
 - **Top Navbar Replaced with Left Sidebar**: Eliminates the top navbar to free up the full vertical height of the screen (100vh) for code editing and result inspection.
 - **Collapsible Mini-Sidebar**: Click the `◀` / `▶` toggle button on the sidebar to collapse it into a compact 68px icon-only mode, maximizing horizontal screen space for wide monitors or split-screen coding.
+- **Flicker-Free Persistent State**: User preference is stored in `localStorage` and initialized synchronously during parsing before first paint. When refreshed in minimized mode, it renders directly in minimized state without opening and auto-collapsing. Smooth transitions are enabled strictly during interactive toggle clicks.
 - **Integrated Daily Practice Targets (On the Side)**:
   - Date picker and daily session progress badge (`0 / 6`).
   - Vertical list of all 6 daily practice targets (SQL, Python, PySpark, Databricks, DSA, System Design) with live status dots (Completed, In Progress, Not Started).

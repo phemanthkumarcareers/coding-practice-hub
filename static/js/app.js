@@ -96,11 +96,20 @@ function initSidebar() {
 
     if (isCollapsed) {
         sidebar.classList.add('collapsed');
+        document.documentElement.classList.add('sidebar-is-collapsed');
         if (toggleBtn) toggleBtn.textContent = '▶';
     } else {
         sidebar.classList.remove('collapsed');
+        document.documentElement.classList.remove('sidebar-is-collapsed');
         if (toggleBtn) toggleBtn.textContent = '◀';
     }
+
+    // Enable smooth slide transitions only AFTER initial paint to prevent opening/minimizing flicker on refresh
+    requestAnimationFrame(() => {
+        setTimeout(() => {
+            sidebar.classList.add('sidebar-animated');
+        }, 50);
+    });
 }
 
 function toggleSidebar() {
@@ -108,14 +117,19 @@ function toggleSidebar() {
     const toggleBtn = document.getElementById('sidebar-toggle-btn');
     if (!sidebar) return;
 
+    // Ensure transition animation is enabled on user click
+    sidebar.classList.add('sidebar-animated');
+
     const isCurrentlyCollapsed = sidebar.classList.contains('collapsed');
     const nextState = !isCurrentlyCollapsed;
 
     if (nextState) {
         sidebar.classList.add('collapsed');
+        document.documentElement.classList.add('sidebar-is-collapsed');
         if (toggleBtn) toggleBtn.textContent = '▶';
     } else {
         sidebar.classList.remove('collapsed');
+        document.documentElement.classList.remove('sidebar-is-collapsed');
         if (toggleBtn) toggleBtn.textContent = '◀';
     }
 

@@ -39,6 +39,15 @@
     <div class="app-layout" id="app-layout">
         <!-- Vertical Left Sidebar Navigation -->
         <aside class="app-sidebar" id="app-sidebar">
+            <script>
+                (function() {
+                    try {
+                        if (localStorage.getItem('ch_sidebar_collapsed') === 'true') {
+                            document.getElementById('app-sidebar').classList.add('collapsed');
+                        }
+                    } catch(e) {}
+                })();
+            </script>
             <div class="sidebar-top">
                 <!-- Brand & Logo -->
                 <div class="sidebar-brand-wrapper">
@@ -56,6 +65,16 @@
                         <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar" onclick="toggleSidebar()">
                             ◀
                         </button>
+                        <script>
+                            (function() {
+                                try {
+                                    if (localStorage.getItem('ch_sidebar_collapsed') === 'true') {
+                                        var btn = document.getElementById('sidebar-toggle-btn');
+                                        if (btn) btn.textContent = '▶';
+                                    }
+                                } catch(e) {}
+                            })();
+                        </script>
                     </div>
                 </div>
 

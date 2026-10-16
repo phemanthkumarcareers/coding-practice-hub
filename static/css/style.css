@@ -136,12 +136,17 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   z-index: 100;
   user-select: none;
 }
 
+/* Enable smooth slide transition only during user interactions, not on page load/refresh */
+.app-sidebar.sidebar-animated {
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.sidebar-is-collapsed .app-sidebar,
 .app-sidebar.collapsed {
   width: 68px;
   min-width: 68px;
