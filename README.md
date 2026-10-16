@@ -53,7 +53,8 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   - Vertical list of all 6 daily practice targets (SQL, Python, PySpark, Databricks, DSA, System Design) with live status dots (Completed, In Progress, Not Started).
   - Keeps the top workspace header clean, uncluttered, and free of button collisions.
 - **Integrated Sidebar Utilities**:
-  - Brand header & navigation links (Dashboard, Practice, History, Datasets, Reports, Settings).
+  - Prominent brand header with full title visibility and dedicated single `◀` / `▶` collapse toggle (clean, uncluttered layout without disturbing double icons).
+  - Navigation links (Dashboard, Practice, History, Datasets, Reports, Settings).
   - Quick Search trigger button (`Ctrl + K`).
   - Dedicated bottom theme selector and local server status.
 
@@ -66,7 +67,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 - **Live Monaco Synchronization**: Theme switches instantly update Monaco Editor between `vs` and `vs-dark`, and persist across browser sessions in `localStorage` and backend settings.
 
 ### 3. Fullscreen & Maximize Editor (Zen / Focus Mode)
-- **⛶ Normal Browser Fullscreen**: Click the `⛶ Fullscreen` button in the sidebar header or practice workspace actions (or press `F11`) to expand the app into true edge-to-edge browser fullscreen mode.
+- **⛶ Normal Browser Fullscreen**: Click the `⛶ Fullscreen` button in the editor tab bar / practice workspace actions (or press `F11`) to expand the app into true edge-to-edge browser fullscreen mode.
 - **🗖 Maximize Editor (Focus Mode)**: Click the `🗖 Maximize` button to isolate the Monaco Editor into 100% full-screen focus mode. This temporarily hides the sidebar, metadata bar, and console log so you can code without distractions.
 - **Universal Escape (`Esc`) Handler**: Pressing `Escape` naturally exits fullscreen modes in clean priority:
   1. Closes any open modal dialog (Explorer, Create Database, Confirm, Prompt, History).

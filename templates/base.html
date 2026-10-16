@@ -58,24 +58,19 @@
                             <span class="brand-sub">Daily Hub</span>
                         </div>
                     </a>
-                    <div class="sidebar-header-actions">
-                        <button class="sidebar-toggle-btn btn-fullscreen-trigger" title="Toggle Fullscreen (F11)" onclick="toggleFullScreen()">
-                            ⛶
-                        </button>
-                        <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar" onclick="toggleSidebar()">
-                            ◀
-                        </button>
-                        <script>
-                            (function() {
-                                try {
-                                    if (localStorage.getItem('ch_sidebar_collapsed') === 'true') {
-                                        var btn = document.getElementById('sidebar-toggle-btn');
-                                        if (btn) btn.textContent = '▶';
-                                    }
-                                } catch(e) {}
-                            })();
-                        </script>
-                    </div>
+                    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar" onclick="toggleSidebar()">
+                        ◀
+                    </button>
+                    <script>
+                        (function() {
+                            try {
+                                if (localStorage.getItem('ch_sidebar_collapsed') === 'true') {
+                                    var btn = document.getElementById('sidebar-toggle-btn');
+                                    if (btn) btn.textContent = '▶';
+                                }
+                            } catch(e) {}
+                        })();
+                    </script>
                 </div>
 
                 <!-- Global Quick Search button -->
