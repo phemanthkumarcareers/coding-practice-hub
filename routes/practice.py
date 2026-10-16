@@ -153,12 +153,19 @@ def run_practice():
     structured_result = None
     updated_schemas = None
 
+    full_code = data.get("code", "")
     if files and isinstance(files, dict) and entry_file in files:
-        code = files[entry_file]
+        full_code = files[entry_file]
+
+    selected_code = data.get("selected_code")
+    if selected_code and selected_code.strip():
+        code_to_run = selected_code.strip()
+    else:
+        code_to_run = full_code
 
     if technology == "SQL":
         duckdb_service.sync_dataset_views()
-        res = duckdb_service.execute_query(code, active_db=active_db)
+        res = duckdb_service.execute_query(code_to_run, active_db=active_db)
         run_status = res["status"]
         duration_ms = res["duration_ms"]
         structured_result = res
@@ -172,17 +179,19 @@ def run_practice():
         updated_schemas = duckdb_service.get_explorer_schema()
 
     elif technology in ("Python", "DSA"):
-        if files and isinstance(files, dict) and len(files) > 0:
+        if selected_code and selected_code.strip():
+            res = code_executor.execute_python(code_to_run, tech=technology)
+        elif files and isinstance(files, dict) and len(files) > 0:
             res = code_executor.execute_python_project(files, entry_file=entry_file, tech=technology)
         else:
-            res = code_executor.execute_python(code, tech=technology)
+            res = code_executor.execute_python(code_to_run, tech=technology)
         run_status = res["status"]
         duration_ms = res["duration_ms"]
         output_text = res["stdout"]
         error_text = res["stderr"]
 
     elif technology == "PySpark":
-        res = pyspark_service.execute_pyspark(code)
+        res = pyspark_service.execute_pyspark(code_to_run)
         run_status = res["status"]
         duration_ms = res["duration_ms"]
         output_text = res["stdout"]
@@ -192,7 +201,7 @@ def run_practice():
         subtype = data.get("extra_metadata", {}).get("subtype", "Python")
         if subtype == "SQL":
             duckdb_service.sync_dataset_views()
-            res = duckdb_service.execute_query(code, active_db=active_db)
+            res = duckdb_service.execute_query(code_to_run, active_db=active_db)
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             structured_result = res
@@ -200,16 +209,18 @@ def run_practice():
             output_text = f"Databricks SQL simulated on DuckDB. Rows: {res['row_count']}"
             updated_schemas = duckdb_service.get_explorer_schema()
         elif subtype in ["PySpark", "Structured Streaming", "Delta Lake"]:
-            res = pyspark_service.execute_pyspark(code)
+            res = pyspark_service.execute_pyspark(code_to_run)
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             output_text = res["stdout"]
             error_text = res["stderr"]
         else:
-            if files and isinstance(files, dict) and len(files) > 0:
+            if selected_code and selected_code.strip():
+                res = code_executor.execute_python(code_to_run, tech="databricks")
+            elif files and isinstance(files, dict) and len(files) > 0:
                 res = code_executor.execute_python_project(files, entry_file=entry_file, tech="databricks")
             else:
-                res = code_executor.execute_python(code, tech="databricks")
+                res = code_executor.execute_python(code_to_run, tech="databricks")
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             output_text = res["stdout"]
@@ -226,7 +237,7 @@ def run_practice():
     cursor.execute("""
         INSERT INTO executions (practice_id, code_snapshot, output, error_output, status, duration_ms)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (practice_id, code, output_text, error_text, run_status, duration_ms))
+    """, (practice_id, code_to_run, output_text, error_text, run_status, duration_ms))
 
     cursor.execute("SELECT status FROM practices WHERE id = ?", (practice_id,))
     cur_p = cursor.fetchone()
@@ -243,7 +254,7 @@ def run_practice():
             status = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    """, (code, output_text, error_text, duration_ms, new_status, practice_id))
+    """, (full_code, output_text, error_text, duration_ms, new_status, practice_id))
 
     cursor.execute("SELECT session_id FROM practices WHERE id = ?", (practice_id,))
     s_row = cursor.fetchone()

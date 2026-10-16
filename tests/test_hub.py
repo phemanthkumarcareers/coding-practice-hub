@@ -316,8 +316,43 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn(b"Datasets", res.data)
 
+    def test_16_run_selected_sql_statement(self):
+        sess = get_or_create_daily_session(date.today())
+        # Find or create SQL practice
+        sql_practice = next((p for p in sess["practices"] if p["technology"] == "SQL"), None)
+        self.assertIsNotNone(sql_practice)
+        p_id = sql_practice["id"]
+
+        full_code = "-- Query 1\nSELECT 101 AS num1;\n\n-- Query 2\nSELECT 202 AS num2;"
+        selected_code = "SELECT 101 AS num1;"
+
+        res = self.client.post("/api/practice/run", json={
+            "id": p_id,
+            "technology": "SQL",
+            "code": full_code,
+            "selected_code": selected_code,
+            "files": {"query.sql": full_code},
+            "entry_file": "query.sql"
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(data["structured_result"]["columns"], ["num1"])
+        self.assertEqual(data["structured_result"]["rows"], [[101]])
+
+        # Verify full code is preserved in database, not overwritten with selected snippet
+        conn = get_connection()
+        p_row = conn.execute("SELECT code FROM practices WHERE id = ?", (p_id,)).fetchone()
+        self.assertIn("SELECT 202 AS num2;", p_row["code"])
+
+        # Verify execution record has the exact query that ran
+        e_row = conn.execute("SELECT code_snapshot FROM executions WHERE practice_id = ? ORDER BY id DESC LIMIT 1", (p_id,)).fetchone()
+        conn.close()
+        self.assertEqual(e_row["code_snapshot"], selected_code)
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

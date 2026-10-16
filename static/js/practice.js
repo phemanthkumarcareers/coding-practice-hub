@@ -74,14 +74,38 @@ function createOrUpdateEditor(code, language) {
             scheduleAutosave();
         });
 
-        // Ctrl+Enter: Run Code
+        // Ctrl+Enter: Run Statement / Selection
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-            runCurrentCode();
+            runCurrentCode(false);
+        });
+
+        // Ctrl+Shift+Enter: Run Entire File
+        monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => {
+            runCurrentCode(true);
         });
 
         // Ctrl+S: Save
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
             saveCurrentPractice(false);
+        });
+
+        // Monaco Context Menu Actions
+        monacoEditor.addAction({
+            id: 'run-statement-or-selection',
+            label: 'Run Statement at Cursor / Selected Code (Ctrl+Enter)',
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
+            contextMenuGroupId: 'navigation',
+            contextMenuOrder: 1,
+            run: () => runCurrentCode(false)
+        });
+
+        monacoEditor.addAction({
+            id: 'run-entire-file',
+            label: 'Run All Statements / Entire File (Ctrl+Shift+Enter)',
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter],
+            contextMenuGroupId: 'navigation',
+            contextMenuOrder: 2,
+            run: () => runCurrentCode(true)
         });
     } else {
         const model = monacoEditor.getModel();
@@ -1297,8 +1321,204 @@ async function saveCurrentPractice(markCompleted = false) {
     }
 }
 
-// Run Code
-async function runCurrentCode() {
+// Flash statement or selection highlight in Monaco editor
+let statementDecorations = [];
+function flashExecutionRange(startLine, endLine) {
+    if (!monacoEditor) return;
+    try {
+        const model = monacoEditor.getModel();
+        if (!model) return;
+        const maxLine = model.getLineCount();
+        const sLine = Math.max(1, Math.min(startLine, maxLine));
+        const eLine = Math.max(sLine, Math.min(endLine, maxLine));
+        const maxCol = model.getLineMaxColumn(eLine);
+
+        statementDecorations = monacoEditor.deltaDecorations(statementDecorations, [
+            {
+                range: new monaco.Range(sLine, 1, eLine, maxCol),
+                options: {
+                    isWholeLine: true,
+                    className: 'executing-statement-highlight',
+                    overviewRuler: {
+                        color: 'rgba(59, 130, 246, 0.7)',
+                        position: monaco.editor.OverviewRulerLane.Full
+                    }
+                }
+            }
+        ]);
+
+        setTimeout(() => {
+            if (monacoEditor) {
+                statementDecorations = monacoEditor.deltaDecorations(statementDecorations, []);
+            }
+        }, 1200);
+    } catch (e) {
+        console.warn('flashExecutionRange decoration error:', e);
+    }
+}
+
+// Parse SQL script into individual statements separated by semicolon (;)
+function splitSqlStatements(sqlText) {
+    if (!sqlText || !sqlText.trim()) return [];
+
+    const statements = [];
+    let currentStart = 0;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let inLineComment = false;
+    let inBlockComment = false;
+    const len = sqlText.length;
+
+    // Precompute line break indices
+    const lineStarts = [0];
+    for (let i = 0; i < len; i++) {
+        if (sqlText[i] === '\n') {
+            lineStarts.push(i + 1);
+        }
+    }
+    function getLineNumber(offset) {
+        let low = 0, high = lineStarts.length - 1;
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            if (lineStarts[mid] <= offset) {
+                if (mid === lineStarts.length - 1 || lineStarts[mid + 1] > offset) {
+                    return mid + 1;
+                }
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return 1;
+    }
+
+    function addStatement(rawStart, rawEnd) {
+        const rawChunk = sqlText.slice(rawStart, rawEnd);
+        const nonWsMatch = rawChunk.match(/\S/);
+        if (!nonWsMatch) return;
+
+        const actualStart = rawStart + nonWsMatch.index;
+        const actualEnd = rawEnd;
+        const trimmed = sqlText.slice(actualStart, actualEnd).trim();
+
+        // Check if trimmed text has actual SQL code beyond comments
+        const noComments = trimmed
+            .replace(/--.*$/gm, '')
+            .replace(/\/\*[\s\S]*?\*\//g, '')
+            .trim();
+        if (!noComments) return;
+
+        const startLine = getLineNumber(actualStart);
+        const endLine = getLineNumber(Math.max(actualStart, actualEnd - 1));
+
+        statements.push({
+            text: trimmed,
+            cleanSql: trimmed.endsWith(';') ? trimmed.slice(0, -1).trim() : trimmed,
+            startIndex: actualStart,
+            endIndex: actualEnd,
+            startLine: startLine,
+            endLine: endLine
+        });
+    }
+
+    for (let i = 0; i < len; i++) {
+        const ch = sqlText[i];
+        const next = i + 1 < len ? sqlText[i + 1] : '';
+
+        if (inLineComment) {
+            if (ch === '\n') inLineComment = false;
+            continue;
+        }
+        if (inBlockComment) {
+            if (ch === '*' && next === '/') {
+                inBlockComment = false;
+                i++;
+            }
+            continue;
+        }
+        if (inSingleQuote) {
+            if (ch === "'") {
+                if (next === "'") {
+                    i++;
+                } else {
+                    inSingleQuote = false;
+                }
+            }
+            continue;
+        }
+        if (inDoubleQuote) {
+            if (ch === '"') {
+                if (next === '"') {
+                    i++;
+                } else {
+                    inDoubleQuote = false;
+                }
+            }
+            continue;
+        }
+
+        if (ch === '-' && next === '-') {
+            inLineComment = true;
+            i++;
+            continue;
+        }
+        if (ch === '/' && next === '*') {
+            inBlockComment = true;
+            i++;
+            continue;
+        }
+        if (ch === "'") {
+            inSingleQuote = true;
+            continue;
+        }
+        if (ch === '"') {
+            inDoubleQuote = true;
+            continue;
+        }
+
+        if (ch === ';') {
+            addStatement(currentStart, i + 1);
+            currentStart = i + 1;
+        }
+    }
+
+    if (currentStart < len) {
+        addStatement(currentStart, len);
+    }
+
+    return statements;
+}
+
+// Find SQL statement at the given line number (1-indexed)
+function getSqlStatementAtCursor(fullCode, cursorLine) {
+    const statements = splitSqlStatements(fullCode);
+    if (!statements || statements.length === 0) return null;
+
+    // 1. Direct match: cursor line is inside statement span [startLine, endLine]
+    for (const stmt of statements) {
+        if (cursorLine >= stmt.startLine && cursorLine <= stmt.endLine) {
+            return stmt;
+        }
+    }
+
+    // 2. Cursor is before first statement
+    if (cursorLine < statements[0].startLine) {
+        return statements[0];
+    }
+
+    // 3. Cursor is between statements: choose the next one
+    for (const stmt of statements) {
+        if (stmt.startLine >= cursorLine) {
+            return stmt;
+        }
+    }
+
+    // 4. Fallback to the last statement
+    return statements[statements.length - 1];
+}
+
+// Run Code (supports selection, statement under cursor, or full file)
+async function runCurrentCode(runAll = false) {
     if (!activePracticeId) return;
 
     // Ensure console is visible when user runs code
@@ -1329,13 +1549,51 @@ async function runCurrentCode() {
         runBtn.innerHTML = '⏳ Running...';
     }
 
-    const code = (activeFileName && currentProjectFiles[activeFileName])
+    const fullCode = (activeFileName && currentProjectFiles[activeFileName])
         ? currentProjectFiles[activeFileName]
         : (monacoEditor ? monacoEditor.getValue() : '');
+
+    let codeToExecute = fullCode;
+    let executionNote = '';
+
+    // Check for user-selected text in Monaco editor
+    if (monacoEditor) {
+        const selection = monacoEditor.getSelection();
+        if (selection && !selection.isEmpty()) {
+            const selectedText = monacoEditor.getModel()?.getValueInRange(selection);
+            if (selectedText && selectedText.trim().length > 0) {
+                codeToExecute = selectedText.trim();
+                flashExecutionRange(selection.startLineNumber, selection.endLineNumber);
+                executionNote = `(lines ${selection.startLineNumber}-${selection.endLineNumber})`;
+            }
+        }
+    }
+
+    // If no selection was made and runAll is not requested, check if it's SQL to run statement at cursor
+    const isSql = (activeTechnology === 'SQL') ||
+                  (activeTechnology === 'Databricks' && gatherExtraMetadata().subtype === 'SQL') ||
+                  (activeFileName && activeFileName.endsWith('.sql'));
+
+    if (codeToExecute === fullCode && !runAll && isSql && monacoEditor) {
+        const position = monacoEditor.getPosition();
+        const cursorLine = position ? position.lineNumber : 1;
+        const stmt = getSqlStatementAtCursor(fullCode, cursorLine);
+        if (stmt && stmt.text) {
+            codeToExecute = stmt.text;
+            flashExecutionRange(stmt.startLine, stmt.endLine);
+            executionNote = `query at line ${cursorLine} (lines ${stmt.startLine}-${stmt.endLine})`;
+        }
+    }
+
+    if (executionNote) {
+        showToast(`Running ${executionNote}`, 'info', 1800);
+    }
+
     const payload = {
         id: activePracticeId,
         technology: activeTechnology,
-        code: code,
+        code: fullCode,
+        selected_code: codeToExecute !== fullCode ? codeToExecute : null,
         active_db: activeDatabaseName,
         files: currentProjectFiles,
         entry_file: activeFileName || Object.keys(currentProjectFiles)[0] || '',
@@ -1384,7 +1642,7 @@ async function runCurrentCode() {
     }
 }
 
-// Render Output Console
+// Render Output Console with Sticky Table Header in Scroll Wrapper
 function renderOutput(stdout, stderr, durationMs, structuredResult) {
     const container = document.getElementById('output-console');
     if (!container) return;
@@ -1395,6 +1653,9 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
     container.innerHTML = '';
 
     if (structuredResult && structuredResult.columns && structuredResult.columns.length > 0) {
+        const scrollWrapper = document.createElement('div');
+        scrollWrapper.className = 'table-scroll-wrapper';
+
         const table = document.createElement('table');
         table.className = 'output-table';
 
@@ -1421,7 +1682,8 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
         });
         table.appendChild(tbody);
 
-        container.appendChild(table);
+        scrollWrapper.appendChild(table);
+        container.appendChild(scrollWrapper);
 
         const summary = document.createElement('div');
         summary.style.marginTop = '0.5rem';
@@ -1920,7 +2182,7 @@ async function initPracticePage(sessionData, initialTech) {
         }
     });
 
-    document.getElementById('btn-run')?.addEventListener('click', runCurrentCode);
+    document.getElementById('btn-run')?.addEventListener('click', () => runCurrentCode(false));
     document.getElementById('btn-save')?.addEventListener('click', () => saveCurrentPractice(false));
     document.getElementById('btn-save-complete')?.addEventListener('click', () => saveCurrentPractice(true));
     document.getElementById('btn-clear-output')?.addEventListener('click', () => renderOutput('', '', 0));

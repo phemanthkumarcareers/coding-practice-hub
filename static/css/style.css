@@ -1932,24 +1932,62 @@ html.sidebar-is-collapsed .sidebar-footer-info,
   margin-top: 0.5rem;
 }
 
+.table-scroll-wrapper {
+  width: 100%;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  position: relative;
+  margin-top: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
 .output-table {
   width: 100%;
-  border-collapse: collapse;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   font-family: var(--font-mono);
   font-size: 0.82rem;
+  white-space: nowrap;
 }
 
 .output-table th, .output-table td {
-  border: 1px solid var(--border-color);
-  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
+  padding: 0.45rem 0.8rem;
   text-align: left;
+  white-space: nowrap;
+}
+
+.output-table th:last-child, .output-table td:last-child {
+  border-right: none;
 }
 
 .output-table th {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
   position: sticky;
   top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 var(--border-color);
+}
+
+.output-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+
+.output-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Flash statement highlight when executing */
+.executing-statement-highlight {
+  background: rgba(59, 130, 246, 0.22) !important;
+  border-left: 3px solid var(--accent-primary) !important;
 }
 
 /* Modern Modals with Glassmorphism & Pop-in Animation */
