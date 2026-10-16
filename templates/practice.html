@@ -203,15 +203,15 @@
 <div class="split-container">
     <!-- Top: Full-Width Code Editor Pane -->
     <div id="editor-pane" class="editor-pane">
-        <!-- Multi-File Tabs Bar -->
-        <div id="multi-file-tabs-bar" class="file-tabs-bar"></div>
-
-        <div class="pane-header">
-            <span id="editor-title-label">CODE EDITOR</span>
-            <div style="display:flex; align-items:center; gap:0.4rem;">
-                <span style="font-size:0.75rem; color:var(--text-muted); margin-right:0.35rem;">Ctrl+Enter to Run | Ctrl+S to Save</span>
-                <button class="pane-icon-btn" onclick="toggleMaximizeEditor()" title="Maximize Editor / Restore (Zen Mode)">🗖</button>
-                <button class="pane-icon-btn btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
+        <!-- Unified IDE File Tabs & Action Controls Bar -->
+        <div id="multi-file-tabs-bar" class="file-tabs-bar">
+            <div id="file-tabs-list" class="file-tabs-list">
+                <!-- Dynamically populated e.g. [📄 main.py] [📄 utils.py x] [+ New File] -->
+            </div>
+            <div class="editor-quick-controls">
+                <span class="editor-shortcut-hint">Ctrl+Enter to Run | Ctrl+S to Save</span>
+                <button type="button" class="pane-icon-btn" onclick="toggleMaximizeEditor()" title="Maximize Editor / Restore (Zen Mode)">🗖</button>
+                <button type="button" class="pane-icon-btn btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
             </div>
         </div>
         <div id="monaco-editor-container" class="editor-container"></div>

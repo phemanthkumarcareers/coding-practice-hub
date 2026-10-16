@@ -79,10 +79,12 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 
 ### 5. Multi-File Project Workspace for ALL Coding Terminals
 - **Universal Multi-File Tabs**: Practice real-world file structures directly in the browser across **all 6 technologies** (SQL, Python, PySpark, Databricks, DSA, and System Design).
+- **Streamlined IDE Tab Bar**: Clean, unified tab header with proper readable font sizing, context-aware file icons (`🗄️ .sql`, `🐍 .py`, `📝 .md`, `⚙️ .json`, `📄`), and zero horizontal scrollbar clutter.
+- **Integrated Window & Shortcut Controls**: Quick access to keyboard shortcuts (`Ctrl+Enter to Run | Ctrl+S to Save`), maximize (`🗖`), and full screen (`⛶`) integrated directly into the tab bar right header.
 - **`+ New File` Creation**: Add helper modules such as `utils.py`, queries like `tables.sql`, notes like `architecture_notes.md`, or test scripts.
 - **Intelligent Extension Defaults**: Creating new files automatically suggests the proper file extension and template matching the active technology (e.g. `.sql` for SQL, `.py` for Python/DSA/PySpark, `.md` for System Design).
 - **Seamless Execution**: Subprocess and DuckDB runners execute the active entry file and mount all project files together in an isolated workspace.
-- **File Tab Management**: Switch tabs with a single click, close/delete files with confirmation, and persist file buffers automatically across sessions.
+- **File Tab Management**: Switch tabs with a single click, close/delete files with custom in-app confirmation modal, and persist file buffers automatically across sessions.
 
 ### 6. Hierarchical Database, Tables & Views Explorer
 - **Database Accordion / Dropdown**: Hierarchically groups all databases (`practice (main / default)` and user-created DuckDB databases in `database/user_dbs/`). Click any database header to expand/collapse its tables and views.

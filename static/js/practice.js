@@ -94,22 +94,36 @@ function createOrUpdateEditor(code, language) {
 
 // Multi-File Project Workspace Helpers (Enabled for ALL technologies)
 function renderMultiFileTabs() {
-    const bar = document.getElementById('multi-file-tabs-bar');
+    const bar = document.getElementById('file-tabs-list') || document.getElementById('multi-file-tabs-bar');
     if (!bar) return;
 
-    bar.style.display = 'flex';
     bar.innerHTML = '';
+
+    const getFileIcon = (fname) => {
+        if (fname.endsWith('.py')) return '🐍';
+        if (fname.endsWith('.sql')) return '🗄️';
+        if (fname.endsWith('.md')) return '📝';
+        if (fname.endsWith('.json')) return '⚙️';
+        return '📄';
+    };
 
     Object.keys(currentProjectFiles).forEach(fname => {
         const tab = document.createElement('div');
         tab.className = `file-tab ${fname === activeFileName ? 'active' : ''}`;
-        
+        tab.title = `Switch to ${fname}`;
+        tab.onclick = () => switchActiveFile(fname);
+
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'file-tab-icon';
+        iconSpan.textContent = getFileIcon(fname);
+        tab.appendChild(iconSpan);
+
         const titleSpan = document.createElement('span');
+        titleSpan.className = 'file-tab-name';
         titleSpan.textContent = fname;
-        titleSpan.onclick = () => switchActiveFile(fname);
         tab.appendChild(titleSpan);
 
-        // Close/delete file button (don't delete if it's the only file or main.py)
+        // Close/delete file button (don't delete if it's the only file)
         if (Object.keys(currentProjectFiles).length > 1) {
             const closeBtn = document.createElement('span');
             closeBtn.className = 'file-tab-close';
@@ -128,7 +142,7 @@ function renderMultiFileTabs() {
     // "+ New File" Button
     const newBtn = document.createElement('button');
     newBtn.className = 'btn-new-file';
-    newBtn.innerHTML = '+ New File';
+    newBtn.innerHTML = '<span>+ New File</span>';
     newBtn.onclick = promptNewFile;
     bar.appendChild(newBtn);
 }
