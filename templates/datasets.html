@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Dataset Management - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.6rem; font-weight:700;">Dataset Management</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Upload CSV, Parquet, or JSON datasets for direct querying in DuckDB, Python (pandas), and PySpark</p>
+    </div>
+</div>
+
+<!-- Upload Box -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Upload New Dataset</span>
+    </div>
+
+    <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
+        <input type="file" id="dataset-file-input" accept=".csv,.json,.parquet" class="meta-input" style="flex:1; min-width:250px;">
+        <button id="btn-upload-dataset" class="btn btn-primary" onclick="uploadDataset()">
+            ⬆ Upload Dataset
+        </button>
+        <span id="upload-status-indicator" style="font-size:0.85rem; color:var(--text-secondary);"></span>
+    </div>
+    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.5rem;">
+        Supported file types: <code>.csv</code>, <code>.parquet</code>, <code>.json</code>. Files are registered as queryable views in DuckDB automatically upon upload.
+    </div>
+</div>
+
+<!-- Uploaded Datasets Table -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Available Practice Datasets ({{ datasets|length }})</span>
+    </div>
+
+    {% if datasets|length == 0 %}
+        <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+            No datasets uploaded yet. Choose a CSV, Parquet, or JSON file above to begin.
+        </div>
+    {% else %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Table / View Name</th>
+                    <th>Original File</th>
+                    <th>Format</th>
+                    <th>Size</th>
+                    <th>Rows</th>
+                    <th>Columns</th>
+                    <th>Uploaded</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in datasets %}
+                <tr>
+                    <td><code>{{ d.table_name }}</code></td>
+                    <td>{{ d.original_name }}</td>
+                    <td><span class="badge badge-IN-PROGRESS">{{ d.file_type|upper }}</span></td>
+                    <td>{{ (d.file_size / 1024)|round(1) }} KB</td>
+                    <td>{{ d.row_count }}</td>
+                    <td>{{ d.column_count }} cols</td>
+                    <td>{{ d.uploaded_at[:16] }}</td>
+                    <td>
+                        <div style="display:flex; gap:0.4rem;">
+                            <button class="btn btn-secondary btn-sm" onclick="previewDataset({{ d.id }})">👁 Preview</button>
+                            <button class="btn btn-secondary btn-sm" onclick="showSnippets({{ d.id }})">⚡ Code Snippets</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteDataset({{ d.id }}, '{{ d.original_name }}')">🗑 Delete</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<!-- Dataset Preview Modal -->
+<div id="preview-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="max-width:900px;">
+        <div class="modal-header">
+            <h3 id="preview-title">Dataset Preview</h3>
+            <button class="modal-close-btn" onclick="document.getElementById('preview-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body" id="preview-body" style="overflow-x:auto;">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading preview...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Snippets Modal -->
+<div id="snippets-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="max-width:750px;">
+        <div class="modal-header">
+            <h3 id="snippets-title">Usage Snippets</h3>
+            <button class="modal-close-btn" onclick="document.getElementById('snippets-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body" id="snippets-body">
+            <!-- Dynamic snippets -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function uploadDataset() {
+        const fileInput = document.getElementById('dataset-file-input');
+        const indicator = document.getElementById('upload-status-indicator');
+        const uploadBtn = document.getElementById('btn-upload-dataset');
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showToast('Please select a file to upload', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        uploadBtn.disabled = true;
+        indicator.textContent = 'Uploading and analyzing schema in DuckDB...';
+
+        try {
+            const res = await fetch('/api/datasets/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Uploaded ${data.table_name} (${data.row_count} rows)`, 'success');
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                showToast(data.error || 'Upload failed', 'error');
+                indicator.textContent = 'Upload failed';
+            }
+        } catch (err) {
+            showToast('Upload error: ' + err.message, 'error');
+            indicator.textContent = 'Error';
+        } finally {
+            uploadBtn.disabled = false;
+        }
+    }
+
+    async function previewDataset(datasetId) {
+        const modal = document.getElementById('preview-modal');
+        const title = document.getElementById('preview-title');
+        const body = document.getElementById('preview-body');
+
+        modal.style.display = 'flex';
+        body.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading preview...</div>';
+
+        try {
+            const res = await fetch(`/api/datasets/preview/${datasetId}`);
+            const data = await res.json();
+
+            if (!data.success) {
+                body.innerHTML = `<div style="color:#f87171;">Failed to preview: ${data.error}</div>`;
+                return;
+            }
+
+            title.textContent = `Preview: ${data.dataset.table_name} (${data.dataset.row_count} rows total)`;
+            
+            const p = data.preview;
+            if (!p || !p.columns || p.columns.length === 0) {
+                body.innerHTML = '<div style="color:var(--text-muted);">No records found in this table.</div>';
+                return;
+            }
+
+            let html = '<table class="output-table"><thead><tr>';
+            p.columns.forEach(c => { html += `<th>${c}</th>`; });
+            html += '</tr></thead><tbody>';
+
+            p.rows.forEach(r => {
+                html += '<tr>';
+                r.forEach(v => {
+                    html += `<td>${v !== null ? v : '<span style="color:var(--text-muted);">NULL</span>'}</td>`;
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+
+            body.innerHTML = html;
+        } catch (err) {
+            body.innerHTML = `<div style="color:#f87171;">Preview error: ${err.message}</div>`;
+        }
+    }
+
+    async function showSnippets(datasetId) {
+        const modal = document.getElementById('snippets-modal');
+        const title = document.getElementById('snippets-title');
+        const body = document.getElementById('snippets-body');
+
+        modal.style.display = 'flex';
+        body.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading snippets...</div>';
+
+        try {
+            const res = await fetch(`/api/datasets/preview/${datasetId}`);
+            const data = await res.json();
+
+            if (!data.success) {
+                body.innerHTML = `<div style="color:#f87171;">Failed to load: ${data.error}</div>`;
+                return;
+            }
+
+            title.textContent = `Query Snippets: ${data.dataset.table_name}`;
+            
+            body.innerHTML = `
+                <div style="margin-bottom:1rem;">
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">1. DuckDB SQL Query</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.sql}</pre>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">2. Python (Pandas)</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.python}</pre>
+                </div>
+                <div>
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">3. PySpark (SparkSession)</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.pyspark}</pre>
+                </div>
+            `;
+        } catch (err) {
+            body.innerHTML = `<div style="color:#f87171;">Error: ${err.message}</div>`;
+        }
+    }
+
+    async function deleteDataset(id, name) {
+        if (!confirm(`Are you sure you want to delete dataset '${name}' and remove its DuckDB view?`)) return;
+
+        try {
+            const res = await fetch(`/api/datasets/delete/${id}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Dataset deleted', 'info');
+                setTimeout(() => window.location.reload(), 600);
+            } else {
+                showToast(data.error || 'Failed to delete', 'error');
+            }
+        } catch (err) {
+            showToast('Delete error: ' + err.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

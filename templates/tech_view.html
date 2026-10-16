@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tech_name }} Practice History - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+            <a href="{{ url_for('history.history_view') }}" style="color:var(--text-secondary); text-decoration:none; font-size:0.85rem;">← Back to All History</a>
+        </div>
+        <h1 style="font-size:1.6rem; font-weight:700;">{{ tech_name }} Practice History</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Browse all {{ tech_name }} practice records, solutions, and past runs</p>
+    </div>
+    <div>
+        <a href="{{ url_for('practice.practice_workspace', tech=tech_name) }}" class="btn btn-primary">
+            + Practice {{ tech_name }} Today
+        </a>
+    </div>
+</div>
+
+<!-- Technology Switcher Pills -->
+<div style="display:flex; gap:0.5rem; margin-bottom:1.5rem; overflow-x:auto;">
+    {% for tech in technologies %}
+        <a href="{{ url_for('history.tech_view', tech_name=tech) }}" class="btn {% if tech == tech_name %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+            {{ tech }}
+        </a>
+    {% endfor %}
+</div>
+
+<!-- Table of Practices for this tech -->
+<div class="section-box">
+    <div class="section-title">
+        <span>{{ tech_name }} Practice Records ({{ practices|length }})</span>
+    </div>
+
+    {% if practices|length == 0 %}
+        <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+            No practices recorded for {{ tech_name }} yet.
+        </div>
+    {% else %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Difficulty</th>
+                    <th>Topic</th>
+                    <th>Status</th>
+                    <th>Executions</th>
+                    <th>Last Runtime</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in practices %}
+                <tr>
+                    <td>{{ p.session_date }}</td>
+                    <td><strong>{{ p.title or 'Untitled Practice' }}</strong></td>
+                    <td>{{ p.difficulty }}</td>
+                    <td>{{ p.topic or '-' }}</td>
+                    <td><span class="badge badge-{{ p.status|replace(' ', '-') }}">{{ p.status }}</span></td>
+                    <td>{{ p.execution_count }} attempts</td>
+                    <td>{{ p.duration_ms }} ms</td>
+                    <td>
+                        <a href="{{ url_for('practice.practice_workspace', practice_id=p.id, tech=tech_name) }}" class="btn btn-secondary btn-sm">
+                            View / Edit
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}

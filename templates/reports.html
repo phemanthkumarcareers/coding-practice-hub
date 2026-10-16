@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Reports & Analytics - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.6rem; font-weight:700;">Performance & Progress Reports</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Comprehensive statistics, success metrics, streaks, and practice trends</p>
+    </div>
+</div>
+
+<!-- Overall KPI Cards -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <div class="stat-label">Completion Rate</div>
+        <div class="stat-val" style="color:#c084fc;">{{ completion_rate }}%</div>
+        <div class="stat-sub">Marked COMPLETED (6/6 goal)</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Success Rate</div>
+        <div class="stat-val" style="color:#34d399;">{{ success_rate }}%</div>
+        <div class="stat-sub">Passing executions & completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Current Streak</div>
+        <div class="stat-val" style="color:#fbbf24;">🔥 {{ metrics.current_streak }} days</div>
+        <div class="stat-sub">Longest: {{ metrics.longest_streak }} days</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">6/6 Full Days</div>
+        <div class="stat-val" style="color:#60a5fa;">{{ metrics.days_completed_6 }}</div>
+        <div class="stat-sub">Partial: {{ metrics.partial_days }} days</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Avg Attempts / Success</div>
+        <div class="stat-val" style="color:#38bdf8;">{{ avg_attempts_before_success }}</div>
+        <div class="stat-sub">Iterations to solve</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Avg Execution Runtime</div>
+        <div class="stat-val" style="color:#a78bfa;">{{ metrics.avg_execution_duration }} ms</div>
+        <div class="stat-sub">Over {{ metrics.total_executions }} total runs</div>
+    </div>
+</div>
+
+<!-- Technology Performance Table -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Performance by Technology</span>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Technology</th>
+                <th>Total Practices</th>
+                <th>Completed</th>
+                <th>Success</th>
+                <th>Failed</th>
+                <th>In Progress</th>
+                <th>Completion %</th>
+                <th>Success %</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tech, stats in tech_stats.items() %}
+            <tr>
+                <td><strong>{{ tech }}</strong></td>
+                <td>{{ stats.total }}</td>
+                <td><span class="badge badge-COMPLETED">{{ stats.completed }}</span></td>
+                <td><span style="color:#10b981; font-weight:600;">{{ stats.success }}</span></td>
+                <td><span style="color:#ef4444; font-weight:600;">{{ stats.failed }}</span></td>
+                <td><span style="color:#3b82f6;">{{ stats.in_progress }}</span></td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span>{{ stats.completion_pct }}%</span>
+                        <div style="flex:1; height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden;">
+                            <div style="width:{{ stats.completion_pct }}%; background:#a855f7; height:100%;"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span>{{ stats.success_pct }}%</span>
+                        <div style="flex:1; height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden;">
+                            <div style="width:{{ stats.success_pct }}%; background:#10b981; height:100%;"></div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Trends & Difficulty Distribution Grid -->
+<div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem;">
+    <!-- Recent 14-day Activity Trend -->
+    <div class="section-box">
+        <div class="section-title">
+            <span>Recent Activity Trend (Last 14 Days)</span>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:0.5rem; height:160px; padding-top:1rem;">
+            {% for i in range(trend_days|length) %}
+                {% set d = trend_days[i] %}
+                {% set cnt = trend_counts[i] %}
+                {% set height_pct = (cnt / 6 * 100) if cnt <= 6 else 100 %}
+                <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="{{ d }}: {{ cnt }}/6 practices">
+                    <span style="font-size:0.7rem; color:var(--text-secondary); margin-bottom:0.25rem;">{{ cnt }}</span>
+                    <div style="width:100%; height:{{ [height_pct, 5]|max }}%; background:{% if cnt == 6 %}#10b981{% elif cnt > 0 %}#3b82f6{% else %}var(--bg-tertiary){% endif %}; border-radius:4px 4px 0 0;"></div>
+                    <span style="font-size:0.65rem; color:var(--text-muted); margin-top:0.4rem; white-space:nowrap; overflow:hidden;">{{ d[5:] }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Difficulty Breakdown -->
+    <div class="section-box">
+        <div class="section-title">
+            <span>Difficulty Distribution</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:0.75rem; padding-top:0.5rem;">
+            {% set easy_cnt = difficulty_breakdown.get('Easy', 0) %}
+            {% set med_cnt = difficulty_breakdown.get('Medium', 0) %}
+            {% set hard_cnt = difficulty_breakdown.get('Hard', 0) %}
+            {% set total_diff = easy_cnt + med_cnt + hard_cnt %}
+
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+                    <span>🟢 Easy</span>
+                    <span>{{ easy_cnt }} ({{ ((easy_cnt / total_diff * 100)|round(1)) if total_diff > 0 else 0 }}%)</span>
+                </div>
+                <div style="height:8px; background:var(--bg-tertiary); border-radius:4px; overflow:hidden;">
+                    <div style="width:{{ (easy_cnt / total_diff * 100) if total_diff > 0 else 0 }}%; background:#10b981; height:100%;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+                    <span>🟡 Medium</span>
+                    <span>{{ med_cnt }} ({{ ((med_cnt / total_diff * 100)|round(1)) if total_diff > 0 else 0 }}%)</span>
+                </div>
+                <div style="height:8px; background:var(--bg-tertiary); border-radius:4px; overflow:hidden;">
+                    <div style="width:{{ (med_cnt / total_diff * 100) if total_diff > 0 else 0 }}%; background:#f59e0b; height:100%;"></div>
+                </div>
+            </div>
+
+            <div>
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:0.25rem;">
+                    <span>🔴 Hard</span>
+                    <span>{{ hard_cnt }} ({{ ((hard_cnt / total_diff * 100)|round(1)) if total_diff > 0 else 0 }}%)</span>
+                </div>
+                <div style="height:8px; background:var(--bg-tertiary); border-radius:4px; overflow:hidden;">
+                    <div style="width:{{ (hard_cnt / total_diff * 100) if total_diff > 0 else 0 }}%; background:#ef4444; height:100%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

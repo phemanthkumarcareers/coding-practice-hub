@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.6rem; font-weight:700;">Daily Coding Practice Dashboard</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Daily target: 6/6 technical practices (SQL, Python, PySpark, Databricks, DSA, System Design)</p>
+    </div>
+    <div style="display:flex; gap:0.75rem; align-items:center;">
+        {% if metrics.today_progress.exists %}
+            <a href="{{ url_for('practice.practice_workspace', date=today) }}" class="btn btn-primary" style="padding:0.6rem 1.25rem;">
+                ⚡ Continue Today's Practice ({{ today }})
+            </a>
+        {% else %}
+            <a href="{{ url_for('practice.practice_workspace', date=today) }}" class="btn btn-success" style="padding:0.6rem 1.25rem;">
+                🚀 Start Today's Practice ({{ today }})
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Cards: 8 Metrics -->
+<div class="cards-grid">
+    <div class="stat-card">
+        <div class="stat-label">Total Practices</div>
+        <div class="stat-val">{{ metrics.total_practices }}</div>
+        <div class="stat-sub">Tracked across all sessions</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Successful</div>
+        <div class="stat-val" style="color:#10b981;">{{ metrics.successful_practices }}</div>
+        <div class="stat-sub">Passed & completed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Failed</div>
+        <div class="stat-val" style="color:#ef4444;">{{ metrics.failed_practices }}</div>
+        <div class="stat-sub">Execution errors preserved</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">In Progress</div>
+        <div class="stat-val" style="color:#3b82f6;">{{ metrics.in_progress_practices }}</div>
+        <div class="stat-sub">Under active practice</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Not Started</div>
+        <div class="stat-val" style="color:var(--text-muted);">{{ metrics.not_started_practices }}</div>
+        <div class="stat-sub">Awaiting exercise</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Total Executions</div>
+        <div class="stat-val" style="color:#8b5cf6;">{{ metrics.total_executions }}</div>
+        <div class="stat-sub">Avg {{ metrics.avg_execution_duration }}ms / run</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Current Streak</div>
+        <div class="stat-val" style="color:#f59e0b;">🔥 {{ metrics.current_streak }} <span style="font-size:1rem; font-weight:normal;">days</span></div>
+        <div class="stat-sub">Continuous 6/6 days</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Longest Streak</div>
+        <div class="stat-val" style="color:#ec4899;">🏆 {{ metrics.longest_streak }} <span style="font-size:1rem; font-weight:normal;">days</span></div>
+        <div class="stat-sub">All-time record</div>
+    </div>
+</div>
+
+<!-- Today's Progress Box -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Today's Practice Target ({{ today }})</span>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:0.9rem; color:var(--text-secondary);">Goal:</span>
+            <span class="badge {% if metrics.today_progress.completed_count == 6 %}badge-COMPLETED{% elif metrics.today_progress.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}" style="font-size:0.9rem; padding:0.3rem 0.8rem;">
+                {{ metrics.today_progress.completed_count }} / 6 Completed
+            </span>
+        </div>
+    </div>
+    
+    <div style="background:var(--bg-tertiary); border-radius:9999px; height:10px; width:100%; margin-bottom:1.25rem; overflow:hidden;">
+        <div style="background:linear-gradient(90deg, #3b82f6, #10b981); height:100%; width:{{ (metrics.today_progress.completed_count / 6 * 100)|round }}%; transition: width 0.3s ease;"></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem;">
+        {% for tech in technologies %}
+            {% set item = metrics.today_progress.tech_items.get(tech) %}
+            <a href="{{ url_for('practice.practice_workspace', date=today, tech=tech) }}" style="text-decoration:none; color:inherit; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.1s, border-color 0.15s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+                <div>
+                    <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.35rem;">{{ tech }}</div>
+                    <div style="font-size:0.78rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        {{ item.title if item and item.title else 'Practice not set' }}
+                    </div>
+                </div>
+                <div style="margin-top:0.75rem;">
+                    <span class="badge badge-{{ item.status|replace(' ', '-') if item else 'NOT-STARTED' }}">
+                        {{ item.status if item else 'NOT STARTED' }}
+                    </span>
+                </div>
+            </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Technology Breakdown Table -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Technology Statistics</span>
+        <span style="font-size:0.85rem; color:var(--text-secondary); font-weight:normal;">Click a technology to browse history</span>
+    </div>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Technology</th>
+                <th>Total Practices</th>
+                <th>Success</th>
+                <th>Failed</th>
+                <th>In Progress</th>
+                <th>Completed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tech, stats in metrics.technology_stats.items() %}
+            <tr>
+                <td>
+                    <strong><a href="{{ url_for('history.tech_view', tech_name=tech) }}" style="color:var(--text-primary); text-decoration:none;">{{ tech }}</a></strong>
+                </td>
+                <td>{{ stats.total }}</td>
+                <td><span style="color:#10b981; font-weight:600;">{{ stats.success }}</span></td>
+                <td><span style="color:#ef4444; font-weight:600;">{{ stats.failed }}</span></td>
+                <td><span style="color:#3b82f6;">{{ stats.in_progress }}</span></td>
+                <td><span class="badge badge-COMPLETED">{{ stats.completed }}</span></td>
+                <td>
+                    <div style="display:flex; gap:0.4rem;">
+                        <a href="{{ url_for('practice.practice_workspace', tech=tech) }}" class="btn btn-secondary btn-sm">Practice</a>
+                        <a href="{{ url_for('history.tech_view', tech_name=tech) }}" class="btn btn-secondary btn-sm">Browse</a>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

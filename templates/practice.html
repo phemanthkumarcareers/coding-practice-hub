@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Practice Workspace - {{ session.date }} - Coding Practice Hub{% endblock %}
+
+{% block main_class %}workspace-page{% endblock %}
+
+{% block content %}
+<!-- Top Header & Tabs -->
+<div class="workspace-header">
+    <div style="display:flex; align-items:center; gap:1rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" onchange="window.location.href='/practice?date=' + this.value;">
+            <span id="session-completion-badge" class="badge {% if session.completed_count == 6 %}badge-COMPLETED{% elif session.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
+                {{ session.completed_count }} / 6
+            </span>
+        </div>
+
+        <div class="tech-tabs">
+            {% for tech in technologies %}
+                {% set p = (session.practices|selectattr('technology', 'equalto', tech)|first) %}
+                <button class="tech-tab {% if tech == selected_tech %}active{% endif %}" data-tech="{{ tech }}" onclick="switchTech('{{ tech }}')">
+                    <span>{{ tech }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="workspace-actions">
+        <div id="autosave-indicator" class="autosave-status">
+            <span>All changes saved</span>
+        </div>
+
+        <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" style="display:none;" title="DuckDB Tables & Views Explorer">
+            📊 Table Explorer
+        </button>
+
+        <button id="btn-exec-history" class="btn btn-secondary btn-sm" title="View execution attempts history">
+            📜 History
+        </button>
+
+        <button id="btn-reset" class="btn btn-secondary btn-sm" title="Reset code workspace">
+            ↺ Reset
+        </button>
+
+        <button id="btn-clear-output" class="btn btn-secondary btn-sm" title="Clear console output">
+            ⌫ Clear
+        </button>
+
+        <button id="btn-save" class="btn btn-secondary btn-sm" title="Save current changes (Ctrl+S)">
+            💾 Save
+        </button>
+
+        <button id="btn-save-complete" class="btn btn-success btn-sm" title="Mark as Completed">
+            ✓ Complete
+        </button>
+
+        <button id="btn-run" class="btn btn-primary" title="Execute Code (Ctrl+Enter)">
+            ▶ Run
+        </button>
+    </div>
+</div>
+
+<!-- Metadata Bar -->
+<div class="practice-meta-bar">
+    <div class="meta-field" style="flex:2; min-width:200px;">
+        <label>Title:</label>
+        <input type="text" id="meta-title" class="meta-input" style="width:100%;" placeholder="Practice Title / Problem Name">
+    </div>
+
+    <div class="meta-field">
+        <label>Difficulty:</label>
+        <select id="meta-difficulty" class="meta-select">
+            <option value="Easy">Easy</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="Hard">Hard</option>
+        </select>
+    </div>
+
+    <div class="meta-field" style="flex:1; min-width:140px;">
+        <label>Topic:</label>
+        <input type="text" id="meta-topic" class="meta-input" style="width:100%;" placeholder="e.g. Window Functions, DP">
+    </div>
+
+    <div class="meta-field" style="flex:1; min-width:140px;">
+        <label>Tags:</label>
+        <input type="text" id="meta-tags" class="meta-input" style="width:100%;" placeholder="e.g. sql, lead_lag, interview">
+    </div>
+
+    <div class="meta-field">
+        <label>Status:</label>
+        <span id="practice-status-badge" class="badge badge-NOT-STARTED">NOT STARTED</span>
+    </div>
+</div>
+
+<!-- Collapsible Problem Statement & Notes Bar -->
+<details style="background:var(--bg-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:0.5rem 1rem; font-size:0.85rem;" open>
+    <summary style="cursor:pointer; color:var(--text-secondary); font-weight:600;">
+        📝 Problem Statement & Practice Notes (Click to toggle)
+    </summary>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem; margin-top:0.5rem;">
+        <div>
+            <label style="font-size:0.78rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Question / Problem Statement:</label>
+            <textarea id="meta-question" class="meta-input" style="width:100%; height:60px; font-family:var(--font-sans); resize:vertical;" placeholder="Enter question or requirement details..."></textarea>
+        </div>
+        <div>
+            <label style="font-size:0.78rem; color:var(--text-secondary); display:block; margin-bottom:0.25rem;">Personal Practice Notes & Learnings:</label>
+            <textarea id="meta-notes" class="meta-input" style="width:100%; height:60px; font-family:var(--font-sans); resize:vertical;" placeholder="Key takeaways, edge cases, formulas..."></textarea>
+        </div>
+    </div>
+</details>
+
+<!-- DSA Specialized Fields -->
+<div id="dsa-specific-panel" style="display:none; background:var(--bg-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:0.5rem 1rem;">
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:0.6rem;">
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary);">Constraints:</label>
+            <input type="text" id="dsa-constraints" class="meta-input" style="width:100%;" placeholder="e.g. 1 <= nums.length <= 10^5">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary);">Time Complexity:</label>
+            <input type="text" id="dsa-time-complexity" class="meta-input" style="width:100%;" placeholder="e.g. O(N log N)">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary);">Space Complexity:</label>
+            <input type="text" id="dsa-space-complexity" class="meta-input" style="width:100%;" placeholder="e.g. O(1)">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary);">Test Cases:</label>
+            <input type="text" id="dsa-test-cases" class="meta-input" style="width:100%;" placeholder="e.g. nums=[2,7,11,15], target=9">
+        </div>
+    </div>
+</div>
+
+<!-- Databricks Specialized Fields -->
+<div id="databricks-specific-panel" style="display:none; background:var(--bg-secondary); border-left:1px solid var(--border-color); border-right:1px solid var(--border-color); border-bottom:1px solid var(--border-color); padding:0.4rem 1rem;">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+        <label style="font-size:0.8rem; color:var(--text-secondary);">Databricks Subtype:</label>
+        <select id="databricks-subtype" class="meta-select" style="min-width:200px;">
+            <option value="PySpark">PySpark</option>
+            <option value="Python">Python</option>
+            <option value="SQL">SQL</option>
+            <option value="Delta Lake">Delta Lake</option>
+            <option value="Structured Streaming">Structured Streaming</option>
+            <option value="Auto Loader">Auto Loader</option>
+            <option value="Unity Catalog">Unity Catalog</option>
+            <option value="Performance / Optimization">Performance / Optimization</option>
+            <option value="Notebook Exercise">Notebook Exercise</option>
+            <option value="Other">Other</option>
+        </select>
+        <span style="font-size:0.78rem; color:var(--text-muted);">V1 local notebook/knowledge workspace. Preserves full code and solutions.</span>
+    </div>
+</div>
+
+<!-- Resizable Split Container -->
+<div class="split-container">
+    <!-- Left: Monaco Code Editor -->
+    <div id="editor-pane" class="editor-pane">
+        <div class="pane-header">
+            <span>CODE EDITOR</span>
+            <span style="font-size:0.75rem; color:var(--text-muted);">Ctrl+Enter to Run | Ctrl+S to Save</span>
+        </div>
+        <div id="monaco-editor-container" class="editor-container"></div>
+    </div>
+
+    <!-- Draggable Divider -->
+    <div id="workspace-resizer" class="resizer-handle" title="Drag to resize editor and output panes"></div>
+
+    <!-- Right: Output or System Design Live Preview -->
+    <div id="output-pane" class="output-pane">
+        <div class="pane-header">
+            <span id="output-title">OUTPUT / CONSOLE</span>
+            <span id="output-duration-badge" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);"></span>
+        </div>
+
+        <!-- Standard Output (for SQL, Python, PySpark, Databricks, DSA) -->
+        <div id="standard-output-container" style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+            <div id="output-console" class="output-content">
+                <span style="color:var(--text-muted);">Ready. Click Run to execute code.</span>
+            </div>
+        </div>
+
+        <!-- System Design Live Preview (Markdown + Mermaid) -->
+        <div id="system-design-preview-container" style="display:none; flex:1; padding:1.25rem; overflow:auto; background:var(--output-bg);">
+        </div>
+    </div>
+</div>
+
+<!-- Execution History Modal -->
+<div id="history-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Execution History Snapshots</h3>
+            <button class="modal-close-btn" onclick="document.getElementById('history-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body" id="history-list-container">
+        </div>
+    </div>
+</div>
+
+<!-- DuckDB Table Explorer Modal -->
+<div id="duckdb-explorer-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
+    <div class="modal-content" style="max-width: 650px;">
+        <div class="modal-header">
+            <h3>DuckDB Database Explorer</h3>
+            <button class="modal-close-btn" onclick="document.getElementById('duckdb-explorer-modal').style.display='none'">&times;</button>
+        </div>
+        <div class="modal-body" id="duckdb-explorer-list">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/practice.js') }}"></script>
+<script>
+    const sessionData = {{ session|tojson }};
+    const initialTech = "{{ selected_tech }}";
+    document.addEventListener('DOMContentLoaded', () => {
+        initPracticePage(sessionData, initialTech);
+    });
+</script>
+{% endblock %}

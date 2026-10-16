@@ -1,0 +1,169 @@
+import unittest
+import os
+import json
+from datetime import date
+from app import create_app
+from models.db import (
+    init_db,
+    get_connection,
+    get_or_create_daily_session,
+    update_session_completion_status,
+    TECHNOLOGIES
+)
+from services.duckdb_service import duckdb_service
+from services.code_executor import code_executor
+from services.streak_service import streak_service
+from services.backup_service import backup_service
+
+class TestCodingPracticeHub(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        init_db()
+        cls.app = create_app()
+        cls.client = cls.app.test_client()
+
+    def test_01_database_initialization(self):
+        conn = get_connection()
+        tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
+        conn.close()
+        
+        expected_tables = ["daily_sessions", "practices", "executions", "datasets", "tags", "practice_tags", "settings"]
+        for t in expected_tables:
+            self.assertIn(t, tables, f"Table {t} should be initialized")
+
+    def test_02_daily_session_and_six_practices(self):
+        test_date = "2026-10-17"
+        session = get_or_create_daily_session(test_date)
+        
+        self.assertEqual(session["date"], test_date)
+        self.assertEqual(len(session["practices"]), 6, "Every session must have exactly 6 practices")
+        
+        techs_in_session = [p["technology"] for p in session["practices"]]
+        for t in TECHNOLOGIES:
+            self.assertIn(t, techs_in_session)
+
+    def test_03_prevent_duplicate_sessions(self):
+        test_date = "2026-10-17"
+        session1 = get_or_create_daily_session(test_date)
+        session2 = get_or_create_daily_session(test_date)
+        self.assertEqual(session1["id"], session2["id"], "Multiple calls for the same date must return the same session")
+
+    def test_04_python_execution_success_and_failure(self):
+        # 1. Success case
+        code_success = "print('Subprocess execution output: 42')"
+        res_ok = code_executor.execute_python(code_success, tech="python")
+        self.assertEqual(res_ok["status"], "SUCCESS")
+        self.assertIn("Subprocess execution output: 42", res_ok["stdout"])
+        self.assertEqual(res_ok["stderr"], "")
+
+        # 2. Failure case
+        code_fail = "x = 1 / 0"
+        res_fail = code_executor.execute_python(code_fail, tech="python")
+        self.assertEqual(res_fail["status"], "FAILED")
+        self.assertIn("ZeroDivisionError", res_fail["stderr"])
+
+        # 3. Timeout handling
+        code_timeout = "import time; time.sleep(5)"
+        res_timeout = code_executor.execute_python(code_timeout, tech="python", custom_timeout=1)
+        self.assertEqual(res_timeout["status"], "FAILED")
+        self.assertTrue(res_timeout["timed_out"])
+
+    def test_05_duckdb_sql_execution(self):
+        # Test basic query
+        res = duckdb_service.execute_query("SELECT 100 AS num, 'DuckDB' AS engine;")
+        self.assertEqual(res["status"], "SUCCESS")
+        self.assertEqual(res["columns"], ["num", "engine"])
+        self.assertEqual(res["rows"], [[100, "DuckDB"]])
+        self.assertEqual(res["row_count"], 1)
+
+        # Test window function & CTE
+        cte_query = """
+            WITH ranked AS (
+                SELECT 1 AS id, 10 AS score
+                UNION ALL
+                SELECT 2 AS id, 20 AS score
+            )
+            SELECT id, score, RANK() OVER (ORDER BY score DESC) as rank
+            FROM ranked;
+        """
+        res_cte = duckdb_service.execute_query(cte_query)
+        self.assertEqual(res_cte["status"], "SUCCESS")
+        self.assertEqual(len(res_cte["rows"]), 2)
+
+        # Test SQL Error handling
+        res_err = duckdb_service.execute_query("SELECT * FROM non_existent_table_xyz;")
+        self.assertEqual(res_err["status"], "FAILED")
+        self.assertIsNotNone(res_err["error"])
+
+    def test_06_execution_history_preservation(self):
+        import uuid
+        test_date = f"2099-01-{uuid.uuid4().hex[:4]}"
+        session = get_or_create_daily_session(test_date)
+        sql_practice = next(p for p in session["practices"] if p["technology"] == "SQL")
+
+        # Run 1: Failed
+        res1 = self.client.post("/api/practice/run", json={
+            "id": sql_practice["id"],
+            "technology": "SQL",
+            "code": "SELECT * FROM non_existent;"
+        })
+        self.assertEqual(res1.status_code, 200)
+
+        # Run 2: Success
+        res2 = self.client.post("/api/practice/run", json={
+            "id": sql_practice["id"],
+            "technology": "SQL",
+            "code": "SELECT 1;"
+        })
+        self.assertEqual(res2.status_code, 200)
+
+        # Check execution history: both must be preserved
+        hist_res = self.client.get(f"/api/practice/executions/{sql_practice['id']}")
+        self.assertEqual(hist_res.status_code, 200)
+        executions = hist_res.get_json()
+        self.assertEqual(len(executions), 2, "Both executions must be preserved")
+        self.assertEqual(executions[0]["status"], "SUCCESS")
+        self.assertEqual(executions[1]["status"], "FAILED")
+
+    def test_07_completion_logic_0_to_6(self):
+        import uuid
+        test_date = f"2099-02-{uuid.uuid4().hex[:4]}"
+        session = get_or_create_daily_session(test_date)
+        session_id = session["id"]
+
+        # Mark all 6 as COMPLETED one by one
+        for i, p in enumerate(session["practices"], 1):
+            save_res = self.client.post("/api/practice/save", json={
+                "id": p["id"],
+                "status": "COMPLETED",
+                "title": f"Done {p['technology']}"
+            })
+            data = save_res.get_json()
+            self.assertEqual(data["completed_count"], i)
+            if i == 6:
+                self.assertEqual(data["session_status"], "COMPLETED")
+            else:
+                self.assertEqual(data["session_status"], "IN PROGRESS")
+
+    def test_08_global_search(self):
+        # Insert known keyword into title
+        session = get_or_create_daily_session("2026-10-20")
+        p = session["practices"][0]
+        self.client.post("/api/practice/save", json={
+            "id": p["id"],
+            "title": "Quantum Window Function Practice",
+            "question": "Calculate running totals using partition by",
+            "topic": "Analytics"
+        })
+
+        search_res = self.client.get("/api/search?q=Quantum")
+        results = search_res.get_json()["results"]
+        self.assertTrue(any(r["title"] == "Quantum Window Function Practice" for r in results))
+
+    def test_09_backup_service(self):
+        backup_file = backup_service.create_backup()
+        self.assertTrue(backup_file.exists())
+        self.assertTrue(backup_file.name.endswith(".zip"))
+
+if __name__ == "__main__":
+    unittest.main()

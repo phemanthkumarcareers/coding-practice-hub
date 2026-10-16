@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Settings & System - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.6rem; font-weight:700;">Settings & Environment</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Configure interpreters, execution safety timeouts, backup/restore, and system diagnostics</p>
+    </div>
+</div>
+
+<!-- Diagnostics / Environment Status Card -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Environment Diagnostics & Auto-Detection</span>
+        <button class="btn btn-secondary btn-sm" onclick="reDetectEnv()">🔄 Refresh Detection</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px; border:1px solid var(--border-color);">
+            <div style="font-size:0.8rem; color:var(--text-secondary);">Python Runtime</div>
+            <div style="font-weight:600; margin-top:0.25rem;">Python {{ env_info.python_version }}</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); word-break:break-all; font-family:var(--font-mono); margin-top:0.2rem;">{{ env_info.detected_python }}</div>
+        </div>
+
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px; border:1px solid var(--border-color);">
+            <div style="font-size:0.8rem; color:var(--text-secondary);">Java (JVM) Status</div>
+            <div style="font-weight:600; margin-top:0.25rem; display:flex; align-items:center; gap:0.4rem;">
+                {% if env_info.java_installed %}
+                    <span style="color:#10b981;">● Detected</span>
+                {% else %}
+                    <span style="color:#ef4444;">● Not Found</span>
+                {% endif %}
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">{{ env_info.java_version or 'Configure JAVA_HOME below to enable PySpark' }}</div>
+        </div>
+
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px; border:1px solid var(--border-color);">
+            <div style="font-size:0.8rem; color:var(--text-secondary);">PySpark Package</div>
+            <div style="font-weight:600; margin-top:0.25rem;">
+                {% if env_info.pyspark_installed %}
+                    <span style="color:#10b981;">● Installed (v{{ env_info.pyspark_version }})</span>
+                {% else %}
+                    <span style="color:#f59e0b;">● Not installed (`pip install pyspark`)</span>
+                {% endif %}
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.2rem;">Ready for PySpark: {{ 'YES' if env_info.ready else 'NO (Requires Java + PySpark)' }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Form -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Application Configuration</span>
+        <button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 Save Settings</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Python Executable Path:</label>
+            <input type="text" id="setting-python-executable" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('python_executable', '') }}" placeholder="e.g. python or C:\Python312\python.exe">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Used for isolated subprocess Python and DSA practice execution.</span>
+        </div>
+
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Execution Timeout (seconds):</label>
+            <input type="number" id="setting-execution-timeout" class="meta-input" style="width:100%;" value="{{ settings.get('execution_timeout', '15') }}" min="3" max="120">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Prevents infinite loops or hung scripts from freezing Flask. Default: 15s.</span>
+        </div>
+
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">JAVA_HOME:</label>
+            <input type="text" id="setting-java-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('java_home', '') }}" placeholder="e.g. C:\Program Files\Java\jdk-17">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Required if running local Spark / PySpark.</span>
+        </div>
+
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">SPARK_HOME:</label>
+            <input type="text" id="setting-spark-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('spark_home', '') }}" placeholder="e.g. C:\spark">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Optional custom Spark distribution home path.</span>
+        </div>
+
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Autosave Interval (seconds):</label>
+            <input type="number" id="setting-autosave-interval" class="meta-input" style="width:100%;" value="{{ settings.get('autosave_interval', '15') }}" min="5" max="120">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Periodic background save rate for code and problem notes.</span>
+        </div>
+
+        <div>
+            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Default Theme:</label>
+            <select id="setting-theme" class="meta-select" style="width:100%;">
+                <option value="dark" {% if settings.get('theme') == 'dark' %}selected{% endif %}>Dark (VS Code Dark)</option>
+                <option value="light" {% if settings.get('theme') == 'light' %}selected{% endif %}>Light</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Storage Locations -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Storage Paths</span>
+    </div>
+    <div style="font-size:0.82rem; font-family:var(--font-mono); display:flex; flex-direction:column; gap:0.4rem; color:var(--text-secondary);">
+        <div><strong>SQLite App DB:</strong> {{ env_info.sqlite_path }}</div>
+        <div><strong>DuckDB Engine DB:</strong> {{ env_info.duckdb_path }}</div>
+        <div><strong>Datasets Uploads:</strong> {{ env_info.uploads_dir }}</div>
+        <div><strong>Workspace Subprocess Dir:</strong> {{ env_info.workspace_dir }}</div>
+    </div>
+</div>
+
+<!-- Backup & Restore -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Backup & Restore Practice Data</span>
+    </div>
+    <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+        Generate full zip snapshots including your SQLite database, DuckDB database, uploaded datasets, and custom workspace files to protect months of practice history.
+    </p>
+
+    <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+        <div style="flex:1; min-width:280px; background:var(--bg-tertiary); padding:1rem; border-radius:6px; border:1px solid var(--border-color);">
+            <div style="font-weight:600; margin-bottom:0.4rem;">Create Backup</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Creates a timestamped compressed ZIP archive in the <code>backups/</code> folder.</p>
+            <button class="btn btn-primary" onclick="createBackup()">📦 Create Backup Now</button>
+        </div>
+
+        <div style="flex:1; min-width:280px; background:var(--bg-tertiary); padding:1rem; border-radius:6px; border:1px solid var(--border-color);">
+            <div style="font-weight:600; margin-bottom:0.4rem;">Restore From Backup</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Restores database and uploaded files. Requires user confirmation.</p>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="file" id="backup-file-input" accept=".zip" class="meta-input" style="flex:1;">
+                <button class="btn btn-danger" onclick="restoreBackup()">↺ Restore</button>
+            </div>
+        </div>
+    </div>
+
+    {% if backups|length > 0 %}
+        <div style="font-weight:600; font-size:0.9rem; margin-bottom:0.5rem;">Existing Backups:</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Backup File</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in backups %}
+                <tr>
+                    <td><code>{{ b.filename }}</code></td>
+                    <td>{{ b.size_kb }} KB</td>
+                    <td>
+                        <a href="/api/backup/download/{{ b.filename }}" class="btn btn-secondary btn-sm">⬇ Download</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function saveSettings() {
+        const payload = {
+            python_executable: document.getElementById('setting-python-executable').value,
+            execution_timeout: document.getElementById('setting-execution-timeout').value,
+            java_home: document.getElementById('setting-java-home').value,
+            spark_home: document.getElementById('setting-spark-home').value,
+            autosave_interval: document.getElementById('setting-autosave-interval').value,
+            theme: document.getElementById('setting-theme').value
+        };
+
+        try {
+            const res = await fetch('/api/settings/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Settings saved successfully!', 'success');
+            } else {
+                showToast('Failed to save settings', 'error');
+            }
+        } catch (err) {
+            showToast('Error saving settings: ' + err.message, 'error');
+        }
+    }
+
+    async function createBackup() {
+        showToast('Creating backup archive...', 'info');
+        try {
+            const res = await fetch('/api/backup/create', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Backup created! Starting download...', 'success');
+                window.location.href = data.download_url;
+                setTimeout(() => window.location.reload(), 1500);
+            } else {
+                showToast('Backup creation failed: ' + data.error, 'error');
+            }
+        } catch (err) {
+            showToast('Backup error: ' + err.message, 'error');
+        }
+    }
+
+    async function restoreBackup() {
+        const input = document.getElementById('backup-file-input');
+        if (!input.files || input.files.length === 0) {
+            showToast('Please select a .zip backup file first', 'error');
+            return;
+        }
+
+        if (!confirm('WARNING: Restoring will overwrite existing practice data with the backup contents. Are you sure you wish to proceed?')) {
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('backup_file', input.files[0]);
+
+        showToast('Restoring backup snapshot...', 'info');
+        try {
+            const res = await fetch('/api/backup/restore', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Restoration completed! Reloading...', 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                showToast('Restore failed: ' + data.error, 'error');
+            }
+        } catch (err) {
+            showToast('Restore error: ' + err.message, 'error');
+        }
+    }
+
+    async function reDetectEnv() {
+        showToast('Refreshing environment diagnostics...', 'info');
+        try {
+            const res = await fetch('/api/settings/detect_env');
+            const data = await res.json();
+            if (data.success) {
+                showToast('Diagnostics refreshed', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            }
+        } catch (err) {
+            showToast('Detection error: ' + err.message, 'error');
+        }
+    }
+</script>
+{% endblock %}

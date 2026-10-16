@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Coding Practice Hub{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Monaco Editor Loader -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <!-- Mermaid for System Design -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <script>
+        if (window.mermaid) {
+            mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+        }
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{{ url_for('dashboard.index') }}" class="brand">
+            <div class="brand-icon">CP</div>
+            <span>Coding Practice Hub</span>
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="{{ url_for('dashboard.index') }}" class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">Dashboard</a></li>
+            <li><a href="{{ url_for('practice.practice_workspace') }}" class="nav-link {% if request.endpoint == 'practice.practice_workspace' %}active{% endif %}">Create Practice</a></li>
+            <li><a href="{{ url_for('history.history_view') }}" class="nav-link {% if request.endpoint == 'history.history_view' or request.endpoint == 'history.tech_view' %}active{% endif %}">Practice History</a></li>
+            <li><a href="{{ url_for('reports.reports_view') }}" class="nav-link {% if request.endpoint == 'reports.reports_view' %}active{% endif %}">Reports</a></li>
+            <li><a href="{{ url_for('datasets.datasets_view') }}" class="nav-link {% if request.endpoint == 'datasets.datasets_view' %}active{% endif %}">Datasets</a></li>
+            <li><a href="{{ url_for('settings.settings_view') }}" class="nav-link {% if request.endpoint == 'settings.settings_view' %}active{% endif %}">Settings</a></li>
+        </ul>
+
+        <div class="nav-actions">
+            <button class="search-trigger" onclick="openSearchModal()">
+                <span>🔍 Search</span>
+                <span class="kbd-badge">Ctrl K</span>
+            </button>
+            <button id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle theme">☀️</button>
+        </div>
+    </nav>
+
+    <main class="{% block main_class %}main-content{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Global Search Modal -->
+    <div id="search-modal" class="modal-overlay" onclick="if(event.target === this) closeSearchModal()">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3>Global Practice Search</h3>
+                <button class="modal-close-btn" onclick="closeSearchModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="global-search-input" class="search-input-box" placeholder="Search by title, question, topic, tag, code, notes..." autocomplete="off">
+                <div id="search-results-list" class="search-results-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core App JS -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+
+{% block title %}Practice History - Coding Practice Hub{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+    <div>
+        <h1 style="font-size:1.6rem; font-weight:700;">Practice History</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Review, edit, and continue past daily coding practice sessions</p>
+    </div>
+</div>
+
+<!-- Filter & Grouping Controls -->
+<div class="section-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <span style="font-weight:600; font-size:0.95rem;">Filters & Grouping</span>
+        <button class="btn btn-secondary btn-sm" onclick="resetFilters()">Reset Filters</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:1rem;">
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">From Date:</label>
+            <input type="date" id="filter-start-date" class="meta-input" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">To Date:</label>
+            <input type="date" id="filter-end-date" class="meta-input" style="width:100%;">
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">Technology:</label>
+            <select id="filter-technology" class="meta-select" style="width:100%;">
+                <option value="">All Technologies</option>
+                {% for tech in technologies %}
+                    <option value="{{ tech }}">{{ tech }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">Status:</label>
+            <select id="filter-status" class="meta-select" style="width:100%;">
+                <option value="">All Statuses</option>
+                {% for st in statuses %}
+                    <option value="{{ st }}">{{ st }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">Difficulty:</label>
+            <select id="filter-difficulty" class="meta-select" style="width:100%;">
+                <option value="">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">Group By:</label>
+            <select id="filter-group-by" class="meta-select" style="width:100%;">
+                <option value="date" selected>Date</option>
+                <option value="technology">Technology</option>
+                <option value="status">Status</option>
+                <option value="difficulty">Difficulty</option>
+                <option value="topic">Topic</option>
+            </select>
+        </div>
+    </div>
+    
+    <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+        <button class="btn btn-primary btn-sm" onclick="applyFilters()">Apply Filters</button>
+    </div>
+</div>
+
+<!-- Sessions Summary Table (Default View) -->
+<div id="default-history-container" class="section-box">
+    <div class="section-title">
+        <span>Daily Practice Sessions</span>
+    </div>
+
+    {% if sessions|length == 0 %}
+        <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+            No practice sessions created yet. Click "Create Practice" in the navigation to begin!
+        </div>
+    {% else %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>SQL</th>
+                    <th>Python</th>
+                    <th>PySpark</th>
+                    <th>Databricks</th>
+                    <th>DSA</th>
+                    <th>System Design</th>
+                    <th>Completed</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('practice.practice_workspace', date=s.date) }}" style="font-weight:700; color:var(--text-primary); text-decoration:none;">
+                            📅 {{ s.date }}
+                        </a>
+                    </td>
+                    {% for tech in technologies %}
+                        {% set p = s.tech_practices.get(tech) %}
+                        <td>
+                            {% if p %}
+                                <a href="{{ url_for('practice.practice_workspace', date=s.date, tech=tech) }}" style="text-decoration:none;">
+                                    <span class="badge badge-{{ p.status|replace(' ', '-') }}" style="font-size:0.7rem;">
+                                        {{ p.status }}
+                                    </span>
+                                </a>
+                            {% else %}
+                                <span class="badge badge-NOT-STARTED" style="font-size:0.7rem;">NS</span>
+                            {% endif %}
+                        </td>
+                    {% endfor %}
+                    <td>
+                        <span class="badge {% if s.completed_count == 6 %}badge-COMPLETED{% elif s.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
+                            {{ s.completed_count }} / 6
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('practice.practice_workspace', date=s.date) }}" class="btn btn-secondary btn-sm">
+                            Open Session
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+
+<!-- Filtered Grouped Container (Populated dynamically when filter is applied) -->
+<div id="filtered-history-container" class="section-box" style="display:none;">
+    <div class="section-title">
+        <span id="filtered-title">Filtered Results</span>
+        <span id="filtered-count-badge" class="badge badge-IN-PROGRESS">0 practices</span>
+    </div>
+    <div id="filtered-groups-content"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function applyFilters() {
+        const payload = {
+            start_date: document.getElementById('filter-start-date').value || null,
+            end_date: document.getElementById('filter-end-date').value || null,
+            technologies: document.getElementById('filter-technology').value ? [document.getElementById('filter-technology').value] : [],
+            statuses: document.getElementById('filter-status').value ? [document.getElementById('filter-status').value] : [],
+            difficulties: document.getElementById('filter-difficulty').value ? [document.getElementById('filter-difficulty').value] : [],
+            group_by: document.getElementById('filter-group-by').value || 'date'
+        };
+
+        const res = await fetch('/api/history/filter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        const defaultContainer = document.getElementById('default-history-container');
+        const filteredContainer = document.getElementById('filtered-history-container');
+        const groupsContent = document.getElementById('filtered-groups-content');
+        const countBadge = document.getElementById('filtered-count-badge');
+
+        defaultContainer.style.display = 'none';
+        filteredContainer.style.display = 'block';
+        countBadge.textContent = `${data.count} practice(s) found`;
+
+        if (data.count === 0) {
+            groupsContent.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">No practices match the selected criteria.</div>';
+            return;
+        }
+
+        let html = '';
+        for (const [groupKey, items] of Object.entries(data.grouped)) {
+            html += `
+                <div style="margin-bottom:1.5rem; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; overflow:hidden;">
+                    <div style="padding:0.6rem 1rem; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); font-weight:700; display:flex; justify-content:space-between;">
+                        <span>${data.group_by.toUpperCase()}: ${groupKey}</span>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">${items.length} item(s)</span>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Technology</th>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Difficulty</th>
+                                <th>Executions</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${items.map(p => `
+                                <tr>
+                                    <td>${p.session_date}</td>
+                                    <td><strong>${p.technology}</strong></td>
+                                    <td>${p.title || 'Untitled Practice'}</td>
+                                    <td><span class="badge badge-${p.status.replace(/\s+/g, '-')}">${p.status}</span></td>
+                                    <td>${p.difficulty}</td>
+                                    <td>${p.execution_count} runs</td>
+                                    <td>
+                                        <a href="/practice?practice_id=${p.id}&tech=${encodeURIComponent(p.technology)}" class="btn btn-secondary btn-sm">Edit / Run</a>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        groupsContent.innerHTML = html;
+    }
+
+    function resetFilters() {
+        document.getElementById('filter-start-date').value = '';
+        document.getElementById('filter-end-date').value = '';
+        document.getElementById('filter-technology').value = '';
+        document.getElementById('filter-status').value = '';
+        document.getElementById('filter-difficulty').value = '';
+        document.getElementById('filter-group-by').value = 'date';
+        document.getElementById('default-history-container').style.display = 'block';
+        document.getElementById('filtered-history-container').style.display = 'none';
+    }
+</script>
+{% endblock %}
