@@ -1667,6 +1667,31 @@ function clearConsoleOutput() {
     showToast('Console output cleared', 'info', 1200);
 }
 
+// Copy Console Content to Clipboard (Structured, Text, or Design Preview)
+async function copyConsoleOutput() {
+    const sysDesign = document.getElementById('system-design-preview-container');
+    const consoleEl = document.getElementById('output-console');
+    const targetNode = (sysDesign && sysDesign.style.display !== 'none') ? sysDesign : consoleEl;
+    if (!targetNode) return;
+
+    const textToCopy = targetNode.innerText || targetNode.textContent || '';
+    if (!textToCopy.trim() || textToCopy.trim() === 'Ready. Click Run to execute code.') {
+        showToast('Console has no output to copy', 'info', 1500);
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(textToCopy);
+        showToast('Console output copied to clipboard! 📋', 'success', 1800);
+    } catch (e) {
+        if (window.selectElementContents) {
+            window.selectElementContents(targetNode);
+        }
+        document.execCommand('copy');
+        showToast('Console output copied to clipboard! 📋', 'success', 1800);
+    }
+}
+
 // DuckDB Table & Database Explorer
 async function toggleDuckDBExplorer() {
     const modal = document.getElementById('duckdb-explorer-modal');

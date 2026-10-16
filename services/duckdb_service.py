@@ -3,7 +3,7 @@ import time
 import os
 import re
 from pathlib import Path
-from config import DUCKDB_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS, DATABASE_DIR
+from config import SQLITE_PATH, DUCKDB_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS, DATABASE_DIR
 from models.db import get_connection as get_sqlite_conn
 import sqlite3
 
@@ -284,12 +284,13 @@ class DuckDBService:
 
     def get_databases_overview(self):
         """Returns overview of both SQLite and DuckDB databases (including user-created ones)."""
+        sqlite_file = Path(os.environ.get("CODING_HUB_DB_PATH") or SQLITE_PATH)
         overview = {
             "sqlite": {
                 "name": "SQLite Application Database",
-                "filename": "app.db",
-                "path": str(SQLITE_PATH),
-                "size_kb": round(SQLITE_PATH.stat().st_size / 1024, 1) if SQLITE_PATH.exists() else 0,
+                "filename": sqlite_file.name,
+                "path": str(sqlite_file),
+                "size_kb": round(sqlite_file.stat().st_size / 1024, 1) if sqlite_file.exists() else 0,
                 "tables": []
             },
             "duckdb": {

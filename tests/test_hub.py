@@ -311,6 +311,11 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertNotIn("file_to_del.py", extra.get("files", {}))
         self.assertNotIn("file_to_del.py", extra.get("open_tabs", []))
 
+    def test_15_datasets_view(self):
+        res = self.client.get("/datasets")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"Datasets", res.data)
+
 if __name__ == "__main__":
     unittest.main()
 

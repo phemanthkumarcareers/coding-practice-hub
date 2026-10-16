@@ -60,26 +60,13 @@
             <div class="sidebar-top">
                 <!-- Brand & Logo -->
                 <div class="sidebar-brand-wrapper">
-                    <a href="{{ url_for('dashboard.index') }}" class="sidebar-brand">
-                        <span class="app-logo-img sidebar-logo" id="app-logo-img" role="img" aria-label="Coding Practice Hub Logo"></span>
-                        <div class="brand-text">
+                    <div class="sidebar-brand">
+                        <span class="app-logo-img sidebar-logo" id="app-logo-img" role="button" tabindex="0" onclick="toggleSidebar(event)" title="Toggle Sidebar (Click logo to collapse / expand)" aria-label="Toggle Sidebar Navigation"></span>
+                        <a href="{{ url_for('dashboard.index') }}" class="brand-text" title="Go to Daily Coding Practice Dashboard">
                             <span class="brand-title">Coding Practice</span>
                             <span class="brand-sub">Daily Hub</span>
-                        </div>
-                    </a>
-                    <button class="sidebar-toggle-btn" id="sidebar-toggle-btn" title="Toggle Sidebar" onclick="toggleSidebar()">
-                        ◀
-                    </button>
-                    <script>
-                        (function() {
-                            try {
-                                if (localStorage.getItem('ch_sidebar_collapsed') === 'true') {
-                                    var btn = document.getElementById('sidebar-toggle-btn');
-                                    if (btn) btn.textContent = '▶';
-                                }
-                            } catch(e) {}
-                        })();
-                    </script>
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Global Quick Search button -->

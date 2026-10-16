@@ -139,25 +139,32 @@ function applyThemeUI(themePref) {
     }
 }
 
-// Sidebar Collapse / Expand Controller
+// Sidebar Collapse / Expand Controller (Powered directly by Brand Logo)
+function updateLogoTooltip(isCollapsed) {
+    const logoEl = document.getElementById('app-logo-img');
+    if (logoEl) {
+        logoEl.title = isCollapsed
+            ? 'Expand Sidebar (Click logo)'
+            : 'Collapse Sidebar (Click logo)';
+    }
+}
+
 function initSidebar() {
     const rawVal = localStorage.getItem('ch_sidebar_collapsed');
     // By default: OPEN (not collapsed) on first launch or when null/unset
     const isCollapsed = rawVal === 'true';
     const sidebar = document.getElementById('app-sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle-btn');
 
     if (!sidebar) return;
 
     if (isCollapsed) {
         sidebar.classList.add('collapsed');
         document.documentElement.classList.add('sidebar-is-collapsed');
-        if (toggleBtn) toggleBtn.textContent = '▶';
     } else {
         sidebar.classList.remove('collapsed');
         document.documentElement.classList.remove('sidebar-is-collapsed');
-        if (toggleBtn) toggleBtn.textContent = '◀';
     }
+    updateLogoTooltip(isCollapsed);
 
     // Enable smooth slide transitions only AFTER initial paint to prevent opening/minimizing flicker on refresh
     requestAnimationFrame(() => {
@@ -167,9 +174,12 @@ function initSidebar() {
     });
 }
 
-function toggleSidebar() {
+function toggleSidebar(e) {
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
     const sidebar = document.getElementById('app-sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle-btn');
     if (!sidebar) return;
 
     // Ensure transition animation is enabled on user click
@@ -181,13 +191,12 @@ function toggleSidebar() {
     if (nextState) {
         sidebar.classList.add('collapsed');
         document.documentElement.classList.add('sidebar-is-collapsed');
-        if (toggleBtn) toggleBtn.textContent = '▶';
     } else {
         sidebar.classList.remove('collapsed');
         document.documentElement.classList.remove('sidebar-is-collapsed');
-        if (toggleBtn) toggleBtn.textContent = '◀';
     }
 
+    updateLogoTooltip(nextState);
     localStorage.setItem('ch_sidebar_collapsed', nextState);
 
     // Relayout Monaco editor smoothly after sidebar width transition
@@ -195,7 +204,7 @@ function toggleSidebar() {
         if (window.monacoEditorInstance) {
             window.monacoEditorInstance.layout();
         }
-    }, 220);
+    }, 260);
 }
 
 // Global Toast Notifications
@@ -504,11 +513,109 @@ function initClickAnimations() {
     });
 }
 
+// Scoped Selection & Copy Engine (Ctrl+A / Cmd+A targeting active context only)
+function selectElementContents(el) {
+    if (!el) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    if (sel) {
+        sel.removeAllRanges();
+        sel.addRange(range);
+    }
+}
+window.selectElementContents = selectElementContents;
+
+function initScopedSelection() {
+    let lastInteractedArea = null; // 'console' | 'editor' | 'modal' | 'input' | null
+    let lastInteractedEl = null;
+
+    document.addEventListener('mousedown', (e) => {
+        const target = e.target;
+        if (!target) return;
+
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+            lastInteractedArea = 'input';
+            lastInteractedEl = target;
+        } else if (target.closest('#output-pane') || target.closest('#output-console')) {
+            lastInteractedArea = 'console';
+            lastInteractedEl = document.getElementById('output-console');
+        } else if (target.closest('#editor-pane') || target.closest('#monaco-editor-container')) {
+            lastInteractedArea = 'editor';
+            lastInteractedEl = document.getElementById('monaco-editor-container');
+        } else if (target.closest('.modal-content') || target.closest('.modal-body')) {
+            lastInteractedArea = 'modal';
+            lastInteractedEl = target.closest('.snapshot-code') || target.closest('.modal-body') || target.closest('.modal-content');
+        } else {
+            lastInteractedArea = null;
+            lastInteractedEl = null;
+        }
+    }, true);
+
+    document.addEventListener('keydown', (e) => {
+        // Detect Ctrl+A or Cmd+A
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+            const activeEl = document.activeElement;
+
+            // 1. Native inputs / textareas / contenteditable: let native browser behavior select that element
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.isContentEditable)) {
+                return;
+            }
+
+            // 2. Console Pane: select only console output text or table
+            const isConsoleTarget = e.target && (e.target.closest('#output-pane') || e.target.closest('#output-console'));
+            if (isConsoleTarget || lastInteractedArea === 'console') {
+                const consoleEl = document.getElementById('output-console');
+                const sysDesignEl = document.getElementById('system-design-preview-container');
+                const targetNode = (sysDesignEl && sysDesignEl.style.display !== 'none') ? sysDesignEl : consoleEl;
+
+                if (targetNode) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectElementContents(targetNode);
+                    return;
+                }
+            }
+
+            // 3. Editor Pane: select code inside Monaco editor only
+            const isEditorTarget = e.target && (e.target.closest('#editor-pane') || e.target.closest('#monaco-editor-container'));
+            if (isEditorTarget || lastInteractedArea === 'editor') {
+                const ed = window.monacoEditorInstance || window.monacoEditor;
+                if (ed) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    ed.focus();
+                    const model = ed.getModel();
+                    if (model) {
+                        ed.setSelection(model.getFullModelRange());
+                    }
+                    return;
+                }
+            }
+
+            // 4. Modal dialogs: select modal body or code snippet only
+            const isModalTarget = e.target && (e.target.closest('.modal-content') || e.target.closest('.modal-body'));
+            if (isModalTarget || lastInteractedArea === 'modal') {
+                const openModalBody = document.querySelector('.modal-overlay[style*="display: flex"] .modal-body')
+                    || (lastInteractedEl && document.contains(lastInteractedEl) ? lastInteractedEl : null)
+                    || document.querySelector('.modal-content');
+                if (openModalBody) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    selectElementContents(openModalBody);
+                    return;
+                }
+            }
+        }
+    }, true);
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initSidebar();
     initClickAnimations();
+    initScopedSelection();
 
     const searchInput = document.getElementById('global-search-input');
     if (searchInput) {
