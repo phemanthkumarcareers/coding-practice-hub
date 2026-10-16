@@ -70,27 +70,25 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   - Synchronous pre-paint initialization ensures instant display on page refresh without flicker.
 - **Live Monaco Synchronization**: Theme switches instantly update Monaco Editor between `vs` and `vs-dark`, and persist across browser sessions in `localStorage` and backend settings.
 
-### 3. Fullscreen & Maximize Editor (Zen / Focus Mode)
+### 3. Fullscreen & Maximize Editor (70% Editor + 30% Output Console)
 - **⛶ Normal Browser Fullscreen**: Click the `⛶ Fullscreen` button in the editor tab bar / practice workspace actions (or press `F11`) to expand the app into true edge-to-edge browser fullscreen mode.
-- **🗖 Maximize Editor (Focus Mode)**: Click the `🗖 Maximize` button to isolate the Monaco Editor into 100% full-screen focus mode. This temporarily hides the sidebar, metadata bar, and console log so you can code without distractions.
+- **🗖 Maximize Editor & Console**: Click the `🗖 Maximize` button to isolate the coding environment into distraction-free focus mode. Unlike legacy focus modes that hide the console, this mode cleanly allocates **70% of screen height to the Monaco Editor** and **30% to the Output Console**, allowing you to code and inspect execution results simultaneously. The vertical resizer handle remains fully interactive.
 - **Universal Escape (`Esc`) Handler**: Pressing `Escape` naturally exits fullscreen modes in clean priority:
-  1. Closes any open modal dialog (Explorer, Create Database, Confirm, Prompt, History).
-  2. Restores the editor from Maximized Focus Mode to the normal layout.
+  1. Closes any open modal dialog (Explorer, Create Database, Confirm, History).
+  2. Restores the editor from Maximized Mode to standard view.
   3. Exits edge-to-edge browser fullscreen mode.
 
 ### 4. Zero Browser Popups (Custom In-App Modal Dialogs)
-- **No Native `alert()`, `confirm()`, or `prompt()`**: All dialogs throughout the application use dedicated, themed, accessible in-app modals (`#app-confirm-modal`, `#app-prompt-modal`, and `#create-db-modal`).
+- **No Native `alert()`, `confirm()`, or `prompt()`**: All destructive confirmations and database creations use sleek in-app modals (`#app-confirm-modal` and `#create-db-modal`).
 - **Confirmation Modals**: Destructive operations (resetting workspace code, deleting custom project files, removing uploaded datasets, restoring backups) use sleek modal dialogs with customizable confirmation and cancellation buttons.
-- **Interactive Input Prompts**: Multi-file tab creation and database creation utilize styled in-app prompt inputs with autofocus, keyboard submit (`Enter`), and escape cancellation.
 
 ### 5. Multi-File Project Workspace for ALL Coding Terminals
 - **Universal Multi-File Tabs**: Practice real-world file structures directly in the browser across **all 6 technologies** (SQL, Python, PySpark, Databricks, DSA, and System Design).
+- **Instant `+ New File` Creation (Zero Popups)**: Clicking `+ New File` instantly generates a new tab with intelligent technology-specific defaults (`query_2.sql`, `module_2.py`, `notes_2.md`) and preloaded template content without annoying modal popups.
+- **Inline Tab Renaming (Click-to-Rename, Blur-to-Save)**: Click any file tab name to edit it in place. No extra `X` or tick icons—simply click anywhere on the screen (or press `Enter`) to automatically commit the new filename. Pressing `Escape` cancels the rename.
+- **Problem Statement & Notes Accordion Bounds**: Minimized/maximized height constraints ensure the Problem Statement & Practice Notes section has a solid minimum height when opened while capping maximum expansion to protect editor vertical space.
 - **Streamlined IDE Tab Bar**: Clean, unified tab header with proper readable font sizing, context-aware file icons (`🗄️ .sql`, `🐍 .py`, `📝 .md`, `⚙️ .json`, `📄`), and zero horizontal scrollbar clutter.
 - **Integrated Window & Shortcut Controls**: Quick access to keyboard shortcuts (`Ctrl+Enter to Run | Ctrl+S to Save`), maximize (`🗖`), and full screen (`⛶`) integrated directly into the tab bar right header.
-- **`+ New File` Creation**: Add helper modules such as `utils.py`, queries like `tables.sql`, notes like `architecture_notes.md`, or test scripts.
-- **Intelligent Extension Defaults**: Creating new files automatically suggests the proper file extension and template matching the active technology (e.g. `.sql` for SQL, `.py` for Python/DSA/PySpark, `.md` for System Design).
-- **Seamless Execution**: Subprocess and DuckDB runners execute the active entry file and mount all project files together in an isolated workspace.
-- **File Tab Management**: Switch tabs with a single click, close/delete files with custom in-app confirmation modal, and persist file buffers automatically across sessions.
 
 ### 6. Hierarchical Database, Tables & Views Explorer
 - **Database Accordion / Dropdown**: Hierarchically groups all databases (`practice (main / default)` and user-created DuckDB databases in `database/user_dbs/`). Click any database header to expand/collapse its tables and views.

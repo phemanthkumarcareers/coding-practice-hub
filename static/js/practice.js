@@ -93,6 +93,8 @@ function createOrUpdateEditor(code, language) {
 }
 
 // Multi-File Project Workspace Helpers (Enabled for ALL technologies)
+let inlineRenamingFile = null;
+
 function renderMultiFileTabs() {
     const bar = document.getElementById('file-tabs-list') || document.getElementById('multi-file-tabs-bar');
     if (!bar) return;
@@ -110,8 +112,8 @@ function renderMultiFileTabs() {
     Object.keys(currentProjectFiles).forEach(fname => {
         const tab = document.createElement('div');
         tab.className = `file-tab ${fname === activeFileName ? 'active' : ''}`;
-        tab.title = `Switch to ${fname}`;
-        tab.onclick = () => switchActiveFile(fname);
+        tab.title = `${fname} (Click name to rename inline)`;
+        tab.setAttribute('data-filename', fname);
 
         const iconSpan = document.createElement('span');
         iconSpan.className = 'file-tab-icon';
@@ -121,6 +123,24 @@ function renderMultiFileTabs() {
         const titleSpan = document.createElement('span');
         titleSpan.className = 'file-tab-name';
         titleSpan.textContent = fname;
+
+        // Clicking the tab switches to the file
+        tab.onclick = (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            if (activeFileName !== fname) {
+                switchActiveFile(fname);
+            }
+        };
+
+        // Clicking or double-clicking the file name triggers inline rename mode (no popup!)
+        titleSpan.onclick = (e) => {
+            e.stopPropagation();
+            if (activeFileName !== fname) {
+                switchActiveFile(fname);
+            }
+            startInlineTabRename(fname, titleSpan, tab);
+        };
+
         tab.appendChild(titleSpan);
 
         // Close/delete file button (don't delete if it's the only file)
@@ -137,13 +157,21 @@ function renderMultiFileTabs() {
         }
 
         bar.appendChild(tab);
+
+        // If newly created, immediately initiate inline rename mode
+        if (inlineRenamingFile === fname) {
+            setTimeout(() => {
+                startInlineTabRename(fname, titleSpan, tab);
+            }, 10);
+        }
     });
 
-    // "+ New File" Button
+    // "+ New File" Button - creates file directly without popup
     const newBtn = document.createElement('button');
     newBtn.className = 'btn-new-file';
     newBtn.innerHTML = '<span>+ New File</span>';
-    newBtn.onclick = promptNewFile;
+    newBtn.title = 'Create new file directly in workspace (no popup)';
+    newBtn.onclick = createNewFileTabDirect;
     bar.appendChild(newBtn);
 }
 
@@ -166,54 +194,150 @@ function switchActiveFile(targetFileName) {
     renderMultiFileTabs();
 }
 
-async function promptNewFile() {
-    let defaultSuggest = 'utils.py';
+// Instant file creation: generates file directly with intelligent defaults, no modal popup
+function createNewFileTabDirect() {
     let defaultExt = '.py';
+    let basePrefix = 'module';
     if (activeTechnology === 'SQL') {
-        defaultSuggest = 'tables.sql';
         defaultExt = '.sql';
+        basePrefix = 'query';
     } else if (activeTechnology === 'System Design') {
-        defaultSuggest = 'architecture_notes.md';
         defaultExt = '.md';
+        basePrefix = 'notes';
+    } else if (activeTechnology === 'PySpark') {
+        defaultExt = '.py';
+        basePrefix = 'spark';
+    } else if (activeTechnology === 'Databricks') {
+        defaultExt = '.py';
+        basePrefix = 'notebook';
+    } else if (activeTechnology === 'DSA') {
+        defaultExt = '.py';
+        basePrefix = 'solution';
     }
 
-    const name = await showAppPrompt({
-        title: 'Create New File',
-        message: `Enter new file name for your ${activeTechnology} workspace:`,
-        defaultValue: defaultSuggest,
-        placeholder: `e.g. ${defaultSuggest}`,
-        icon: '📄'
-    });
-
-    if (!name || !name.trim()) return;
-    let cleanName = name.trim();
-
-    if (!cleanName.includes('.')) {
-        cleanName += defaultExt;
+    let counter = 2;
+    let newName = `${basePrefix}_${counter}${defaultExt}`;
+    while (newName in currentProjectFiles) {
+        counter++;
+        newName = `${basePrefix}_${counter}${defaultExt}`;
     }
 
-    if (cleanName in currentProjectFiles) {
-        showToast(`File '${cleanName}' already exists. Switched to it.`, 'info');
-        switchActiveFile(cleanName);
-        return;
+    let defaultContent = `-- ${newName}\n`;
+    if (newName.endsWith('.py')) {
+        defaultContent = `# ${newName}\n\ndef helper():\n    return "Helper logic"\n`;
+    } else if (newName.endsWith('.sql')) {
+        defaultContent = `-- ${newName}\nSELECT 1 AS status;\n`;
+    } else if (newName.endsWith('.md')) {
+        defaultContent = `# ${newName}\n\nDocument architecture notes here.\n`;
+    } else if (newName.endsWith('.json')) {
+        defaultContent = `{\n  "filename": "${newName}"\n}\n`;
     }
 
-    let defaultContent = `-- ${cleanName}\n`;
-    if (cleanName.endsWith('.py')) {
-        defaultContent = `# ${cleanName}\n\ndef example_function():\n    return "Hello from ${cleanName}"\n`;
-    } else if (cleanName.endsWith('.sql')) {
-        defaultContent = `-- ${cleanName}\nSELECT 1 AS status;\n`;
-    } else if (cleanName.endsWith('.md')) {
-        defaultContent = `# ${cleanName}\n\nDocument architecture notes here.\n`;
-    } else if (cleanName.endsWith('.json')) {
-        defaultContent = `{\n  "name": "${cleanName}"\n}\n`;
+    // Save current active buffer first
+    if (monacoEditor && activeFileName) {
+        currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
-    currentProjectFiles[cleanName] = defaultContent;
-    switchActiveFile(cleanName);
+    currentProjectFiles[newName] = defaultContent;
+    inlineRenamingFile = newName;
+    switchActiveFile(newName);
     isDirty = true;
     scheduleAutosave();
-    showToast(`Created ${cleanName}`, 'success');
+    showToast(`Created ${newName} — click anywhere or press Enter to rename`, 'info', 2200);
+}
+
+// Inline tab renaming: transforms tab label into input, saves on blur (click anywhere) or Enter (no icons needed)
+function startInlineTabRename(oldFileName, titleSpan, tab) {
+    if (tab.querySelector('.file-tab-inline-input')) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'file-tab-inline-input';
+    input.value = oldFileName;
+    input.spellcheck = false;
+
+    titleSpan.style.display = 'none';
+    tab.insertBefore(input, titleSpan);
+
+    input.focus();
+    // Select base filename before the extension for convenient typing
+    const dotIdx = oldFileName.lastIndexOf('.');
+    if (dotIdx > 0) {
+        input.setSelectionRange(0, dotIdx);
+    } else {
+        input.select();
+    }
+
+    let isCommitted = false;
+
+    const commitChange = () => {
+        if (isCommitted) return;
+        isCommitted = true;
+        inlineRenamingFile = null;
+
+        let rawVal = input.value.trim();
+        if (!rawVal || rawVal === oldFileName) {
+            input.remove();
+            titleSpan.style.display = '';
+            return;
+        }
+
+        // Auto-append original extension if omitted
+        if (!rawVal.includes('.')) {
+            const originalExt = oldFileName.includes('.') ? oldFileName.substring(oldFileName.lastIndexOf('.')) : '';
+            rawVal += originalExt;
+        }
+
+        const newFileName = rawVal;
+        if (newFileName === oldFileName) {
+            input.remove();
+            titleSpan.style.display = '';
+            return;
+        }
+
+        if (newFileName in currentProjectFiles) {
+            showToast(`File '${newFileName}' already exists!`, 'error', 2500);
+            input.remove();
+            titleSpan.style.display = '';
+            return;
+        }
+
+        // Rename key in currentProjectFiles
+        const content = currentProjectFiles[oldFileName] || (monacoEditor ? monacoEditor.getValue() : '');
+        currentProjectFiles[newFileName] = content;
+        delete currentProjectFiles[oldFileName];
+
+        if (activeFileName === oldFileName) {
+            activeFileName = newFileName;
+        }
+
+        // Update editor language if extension changed
+        if (monacoEditor) {
+            const newLang = getLanguageForFile(newFileName, activeTechnology);
+            createOrUpdateEditor(monacoEditor.getValue(), newLang);
+        }
+
+        isDirty = true;
+        scheduleAutosave();
+        showToast(`Renamed to '${newFileName}'`, 'success', 1800);
+        renderMultiFileTabs();
+    };
+
+    // Clicking anywhere on the screen fires blur and automatically saves
+    input.onblur = commitChange;
+
+    input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            isCommitted = true;
+            inlineRenamingFile = null;
+            input.remove();
+            titleSpan.style.display = '';
+        }
+    };
 }
 
 async function deleteProjectFile(filename) {
@@ -1170,12 +1294,12 @@ function toggleMaximizeEditor() {
         if (isMax) {
             maxBtn.classList.add('active');
             maxBtn.innerHTML = '<span id="maximize-icon">🗗</span> <span id="maximize-text">Restore</span>';
-            maxBtn.title = 'Restore standard layout with console and metadata (Esc)';
-            showToast('Editor Maximized (Focus Mode) — Press Esc or Restore to exit', 'info', 2000);
+            maxBtn.title = 'Restore standard layout (Esc)';
+            showToast('Maximized: 70% Coding Screen | 30% Output Console (Press Esc to restore)', 'info', 2200);
         } else {
             maxBtn.classList.remove('active');
             maxBtn.innerHTML = '<span id="maximize-icon">🗖</span> <span id="maximize-text">Maximize</span>';
-            maxBtn.title = 'Maximize Editor / Focus Mode';
+            maxBtn.title = 'Maximize Editor & Console (70/30 Split)';
             showToast('Standard View Restored', 'info', 1500);
         }
     }
