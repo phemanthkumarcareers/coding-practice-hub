@@ -3,7 +3,8 @@ import time
 import os
 import re
 from pathlib import Path
-from config import DUCKDB_PATH, SQLITE_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS, DATABASE_DIR
+from config import DUCKDB_PATH, CSV_UPLOADS, JSON_UPLOADS, PARQUET_UPLOADS, DATABASE_DIR
+from models.db import get_connection as get_sqlite_conn
 import sqlite3
 
 USER_DBS_DIR = DATABASE_DIR / "user_dbs"
@@ -84,8 +85,7 @@ class DuckDBService:
     def sync_dataset_views(self):
         """Automatically create views in DuckDB for all uploaded datasets."""
         try:
-            conn_sqlite = sqlite3.connect(SQLITE_PATH)
-            conn_sqlite.row_factory = sqlite3.Row
+            conn_sqlite = get_sqlite_conn()
             datasets = conn_sqlite.execute("SELECT table_name, original_name, file_path, file_type FROM datasets").fetchall()
             conn_sqlite.close()
 
@@ -305,8 +305,7 @@ class DuckDBService:
 
         # Query SQLite tables & counts
         try:
-            conn_sq = sqlite3.connect(SQLITE_PATH)
-            conn_sq.row_factory = sqlite3.Row
+            conn_sq = get_sqlite_conn()
             tbls = conn_sq.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").fetchall()
             for t in tbls:
                 t_name = t["name"]

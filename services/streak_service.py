@@ -1,11 +1,11 @@
 from datetime import datetime, date, timedelta
 import sqlite3
-from config import SQLITE_PATH, TECHNOLOGIES
+from config import TECHNOLOGIES
+from models.db import get_connection
 
 class StreakService:
     def get_dashboard_metrics(self):
-        conn = sqlite3.connect(SQLITE_PATH)
-        conn.row_factory = sqlite3.Row
+        conn = get_connection()
         
         # 1. Overall Practice Counts
         p_rows = conn.execute("""

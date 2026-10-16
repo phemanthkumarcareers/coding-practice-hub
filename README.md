@@ -238,9 +238,20 @@ Practice/
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Automated Tests & Strict Isolation
 
 Run the comprehensive test suite verifying core workflows:
 ```powershell
 python -m unittest tests/test_hub.py
 ```
+> [!NOTE]
+> **Strict Test Isolation**: The test suite runs against a disposable, isolated SQLite database (`database/test_isolated.db`) and automatically tears down and purges all test databases, DuckDB tables, and backup archives upon completion. The user's practice data in `database/app.db` is strictly preserved and never modified by automated tests.
+
+---
+
+## 🎨 Tactile Animations & Modern UI Polish
+
+- **Tactile Click Feedback**: Interactive elements (`.btn`, `.file-tab`, `.sidebar-link`, `.sidebar-tech-btn`, `.theme-dropdown-trigger`, cards) feature smooth active press scales (`scale(0.96) translateY(1px)`) and coordinates-aware click ripple waves.
+- **Glassmorphic Modals**: Custom modal dialogs feature pop-in animations (`cubic-bezier(0.16, 1, 0.3, 1)`), backdrop blur (`backdrop-filter: blur(8px)`), and in-app prompt/confirm controllers.
+- **Dynamic Breathing Indicators**: Active practices feature smooth glowing pulses on status dots and badges.
+- **Ultra-Clean Scrollbars**: Modern, rounded 6px scrollbars across all viewports with smooth hover states.

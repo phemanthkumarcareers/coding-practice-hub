@@ -473,10 +473,39 @@ document.addEventListener('webkitfullscreenchange', updateFullScreenUI);
 document.addEventListener('mozfullscreenchange', updateFullScreenUI);
 document.addEventListener('MSFullscreenChange', updateFullScreenUI);
 
+// Tactile Click Ripple & Press Animation Engine
+function initClickAnimations() {
+    document.addEventListener('pointerdown', (e) => {
+        const target = e.target.closest(
+            '.btn, .file-tab, .sidebar-link, .sidebar-tech-btn, .theme-dropdown-trigger, .theme-menu-item, .custom-modal-btn, .btn-new-file, .btn-open-files, .btn-file-explorer-toggle, .stat-card, .dashboard-tech-card, .btn-icon, .modal-close-btn'
+        );
+        if (!target) return;
+
+        const rect = target.getBoundingClientRect();
+        const size = Math.max(rect.width, rect.height) * 1.6;
+        const x = (e.clientX || (rect.left + rect.width / 2)) - rect.left - size / 2;
+        const y = (e.clientY || (rect.top + rect.height / 2)) - rect.top - size / 2;
+
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple-effect';
+        ripple.style.width = `${size}px`;
+        ripple.style.height = `${size}px`;
+        ripple.style.left = `${x}px`;
+        ripple.style.top = `${y}px`;
+
+        target.appendChild(ripple);
+
+        setTimeout(() => {
+            ripple.remove();
+        }, 550);
+    });
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
     initSidebar();
+    initClickAnimations();
 
     const searchInput = document.getElementById('global-search-input');
     if (searchInput) {

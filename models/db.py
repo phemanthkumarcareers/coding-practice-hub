@@ -1,11 +1,13 @@
 import sqlite3
 import json
+import os
 from datetime import datetime, date
 from pathlib import Path
 from config import SQLITE_PATH, DEFAULT_SETTINGS, TECHNOLOGIES, STATUSES
 
 def get_connection():
-    conn = sqlite3.connect(SQLITE_PATH)
+    db_path = os.environ.get("CODING_HUB_DB_PATH") or SQLITE_PATH
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn

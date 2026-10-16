@@ -1,6 +1,13 @@
-import unittest
 import os
+from pathlib import Path
+
+# STRICT TEST ISOLATION: Ensure test database is completely separated from app.db
+TEST_DB_PATH = Path("database/test_isolated.db").resolve()
+os.environ["CODING_HUB_DB_PATH"] = str(TEST_DB_PATH)
+
+import unittest
 import json
+import glob
 from datetime import date
 from app import create_app
 from models.db import (
@@ -18,33 +25,30 @@ from services.backup_service import backup_service
 class TestCodingPracticeHub(unittest.TestCase):
     @classmethod
     def cleanup_test_data(cls):
-        import glob
-        # 1. Clean SQLite test sessions and practices
-        try:
-            conn = get_connection()
-            conn.execute("DELETE FROM daily_sessions WHERE date LIKE '2099-%';")
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-
-        # 2. Clean DuckDB test table
+        # 1. Clean DuckDB test table
         try:
             duckdb_service.execute_query("DROP TABLE IF EXISTS test_col_size_tbl;")
         except Exception:
             pass
 
-        # 3. Clean user_dbs test databases
+        # 2. Clean user_dbs test databases
         for f in glob.glob("database/user_dbs/test_db_*.duckdb*"):
             try:
                 os.remove(f)
             except Exception:
                 pass
 
-        # 4. Clean backup zip files created during tests
+        # 3. Clean backup zip files created during tests
         for b in glob.glob("backups/coding_practice_backup_*.zip"):
             try:
                 os.remove(b)
+            except Exception:
+                pass
+
+        # 4. Remove isolated test database completely
+        if TEST_DB_PATH.exists():
+            try:
+                TEST_DB_PATH.unlink()
             except Exception:
                 pass
 
@@ -69,7 +73,7 @@ class TestCodingPracticeHub(unittest.TestCase):
             self.assertIn(t, tables, f"Table {t} should be initialized")
 
     def test_02_daily_session_and_six_practices(self):
-        test_date = "2026-10-17"
+        test_date = "2099-10-17"
         session = get_or_create_daily_session(test_date)
         
         self.assertEqual(session["date"], test_date)
@@ -80,7 +84,7 @@ class TestCodingPracticeHub(unittest.TestCase):
             self.assertIn(t, techs_in_session)
 
     def test_03_prevent_duplicate_sessions(self):
-        test_date = "2026-10-17"
+        test_date = "2099-10-17"
         session1 = get_or_create_daily_session(test_date)
         session2 = get_or_create_daily_session(test_date)
         self.assertEqual(session1["id"], session2["id"], "Multiple calls for the same date must return the same session")

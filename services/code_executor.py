@@ -5,8 +5,8 @@ import uuid
 import json
 import shutil
 from pathlib import Path
-from config import WORKSPACE_DIR, DEFAULT_SETTINGS, SQLITE_PATH
-from models.db import get_setting
+from config import WORKSPACE_DIR, DEFAULT_SETTINGS
+from models.db import get_setting, get_connection
 import sqlite3
 
 class CodeExecutor:
@@ -16,8 +16,7 @@ class CodeExecutor:
     def _sync_datasets_to_workspace(self, target_dir: Path):
         """Copies or links all uploaded datasets directly to the execution workspace."""
         try:
-            conn = sqlite3.connect(SQLITE_PATH)
-            conn.row_factory = sqlite3.Row
+            conn = get_connection()
             datasets = conn.execute("SELECT original_name, file_path FROM datasets").fetchall()
             conn.close()
 

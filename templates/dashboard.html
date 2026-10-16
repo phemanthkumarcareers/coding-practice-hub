@@ -84,7 +84,7 @@
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem;">
         {% for tech in technologies %}
             {% set item = metrics.today_progress.tech_items.get(tech) %}
-            <a href="{{ url_for('practice.practice_workspace', date=today, tech=tech) }}" style="text-decoration:none; color:inherit; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:0.85rem; display:flex; flex-direction:column; justify-content:space-between; transition:transform 0.1s, border-color 0.15s;" onmouseover="this.style.borderColor='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)'">
+            <a href="{{ url_for('practice.practice_workspace', date=today, tech=tech) }}" class="dashboard-tech-card">
                 <div>
                     <div style="font-weight:600; font-size:0.95rem; margin-bottom:0.35rem;">{{ tech }}</div>
                     <div style="font-size:0.78rem; color:var(--text-secondary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
