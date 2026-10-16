@@ -67,24 +67,35 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 ### 3. Fullscreen & Maximize Editor (Zen / Focus Mode)
 - **⛶ Normal Browser Fullscreen**: Click the `⛶ Fullscreen` button in the sidebar header or practice workspace actions (or press `F11`) to expand the app into true edge-to-edge browser fullscreen mode.
 - **🗖 Maximize Editor (Focus Mode)**: Click the `🗖 Maximize` button to isolate the Monaco Editor into 100% full-screen focus mode. This temporarily hides the sidebar, metadata bar, and console log so you can code without distractions.
-- **1-Click Restore**: Click `🗗 Restore` or press `Esc` to instantly return to the standard layout with console logs and metadata.
+- **Universal Escape (`Esc`) Handler**: Pressing `Escape` naturally exits fullscreen modes in clean priority:
+  1. Closes any open modal dialog (Explorer, Create Database, Confirm, Prompt, History).
+  2. Restores the editor from Maximized Focus Mode to the normal layout.
+  3. Exits edge-to-edge browser fullscreen mode.
 
-### 4. Vertical Split Stack (Full-Width Editor with Bottom Console)
-- **Maximized Coding Width**: The Monaco Editor stretches across 100% of the pane width, ideal for extensive scripts, wide SQL joins, and complex classes.
-- **Draggable Horizontal Resizer**: Drag the horizontal divider bar between the code editor and bottom console to adjust the view heights dynamically.
-- **Integrated Console & Status**: Execution status badges, execution times in milliseconds, formatted output tables for SQL, and terminal stderr logs render in the dedicated console pane below the code.
+### 4. Zero Browser Popups (Custom In-App Modal Dialogs)
+- **No Native `alert()`, `confirm()`, or `prompt()`**: All dialogs throughout the application use dedicated, themed, accessible in-app modals (`#app-confirm-modal`, `#app-prompt-modal`, and `#create-db-modal`).
+- **Confirmation Modals**: Destructive operations (resetting workspace code, deleting custom project files, removing uploaded datasets, restoring backups) use sleek modal dialogs with customizable confirmation and cancellation buttons.
+- **Interactive Input Prompts**: Multi-file tab creation and database creation utilize styled in-app prompt inputs with autofocus, keyboard submit (`Enter`), and escape cancellation.
 
-### 5. Multi-File Python Project Workspace
-- **Multi-File Tab Bar**: Practice real-world project structures directly in the browser across Python, DSA, and Databricks.
-- **`+ New File` Creation**: Add helper modules such as `utils.py`, `models.py`, or `config.py`.
-- **Seamless Cross-Module Imports**: Subprocess runner executes all project files together in an isolated workspace, allowing statements like:
-  ```python
-  from utils import calculate_metrics
-  import helper
-  ```
-- **File Management**: Switch tabs with a single click, delete files, and preserve editor code across all tabs.
+### 5. Multi-File Project Workspace for ALL Coding Terminals
+- **Universal Multi-File Tabs**: Practice real-world file structures directly in the browser across **all 6 technologies** (SQL, Python, PySpark, Databricks, DSA, and System Design).
+- **`+ New File` Creation**: Add helper modules such as `utils.py`, queries like `tables.sql`, notes like `architecture_notes.md`, or test scripts.
+- **Intelligent Extension Defaults**: Creating new files automatically suggests the proper file extension and template matching the active technology (e.g. `.sql` for SQL, `.py` for Python/DSA/PySpark, `.md` for System Design).
+- **Seamless Execution**: Subprocess and DuckDB runners execute the active entry file and mount all project files together in an isolated workspace.
+- **File Tab Management**: Switch tabs with a single click, close/delete files with confirmation, and persist file buffers automatically across sessions.
 
-### 6. Multi-Database Creation & Context Selection in DuckDB / SQL
+### 6. Hierarchical Database, Tables & Views Explorer
+- **Database Accordion / Dropdown**: Hierarchically groups all databases (`practice (main / default)` and user-created DuckDB databases in `database/user_dbs/`). Click any database header to expand/collapse its tables and views.
+- **Tables & Views Tree with Badges**: Clearly identifies tables (`📄 TABLE`) and views (`👁️ VIEW`), row counts, and column counts.
+- **`+` / `−` Column Inspector with Column Sizes**: Click the `+` button beside any table to expand an inspector panel displaying:
+  - **Column Name**: Clickable link for instant insertion into the code editor.
+  - **Data Type**: `BIGINT`, `VARCHAR`, `BOOLEAN`, `DOUBLE`, `TIMESTAMP`, etc.
+  - **Column Size / Length**: Calculated human-readable memory footprints (`4 bytes`, `8 bytes`, `max N chars`, `16 bytes`, etc.).
+  - **Nullability**: `YES` or `NO`.
+  - **Quick Insert Action**: One-click `+ Add` button to insert column names into your query at cursor position.
+- **1-Click Query Snippet Insertion**: Click `Insert Query` on any table to auto-generate a `SELECT * FROM "table" LIMIT 10;` (or cross-database qualified `SELECT * FROM "dbname"."table" LIMIT 10;`).
+
+### 7. Multi-Database Creation & Context Selection in DuckDB / SQL
 - **Active Database Selector**: Switch active database context from the top toolbar dropdown (e.g. `main`, `analytics_db`).
 - **Direct Table Querying**: When querying the currently active database, query tables directly without schema prefixes:
   ```sql

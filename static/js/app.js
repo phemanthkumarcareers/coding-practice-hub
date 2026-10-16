@@ -206,18 +206,128 @@ function handleSearchInput(e) {
     }, 250);
 }
 
-// Global Shortcuts
+// Global In-App Modal Dialog Controller (Replaces window.confirm & window.prompt)
+let appConfirmResolve = null;
+let appPromptResolve = null;
+
+function showAppConfirm({ title = 'Confirm Action', message = 'Are you sure?', confirmText = 'Confirm', isDanger = true, icon = '⚠️' } = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('app-confirm-modal');
+        if (!modal) {
+            resolve(window.confirm(message));
+            return;
+        }
+
+        document.getElementById('app-confirm-title').textContent = title;
+        document.getElementById('app-confirm-message').textContent = message;
+        document.getElementById('app-confirm-icon').textContent = icon;
+        
+        const confirmBtn = document.getElementById('app-confirm-btn');
+        confirmBtn.textContent = confirmText;
+        confirmBtn.className = isDanger ? 'btn btn-danger' : 'btn btn-primary';
+
+        appConfirmResolve = resolve;
+        modal.style.display = 'flex';
+        confirmBtn.focus();
+    });
+}
+
+function closeAppConfirm(result) {
+    const modal = document.getElementById('app-confirm-modal');
+    if (modal) modal.style.display = 'none';
+    if (appConfirmResolve) {
+        appConfirmResolve(result);
+        appConfirmResolve = null;
+    }
+}
+
+function showAppPrompt({ title = 'Input Required', message = 'Please enter a value:', defaultValue = '', placeholder = '', icon = '✏️' } = {}) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('app-prompt-modal');
+        if (!modal) {
+            resolve(window.prompt(message, defaultValue));
+            return;
+        }
+
+        document.getElementById('app-prompt-title').textContent = title;
+        document.getElementById('app-prompt-message').textContent = message;
+        document.getElementById('app-prompt-icon').textContent = icon;
+        
+        const input = document.getElementById('app-prompt-input');
+        input.value = defaultValue;
+        input.placeholder = placeholder;
+
+        appPromptResolve = resolve;
+        modal.style.display = 'flex';
+        setTimeout(() => {
+            input.focus();
+            input.select();
+        }, 80);
+
+        input.onkeydown = (e) => {
+            if (e.key === 'Enter') {
+                closeAppPrompt(input.value.trim());
+            }
+        };
+    });
+}
+
+function closeAppPrompt(val) {
+    const modal = document.getElementById('app-prompt-modal');
+    if (modal) modal.style.display = 'none';
+    if (appPromptResolve) {
+        appPromptResolve(val);
+        appPromptResolve = null;
+    }
+}
+
+// Global Shortcuts & Escape Key Handling
 document.addEventListener('keydown', (e) => {
     // Ctrl+K or Cmd+K: Open Search
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         openSearchModal();
+        return;
     }
-    // Escape: Close modals
+
+    // Escape Key: Priority Hierarchy (Close Modal -> Restore Maximized Editor -> Exit Fullscreen)
     if (e.key === 'Escape') {
-        closeSearchModal();
-        const genericModals = document.querySelectorAll('.modal-overlay');
-        genericModals.forEach(m => m.style.display = 'none');
+        // 1. Close open in-app prompt or confirm modals
+        const confirmModal = document.getElementById('app-confirm-modal');
+        if (confirmModal && confirmModal.style.display === 'flex') {
+            closeAppConfirm(false);
+            return;
+        }
+        const promptModal = document.getElementById('app-prompt-modal');
+        if (promptModal && promptModal.style.display === 'flex') {
+            closeAppPrompt(null);
+            return;
+        }
+
+        // 2. Close any generic open modals (search, create-db, explorer, history)
+        let closedAnyModal = false;
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            if (m.style.display === 'flex' || m.style.display === 'block') {
+                m.style.display = 'none';
+                closedAnyModal = true;
+            }
+        });
+        if (closedAnyModal) return;
+
+        // 3. Restore Maximized Editor (Zen Mode) if active
+        const workspacePage = document.querySelector('.workspace-page');
+        if (workspacePage && workspacePage.classList.contains('editor-maximized')) {
+            if (typeof toggleMaximizeEditor === 'function') {
+                toggleMaximizeEditor();
+                return;
+            }
+        }
+
+        // 4. Exit Browser Fullscreen if active
+        if (isFullScreenActive()) {
+            toggleFullScreen();
+            return;
+        }
     }
 });
 

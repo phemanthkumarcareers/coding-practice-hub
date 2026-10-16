@@ -209,7 +209,7 @@ class DuckDBService:
 
                     for tbl, tbl_type in tables:
                         cols = conn.execute(f"""
-                            SELECT column_name, data_type 
+                            SELECT column_name, data_type, character_maximum_length, is_nullable
                             FROM information_schema.columns 
                             WHERE table_catalog = '{db}' AND table_name = '{tbl}' AND table_schema = 'main'
                             ORDER BY ordinal_position;
@@ -223,12 +223,53 @@ class DuckDBService:
                         except Exception:
                             pass
 
+                        formatted_cols = []
+                        for c in cols:
+                            c_name = c[0]
+                            c_type = c[1] or ""
+                            c_max_len = c[2]
+                            c_null = c[3] or "YES"
+
+                            # Calculate readable size
+                            size_str = ""
+                            type_upper = str(c_type).upper()
+                            len_match = re.search(r"\((\d+)\)", type_upper)
+                            if c_max_len:
+                                size_str = f"max {c_max_len} chars"
+                            elif len_match:
+                                size_str = f"max {len_match.group(1)} chars"
+                            elif "INT" in type_upper or "BIGINT" in type_upper:
+                                size_str = "8 bytes" if "64" in type_upper or "BIG" in type_upper else "4 bytes"
+                            elif "TINYINT" in type_upper:
+                                size_str = "1 byte"
+                            elif "SMALLINT" in type_upper:
+                                size_str = "2 bytes"
+                            elif "DOUBLE" in type_upper or "FLOAT" in type_upper or "REAL" in type_upper:
+                                size_str = "8 bytes" if "DOUBLE" in type_upper else "4 bytes"
+                            elif "DECIMAL" in type_upper or "NUMERIC" in type_upper:
+                                size_str = "16 bytes"
+                            elif "TIMESTAMP" in type_upper or "DATE" in type_upper or "TIME" in type_upper:
+                                size_str = "8 bytes" if "TIMESTAMP" in type_upper else "4 bytes"
+                            elif "BOOL" in type_upper:
+                                size_str = "1 byte"
+                            elif "VARCHAR" in type_upper or "TEXT" in type_upper:
+                                size_str = "variable"
+                            else:
+                                size_str = "dynamic"
+
+                            formatted_cols.append({
+                                "name": c_name,
+                                "type": c_type,
+                                "size": size_str,
+                                "nullable": c_null
+                            })
+
                         schema_info.append({
                             "database": db,
                             "name": tbl,
                             "type": tbl_type,
                             "row_count": cnt,
-                            "columns": [{"name": c[0], "type": c[1]} for c in cols],
+                            "columns": formatted_cols,
                             "qualified_name": f"{db}.{tbl}" if db != 'main' else tbl
                         })
                 except Exception as e:

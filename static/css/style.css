@@ -243,17 +243,23 @@ body {
 }
 
 .app-sidebar.collapsed .sidebar-brand-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 0.25rem 0 0.85rem 0;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.app-sidebar.collapsed .sidebar-brand {
+  justify-content: center;
 }
 
 .app-sidebar.collapsed .sidebar-toggle-btn {
-  position: absolute;
-  top: 10px;
-  right: 5px;
-  width: 20px;
-  height: 20px;
-  font-size: 0.65rem;
+  width: 28px;
+  height: 28px;
+  font-size: 0.75rem;
+  margin: 0 auto;
 }
 
 /* Quick Search Button */
@@ -1227,4 +1233,175 @@ body {
 @keyframes slideIn {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* Databases, Tables & Views Explorer Tree Layout */
+.explorer-tree-root {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.db-tree-node {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.db-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.db-tree-header:hover {
+  background: var(--bg-hover);
+}
+
+.db-tree-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+}
+
+.db-tree-chevron {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.db-tree-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.db-tree-content {
+  padding: 0.5rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--bg-secondary);
+}
+
+/* Table Item in Tree */
+.table-tree-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.table-tree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.table-tree-header:hover {
+  background: var(--bg-hover);
+}
+
+.table-tree-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.btn-tree-expander {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.btn-tree-expander:hover {
+  border-color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+.table-tree-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Columns Table Dropdown */
+.table-columns-panel {
+  padding: 0.5rem 0.75rem 0.75rem 2rem;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.columns-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-family: var(--font-mono);
+}
+
+.columns-data-table th {
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.columns-data-table td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.columns-data-table tr:hover td {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.col-name-link {
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+
+.col-name-link:hover {
+  color: var(--accent-primary);
+}
+
+.col-size-badge {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
 }

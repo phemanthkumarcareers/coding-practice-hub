@@ -66,6 +66,7 @@ def get_databases():
     })
 
 @practice_bp.route("/api/practice/database/create", methods=["POST"])
+@practice_bp.route("/api/practice/create_database", methods=["POST"])
 def create_database():
     data = request.get_json() or {}
     db_name = data.get("name", "")
@@ -151,6 +152,9 @@ def run_practice():
     duration_ms = 0
     structured_result = None
     updated_schemas = None
+
+    if files and isinstance(files, dict) and entry_file in files:
+        code = files[entry_file]
 
     if technology == "SQL":
         duckdb_service.sync_dataset_views()

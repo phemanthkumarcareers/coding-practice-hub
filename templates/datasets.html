@@ -309,7 +309,14 @@ df.show(5)</pre>
     }
 
     async function deleteDataset(id, name) {
-        if (!confirm(`Are you sure you want to delete dataset '${name}' and remove its DuckDB view?`)) return;
+        const confirmed = await showAppConfirm({
+            title: 'Delete Dataset',
+            message: `Are you sure you want to delete dataset '${name}' and remove its DuckDB view? This action cannot be undone.`,
+            confirmText: 'Delete Dataset',
+            isDanger: true,
+            icon: '🗑️'
+        });
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`/api/datasets/delete/${id}`, { method: 'POST' });

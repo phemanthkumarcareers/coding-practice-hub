@@ -165,5 +165,55 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertTrue(backup_file.exists())
         self.assertTrue(backup_file.name.endswith(".zip"))
 
+    def test_10_multifile_execution(self):
+        import uuid
+        test_date = f"2099-03-{uuid.uuid4().hex[:4]}"
+        session = get_or_create_daily_session(test_date)
+        py_practice = next(p for p in session["practices"] if p["technology"] == "Python")
+
+        # Multi-file Python execution
+        files = {
+            "helper.py": "def greet(name):\n    return f'Hello, {name}!'\n",
+            "main.py": "from helper import greet\nprint(greet('Engineer'))\n"
+        }
+        res = self.client.post("/api/practice/run", json={
+            "id": py_practice["id"],
+            "technology": "Python",
+            "files": files,
+            "entry_file": "main.py"
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertIn("Hello, Engineer!", data["output"])
+
+    def test_11_explorer_schema_with_column_sizes(self):
+        # Create a test table in DuckDB
+        duckdb_service.execute_query("CREATE OR REPLACE TABLE test_col_size_tbl (id BIGINT, name VARCHAR(100), is_active BOOLEAN);")
+        schemas = duckdb_service.get_explorer_schema()
+        target = next((s for s in schemas if s["name"] == "test_col_size_tbl"), None)
+        self.assertIsNotNone(target, "test_col_size_tbl must appear in explorer schemas")
+        cols = {c["name"]: c for c in target["columns"]}
+        self.assertIn("id", cols)
+        self.assertEqual(cols["id"]["size"], "8 bytes")
+        self.assertIn(cols["name"]["size"], ["variable", "max 100 chars"])
+        self.assertIn("is_active", cols)
+        self.assertEqual(cols["is_active"]["size"], "1 byte")
+
+    def test_12_create_database(self):
+        import uuid
+        db_name = f"test_db_{uuid.uuid4().hex[:6]}"
+        res = self.client.post("/api/practice/create_database", json={"name": db_name})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["database"], db_name)
+
+        # Verify listed in databases
+        list_res = self.client.get("/api/practice/databases")
+        dbs = list_res.get_json()["databases"]
+        self.assertTrue(any(d["name"] == db_name for d in dbs))
+
 if __name__ == "__main__":
     unittest.main()
+

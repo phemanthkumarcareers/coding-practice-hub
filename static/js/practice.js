@@ -69,10 +69,8 @@ function createOrUpdateEditor(code, language) {
 
         monacoEditor.onDidChangeModelContent(() => {
             isDirty = true;
-            // Update active file buffer
-            if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) {
-                currentProjectFiles[activeFileName] = monacoEditor.getValue();
-            }
+            // Update active file buffer for all technologies
+            currentProjectFiles[activeFileName] = monacoEditor.getValue();
             scheduleAutosave();
         });
 
@@ -94,15 +92,10 @@ function createOrUpdateEditor(code, language) {
     }
 }
 
-// Multi-File Project Workspace Helpers
+// Multi-File Project Workspace Helpers (Enabled for ALL technologies)
 function renderMultiFileTabs() {
     const bar = document.getElementById('multi-file-tabs-bar');
     if (!bar) return;
-
-    if (!('Python' === activeTechnology || 'DSA' === activeTechnology || 'Databricks' === activeTechnology)) {
-        bar.style.display = 'none';
-        return;
-    }
 
     bar.style.display = 'flex';
     bar.innerHTML = '';
@@ -159,44 +152,73 @@ function switchActiveFile(targetFileName) {
     renderMultiFileTabs();
 }
 
-function promptNewFile() {
-    let name = prompt("Enter new file name (e.g. utils.py, helper.py, data.json):", "utils.py");
-    if (!name) return;
-    name = name.trim();
-    if (!name) return;
-
-    if (!name.includes('.')) {
-        name += '.py';
+async function promptNewFile() {
+    let defaultSuggest = 'utils.py';
+    let defaultExt = '.py';
+    if (activeTechnology === 'SQL') {
+        defaultSuggest = 'tables.sql';
+        defaultExt = '.sql';
+    } else if (activeTechnology === 'System Design') {
+        defaultSuggest = 'architecture_notes.md';
+        defaultExt = '.md';
     }
 
-    if (name in currentProjectFiles) {
-        showToast(`File '${name}' already exists.`, 'info');
-        switchActiveFile(name);
+    const name = await showAppPrompt({
+        title: 'Create New File',
+        message: `Enter new file name for your ${activeTechnology} workspace:`,
+        defaultValue: defaultSuggest,
+        placeholder: `e.g. ${defaultSuggest}`,
+        icon: '📄'
+    });
+
+    if (!name || !name.trim()) return;
+    let cleanName = name.trim();
+
+    if (!cleanName.includes('.')) {
+        cleanName += defaultExt;
+    }
+
+    if (cleanName in currentProjectFiles) {
+        showToast(`File '${cleanName}' already exists. Switched to it.`, 'info');
+        switchActiveFile(cleanName);
         return;
     }
 
-    let defaultContent = `# ${name}\n`;
-    if (name.endsWith('.py')) {
-        defaultContent = `# ${name}\n\ndef example_function():\n    return "Hello from ${name}"\n`;
+    let defaultContent = `-- ${cleanName}\n`;
+    if (cleanName.endsWith('.py')) {
+        defaultContent = `# ${cleanName}\n\ndef example_function():\n    return "Hello from ${cleanName}"\n`;
+    } else if (cleanName.endsWith('.sql')) {
+        defaultContent = `-- ${cleanName}\nSELECT 1 AS status;\n`;
+    } else if (cleanName.endsWith('.md')) {
+        defaultContent = `# ${cleanName}\n\nDocument architecture notes here.\n`;
+    } else if (cleanName.endsWith('.json')) {
+        defaultContent = `{\n  "name": "${cleanName}"\n}\n`;
     }
 
-    currentProjectFiles[name] = defaultContent;
-    switchActiveFile(name);
+    currentProjectFiles[cleanName] = defaultContent;
+    switchActiveFile(cleanName);
     isDirty = true;
     scheduleAutosave();
-    showToast(`Created ${name}`, 'success');
+    showToast(`Created ${cleanName}`, 'success');
 }
 
-function deleteProjectFile(filename) {
-    if (filename === 'main.py' && Object.keys(currentProjectFiles).length > 1) {
-        if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
-    } else {
-        if (!confirm(`Delete ${filename}?`)) return;
-    }
+async function deleteProjectFile(filename) {
+    const isConfirmed = await showAppConfirm({
+        title: 'Delete File',
+        message: `Are you sure you want to delete '${filename}' from this practice? This action cannot be undone.`,
+        confirmText: 'Delete File',
+        isDanger: true,
+        icon: '🗑️'
+    });
+
+    if (!isConfirmed) return;
 
     delete currentProjectFiles[filename];
     const remaining = Object.keys(currentProjectFiles);
-    activeFileName = remaining[0];
+    activeFileName = remaining[0] || (activeTechnology === 'SQL' ? 'query.sql' : 'main.py');
+    if (!currentProjectFiles[activeFileName]) {
+        currentProjectFiles[activeFileName] = '';
+    }
     
     const code = currentProjectFiles[activeFileName] || '';
     const lang = getLanguageForFile(activeFileName, activeTechnology);
@@ -204,6 +226,7 @@ function deleteProjectFile(filename) {
     renderMultiFileTabs();
     isDirty = true;
     scheduleAutosave();
+    showToast(`Deleted ${filename}`, 'info');
 }
 
 // Database Selector & Creation (For DuckDB SQL)
@@ -380,26 +403,31 @@ async function switchTech(techName) {
         extra = {};
     }
 
-    // Restore multi-file project for Python / DSA / Databricks
-    if (techName in {'Python':1, 'DSA':1, 'Databricks':1}) {
-        if (extra.files && typeof extra.files === 'object' && Object.keys(extra.files).length > 0) {
-            currentProjectFiles = extra.files;
-            activeFileName = extra.active_file || Object.keys(extra.files)[0];
-        } else {
-            currentProjectFiles = { "main.py": p.code || "" };
-            activeFileName = "main.py";
-        }
-        renderMultiFileTabs();
+    // Restore multi-file project workspace for ALL coding technologies
+    const defaultEntryFiles = {
+        'SQL': 'query.sql',
+        'Python': 'main.py',
+        'PySpark': 'pipeline.py',
+        'Databricks': 'notebook.py',
+        'DSA': 'solution.py',
+        'System Design': 'architecture.md'
+    };
+    const defaultFile = defaultEntryFiles[techName] || 'main.py';
+
+    if (extra.files && typeof extra.files === 'object' && Object.keys(extra.files).length > 0) {
+        currentProjectFiles = extra.files;
+        activeFileName = extra.active_file || Object.keys(extra.files)[0];
     } else {
-        const fileBar = document.getElementById('multi-file-tabs-bar');
-        if (fileBar) fileBar.style.display = 'none';
+        currentProjectFiles = { [defaultFile]: p.code || "" };
+        activeFileName = defaultFile;
     }
+    renderMultiFileTabs();
 
     // Toggle Specialized UI Panes
     setupSpecializedUI(techName, extra);
 
     // Update Editor
-    const initialCode = (techName in {'Python':1, 'DSA':1, 'Databricks':1}) ? (currentProjectFiles[activeFileName] || '') : (p.code || '');
+    const initialCode = currentProjectFiles[activeFileName] || p.code || '';
     const lang = getLanguageForFile(activeFileName, techName, extra.subtype);
     createOrUpdateEditor(initialCode, lang);
 
@@ -491,14 +519,12 @@ function gatherExtraMetadata() {
         extra.subtype = document.getElementById('databricks-subtype')?.value || 'PySpark';
     }
 
-    // Persist multi-file project if applicable
-    if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) {
-        if (monacoEditor) {
-            currentProjectFiles[activeFileName] = monacoEditor.getValue();
-        }
-        extra.files = currentProjectFiles;
-        extra.active_file = activeFileName;
+    // Persist multi-file project across all technologies
+    if (monacoEditor) {
+        currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
+    extra.files = currentProjectFiles;
+    extra.active_file = activeFileName;
 
     return extra;
 }
@@ -524,11 +550,11 @@ async function saveCurrentPractice(markCompleted = false) {
     if (indicator) indicator.textContent = 'Saving...';
 
     // Update active file buffer
-    if (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1} && monacoEditor) {
+    if (monacoEditor) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
-    const code = monacoEditor ? (currentProjectFiles['main.py'] || monacoEditor.getValue()) : '';
+    const code = monacoEditor ? (currentProjectFiles[activeFileName] || monacoEditor.getValue()) : '';
     const currentPractice = practicesMap[activePracticeId];
     
     let targetStatus = currentPractice.status;
@@ -587,7 +613,7 @@ async function runCurrentCode() {
     if (!activePracticeId) return;
 
     // Save active editor into currentProjectFiles buffer
-    if (monacoEditor && (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1})) {
+    if (monacoEditor) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
@@ -600,13 +626,13 @@ async function runCurrentCode() {
         runBtn.innerHTML = '⏳ Running...';
     }
 
-    const code = monacoEditor ? monacoEditor.getValue() : '';
+    const code = monacoEditor ? (currentProjectFiles[activeFileName] || monacoEditor.getValue()) : '';
     const payload = {
         id: activePracticeId,
         technology: activeTechnology,
         code: code,
         active_db: activeDatabaseName,
-        files: (activeTechnology in {'Python':1, 'DSA':1, 'Databricks':1}) ? currentProjectFiles : null,
+        files: currentProjectFiles,
         entry_file: activeFileName,
         extra_metadata: gatherExtraMetadata()
     };
@@ -906,32 +932,83 @@ function renderExplorerSchemaList(schemas) {
         grouped[dbName].push(s);
     });
 
-    let html = '';
+    let html = '<div class="explorer-tree-root">';
+    let dbIndex = 0;
+
     for (const [db, items] of Object.entries(grouped)) {
+        dbIndex++;
+        const isMain = db === 'main';
+        const displayName = isMain ? 'practice (main / default)' : db;
+
         html += `
-            <div style="margin-bottom:1rem; border:1px solid var(--border-color); border-radius:6px; overflow:hidden;">
-                <div style="background:var(--bg-secondary); padding:0.5rem 0.85rem; font-weight:700; font-size:0.88rem; display:flex; justify-content:space-between; align-items:center;">
-                    <span>🗄️ Database: <code style="color:var(--accent-primary);">${db}</code></span>
-                    <span style="font-size:0.75rem; color:var(--text-muted);">${items.length} object(s)</span>
+            <div class="db-tree-node" id="db-node-${dbIndex}">
+                <div class="db-tree-header" onclick="toggleDbAccordion(${dbIndex})">
+                    <div class="db-tree-title">
+                        <span class="db-tree-chevron expanded" id="db-chevron-${dbIndex}">▶</span>
+                        <span>🗄️ Database: <code style="color:var(--accent-primary); font-size:0.88rem;">${displayName}</code></span>
+                        <span class="badge ${isMain ? 'badge-COMPLETED' : 'badge-NOT-STARTED'}" style="font-size:0.65rem; margin-left:0.35rem;">
+                            ${isMain ? 'DEFAULT' : 'ATTACHED'}
+                        </span>
+                    </div>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">
+                        ${items.length} table(s)/view(s)
+                    </div>
                 </div>
-                <div style="padding:0.6rem; display:flex; flex-direction:column; gap:0.5rem; background:var(--bg-primary);">
-                    ${items.map(s => {
-                        const isMain = s.database === 'main';
+                <div class="db-tree-content" id="db-content-${dbIndex}">
+                    ${items.map((s, tblIdx) => {
+                        const itemKey = `${dbIndex}_${tblIdx}`;
                         const querySnippet = isMain ? `SELECT * FROM "${s.name}" LIMIT 10;` : `SELECT * FROM "${s.database}"."${s.name}" LIMIT 10;`;
+                        const colCount = (s.columns && s.columns.length) ? s.columns.length : 0;
+                        const rowCountStr = s.row_count !== null ? `(${s.row_count.toLocaleString()} rows)` : '';
+
                         return `
-                            <div style="background:var(--bg-tertiary); border:1px solid var(--border-subtle); border-radius:5px; padding:0.65rem;">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <div>
-                                        <span style="font-weight:600; font-family:var(--font-mono);">${s.name}</span>
-                                        <span class="badge badge-NOT-STARTED" style="font-size:0.65rem; margin-left:0.35rem;">${s.type}</span>
-                                        ${s.row_count !== null ? `<span style="font-size:0.75rem; color:var(--text-muted); margin-left:0.4rem;">(${s.row_count} rows)</span>` : ''}
+                            <div class="table-tree-item" id="table-tree-item-${itemKey}">
+                                <div class="table-tree-header">
+                                    <div class="table-tree-info" onclick="toggleTableColumns('${itemKey}')">
+                                        <button type="button" class="btn-tree-expander" id="btn-tree-expander-${itemKey}" title="Expand/Collapse columns with sizes" onclick="event.stopPropagation(); toggleTableColumns('${itemKey}');">
+                                            +
+                                        </button>
+                                        <span style="font-size:0.9rem;">${s.type === 'VIEW' ? '👁️' : '📄'}</span>
+                                        <span style="font-weight:700; font-family:var(--font-mono); color:var(--text-primary); font-size:0.85rem;">${s.name}</span>
+                                        <span class="badge ${s.type === 'VIEW' ? 'badge-IN-PROGRESS' : 'badge-NOT-STARTED'}" style="font-size:0.65rem;">${s.type}</span>
+                                        ${rowCountStr ? `<span style="font-size:0.75rem; color:var(--text-muted);">${rowCountStr}</span>` : ''}
+                                        <span style="font-size:0.72rem; color:var(--text-secondary);">• ${colCount} col(s)</span>
                                     </div>
-                                    <button class="btn btn-secondary btn-sm" onclick="insertCustomQuery('${escapeJs(querySnippet)}')">
-                                        Insert Query
-                                    </button>
+                                    <div class="table-tree-actions">
+                                        <button class="btn btn-secondary btn-sm" onclick="insertCustomQuery('${escapeJs(querySnippet)}')">
+                                            Insert Query
+                                        </button>
+                                    </div>
                                 </div>
-                                <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.3rem;">
-                                    ${s.columns.map(c => `<code>${c.name}</code> (${c.type})`).join(', ')}
+                                <div class="table-columns-panel" id="table-columns-${itemKey}" style="display:none;">
+                                    <table class="columns-data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Column Name</th>
+                                                <th>Type</th>
+                                                <th>Size / Length</th>
+                                                <th>Nullable</th>
+                                                <th style="text-align:right;">Insert</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(s.columns || []).map(col => `
+                                                <tr>
+                                                    <td>
+                                                        <span class="col-name-link" onclick="insertColumnName('${escapeJs(col.name)}')" title="Click to insert column into code editor">
+                                                            ${escapeHtml(col.name)}
+                                                        </span>
+                                                    </td>
+                                                    <td><code style="color:var(--accent-primary); font-size:0.75rem;">${escapeHtml(col.type)}</code></td>
+                                                    <td><span class="col-size-badge">${escapeHtml(col.size || 'dynamic')}</span></td>
+                                                    <td><span style="font-size:0.72rem; color:${col.nullable === 'NO' ? '#f87171' : 'var(--text-muted)'};">${escapeHtml(col.nullable || 'YES')}</span></td>
+                                                    <td style="text-align:right;">
+                                                        <button class="btn btn-secondary btn-sm" style="padding:0.1rem 0.4rem; font-size:0.7rem;" onclick="insertColumnName('${escapeJs(col.name)}')">+ Add</button>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         `;
@@ -940,8 +1017,51 @@ function renderExplorerSchemaList(schemas) {
             </div>
         `;
     }
+    html += '</div>';
 
     container.innerHTML = html;
+}
+
+function toggleDbAccordion(dbIndex) {
+    const content = document.getElementById(`db-content-${dbIndex}`);
+    const chevron = document.getElementById(`db-chevron-${dbIndex}`);
+    if (!content) return;
+
+    if (content.style.display === 'none') {
+        content.style.display = 'flex';
+        if (chevron) chevron.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        if (chevron) chevron.classList.remove('expanded');
+    }
+}
+
+function toggleTableColumns(itemKey) {
+    const panel = document.getElementById(`table-columns-${itemKey}`);
+    const btn = document.getElementById(`btn-tree-expander-${itemKey}`);
+    if (!panel) return;
+
+    if (panel.style.display === 'none' || panel.style.display === '') {
+        panel.style.display = 'block';
+        if (btn) btn.textContent = '−';
+    } else {
+        panel.style.display = 'none';
+        if (btn) btn.textContent = '+';
+    }
+}
+
+function insertColumnName(colName) {
+    if (monacoEditor) {
+        const selection = monacoEditor.getSelection();
+        const id = { major: 1, minor: 1 };
+        const text = colName;
+        const op = { identifier: id, range: selection, text: text, forceMoveMarkers: true };
+        monacoEditor.executeEdits("explorer-insert", [op]);
+        monacoEditor.focus();
+        isDirty = true;
+        scheduleAutosave();
+        showToast(`Inserted column '${colName}' into editor`, 'info');
+    }
 }
 
 function escapeJs(str) {
@@ -1000,12 +1120,20 @@ async function initPracticePage(sessionData, initialTech) {
     document.getElementById('btn-exec-history')?.addEventListener('click', openExecutionHistory);
     document.getElementById('btn-toggle-sql-explorer')?.addEventListener('click', toggleDuckDBExplorer);
 
-    document.getElementById('btn-reset')?.addEventListener('click', () => {
-        if (confirm('Reset code workspace? This will not delete past execution history.')) {
+    document.getElementById('btn-reset')?.addEventListener('click', async () => {
+        const ok = await showAppConfirm({
+            title: 'Reset Code Workspace',
+            message: 'Are you sure you want to reset the current editor code? This will not delete your past execution history snapshots.',
+            confirmText: 'Reset Workspace',
+            isDanger: true,
+            icon: '↺'
+        });
+        if (ok) {
             if (monacoEditor) {
                 monacoEditor.setValue('-- Reset workspace\n');
                 isDirty = true;
                 scheduleAutosave();
+                showToast('Workspace reset', 'info');
             }
         }
     });

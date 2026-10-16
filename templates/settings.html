@@ -218,7 +218,14 @@
             return;
         }
 
-        if (!confirm('WARNING: Restoring will overwrite existing practice data with the backup contents. Are you sure you wish to proceed?')) {
+        const confirmed = await showAppConfirm({
+            title: 'Restore Practice Snapshot',
+            message: 'WARNING: Restoring will overwrite existing practice data with the backup contents. Are you sure you wish to proceed?',
+            confirmText: 'Restore & Overwrite',
+            isDanger: true,
+            icon: '⚠️'
+        });
+        if (!confirmed) {
             return;
         }
 
