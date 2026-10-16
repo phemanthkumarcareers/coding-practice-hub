@@ -150,6 +150,9 @@ function updateLogoTooltip(isCollapsed) {
 }
 
 function initSidebar() {
+    // Force purge any legacy sidebar toggle buttons if present in DOM or cache
+    document.querySelectorAll('.sidebar-toggle-btn').forEach(btn => btn.remove());
+
     const rawVal = localStorage.getItem('ch_sidebar_collapsed');
     // By default: OPEN (not collapsed) on first launch or when null/unset
     const isCollapsed = rawVal === 'true';
@@ -165,6 +168,13 @@ function initSidebar() {
         document.documentElement.classList.remove('sidebar-is-collapsed');
     }
     updateLogoTooltip(isCollapsed);
+
+    // Bind direct click and keydown listener to the logo element
+    const logoEl = document.getElementById('app-logo-img') || document.querySelector('.sidebar-logo');
+    if (logoEl) {
+        logoEl.style.cursor = 'pointer';
+        logoEl.onclick = toggleSidebar;
+    }
 
     // Enable smooth slide transitions only AFTER initial paint to prevent opening/minimizing flicker on refresh
     requestAnimationFrame(() => {
