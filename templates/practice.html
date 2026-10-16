@@ -241,6 +241,17 @@
                 </div>
             </div>
             <div id="monaco-editor-container" class="editor-container"></div>
+            <div id="editor-empty-state" class="editor-empty-state" style="display:none;">
+                <div class="empty-state-card">
+                    <div class="empty-state-icon">📄</div>
+                    <div class="empty-state-title">No Files Open in Editor</div>
+                    <div class="empty-state-subtitle">All tabs have been closed. Your files remain safely saved in the workspace.</div>
+                    <div class="empty-state-actions">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="createNewFileTabDirect()">+ New File</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditorExplorer()">📁 Files Explorer</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

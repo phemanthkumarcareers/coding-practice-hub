@@ -101,7 +101,6 @@ let cachedFilesTree = null;
 function ensureOpenTabsConsistent() {
     const existingFiles = Object.keys(currentProjectFiles);
     if (existingFiles.length === 0) {
-        const defaultExt = activeTechnology === 'SQL' ? '.sql' : (activeTechnology === 'System Design' ? '.md' : '.py');
         const defaultName = activeTechnology === 'SQL' ? 'query.sql' : (activeTechnology === 'System Design' ? 'architecture.md' : 'main.py');
         currentProjectFiles[defaultName] = '';
         openTabFileNames = [defaultName];
@@ -111,14 +110,13 @@ function ensureOpenTabsConsistent() {
 
     // Filter open tabs to only valid existing files
     openTabFileNames = openTabFileNames.filter(fname => fname in currentProjectFiles);
-    if (openTabFileNames.length === 0) {
-        openTabFileNames = [existingFiles[0]];
-    }
 
-    if (!activeFileName || !(activeFileName in currentProjectFiles)) {
-        activeFileName = openTabFileNames[0];
-    } else if (!openTabFileNames.includes(activeFileName)) {
-        openTabFileNames.push(activeFileName);
+    if (openTabFileNames.length > 0) {
+        if (!activeFileName || !openTabFileNames.includes(activeFileName)) {
+            activeFileName = openTabFileNames[openTabFileNames.length - 1];
+        }
+    } else {
+        activeFileName = null;
     }
 }
 
@@ -128,6 +126,20 @@ function renderMultiFileTabs() {
 
     ensureOpenTabsConsistent();
     bar.innerHTML = '';
+
+    // Toggle Editor vs Empty State
+    const editorContainer = document.getElementById('monaco-editor-container');
+    const emptyState = document.getElementById('editor-empty-state');
+    if (openTabFileNames.length === 0) {
+        if (editorContainer) editorContainer.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'flex';
+    } else {
+        if (editorContainer) editorContainer.style.display = 'block';
+        if (emptyState) emptyState.style.display = 'none';
+        if (monacoEditor) {
+            setTimeout(() => monacoEditor.layout(), 30);
+        }
+    }
 
     const getFileIcon = (fname) => {
         if (fname.endsWith('.py')) return '🐍';
@@ -240,25 +252,24 @@ function removeTabFromWorkspace(filename) {
         currentProjectFiles[filename] = monacoEditor.getValue();
     }
 
-    if (openTabFileNames.length <= 1) {
-        showToast(`Cannot close only remaining tab. Use '+ New File' or load another file first.`, 'info', 2200);
-        return;
-    }
-
     openTabFileNames = openTabFileNames.filter(f => f !== filename);
 
     if (activeFileName === filename) {
-        activeFileName = openTabFileNames[openTabFileNames.length - 1];
-        const code = currentProjectFiles[activeFileName] || '';
-        const lang = getLanguageForFile(activeFileName, activeTechnology);
-        createOrUpdateEditor(code, lang);
+        if (openTabFileNames.length > 0) {
+            activeFileName = openTabFileNames[openTabFileNames.length - 1];
+            const code = currentProjectFiles[activeFileName] || '';
+            const lang = getLanguageForFile(activeFileName, activeTechnology);
+            createOrUpdateEditor(code, lang);
+        } else {
+            activeFileName = null;
+        }
     }
 
     renderMultiFileTabs();
     refreshFilesTree();
     isDirty = true;
     scheduleAutosave();
-    showToast(`Closed tab '${filename}'. File is saved and can be reloaded anytime from 📂 Open File or 📁 Files.`, 'info', 2600);
+    showToast(`Closed tab '${filename}'. File remains saved in 📂 Open File & 📁 Files.`, 'info', 2500);
 }
 
 // Permanently Delete File with in-app confirmation popup
@@ -277,9 +288,11 @@ async function deleteProjectFilePermanently(filename) {
     openTabFileNames = openTabFileNames.filter(f => f !== filename);
     ensureOpenTabsConsistent();
 
-    const code = currentProjectFiles[activeFileName] || '';
-    const lang = getLanguageForFile(activeFileName, activeTechnology);
-    createOrUpdateEditor(code, lang);
+    if (activeFileName && currentProjectFiles[activeFileName]) {
+        const code = currentProjectFiles[activeFileName] || '';
+        const lang = getLanguageForFile(activeFileName, activeTechnology);
+        createOrUpdateEditor(code, lang);
+    }
 
     renderMultiFileTabs();
     refreshFilesTree();
@@ -1212,12 +1225,14 @@ async function saveCurrentPractice(markCompleted = false) {
     const indicator = document.getElementById('autosave-indicator');
     if (indicator) indicator.textContent = 'Saving...';
 
-    // Update active file buffer
-    if (monacoEditor) {
+    // Update active file buffer if active
+    if (monacoEditor && activeFileName) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
-    const code = monacoEditor ? (currentProjectFiles[activeFileName] || monacoEditor.getValue()) : '';
+    const code = (activeFileName && currentProjectFiles[activeFileName])
+        ? currentProjectFiles[activeFileName]
+        : (Object.values(currentProjectFiles)[0] || (monacoEditor ? monacoEditor.getValue() : ''));
     const currentPractice = practicesMap[activePracticeId];
     
     let targetStatus = currentPractice.status;
@@ -1275,8 +1290,19 @@ async function saveCurrentPractice(markCompleted = false) {
 async function runCurrentCode() {
     if (!activePracticeId) return;
 
+    // If no tab is currently open, load the first available file or warn
+    if (!activeFileName || openTabFileNames.length === 0) {
+        const availableFiles = Object.keys(currentProjectFiles);
+        if (availableFiles.length > 0) {
+            openFileInTab(availableFiles[0]);
+        } else {
+            showToast("No active file in editor. Click '+ New File' or open a file to run code.", 'warning', 2500);
+            return;
+        }
+    }
+
     // Save active editor into currentProjectFiles buffer
-    if (monacoEditor) {
+    if (monacoEditor && activeFileName) {
         currentProjectFiles[activeFileName] = monacoEditor.getValue();
     }
 
@@ -1289,14 +1315,16 @@ async function runCurrentCode() {
         runBtn.innerHTML = '⏳ Running...';
     }
 
-    const code = monacoEditor ? (currentProjectFiles[activeFileName] || monacoEditor.getValue()) : '';
+    const code = (activeFileName && currentProjectFiles[activeFileName])
+        ? currentProjectFiles[activeFileName]
+        : (monacoEditor ? monacoEditor.getValue() : '');
     const payload = {
         id: activePracticeId,
         technology: activeTechnology,
         code: code,
         active_db: activeDatabaseName,
         files: currentProjectFiles,
-        entry_file: activeFileName,
+        entry_file: activeFileName || Object.keys(currentProjectFiles)[0] || '',
         extra_metadata: gatherExtraMetadata()
     };
 
