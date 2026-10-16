@@ -49,9 +49,12 @@ function applyThemeUI(themePref) {
     document.documentElement.setAttribute('data-theme', effectiveTheme);
     document.documentElement.setAttribute('data-theme-preference', themePref);
 
-    // Dynamically update theme-aware logos and favicon
+    // Dynamically update theme-aware logos and favicon across sidebar and main-content
     const logoUrl = `/static/images/logo-${effectiveTheme}.png`;
-    document.querySelectorAll('.sidebar-logo, .theme-aware-logo, #app-logo-img, #dashboard-logo-img').forEach(img => {
+    window.getThemeLogoSrc = function() {
+        return logoUrl;
+    };
+    document.querySelectorAll('.sidebar-logo, .theme-aware-logo, .main-content-logo, #app-logo-img, #dashboard-logo-img, #workspace-logo-img').forEach(img => {
         img.src = logoUrl;
     });
     const fav = document.getElementById('app-favicon');

@@ -64,9 +64,10 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   - **☀️ Light Theme**: Crisp, clean, high-contrast light theme with white editor, subtle borders, and dedicated light-mode emblem.
   - **🌙 Dark Theme**: Deep navy/slate developer dark theme with rich visual hierarchy and glowing cyber emblem.
   - **🩶 Grey Theme**: Modern zinc/charcoal dark theme (inspired by Zed and JetBrains Fleet) with metallic emblem.
-- **Theme-Adaptive Logo & Icon Background**:
-  - Switching themes dynamically swaps the sidebar logo, dashboard logo, and browser favicon between `logo-light.png`, `logo-dark.png`, and `logo-grey.png`.
+- **Theme-Adaptive Logo & Icon Background Across Sidebar and Main-Content**:
+  - Switching themes dynamically swaps all logo instances across the **Sidebar** and **Main-Content** (Dashboard header, Practice workspace header, History, Datasets, Reports, and Settings), as well as the browser favicon, between `logo-light.png`, `logo-dark.png`, and `logo-grey.png`.
   - Icon container backgrounds, borders, and shadows adapt automatically via `--logo-bg`, `--logo-border`, and `--logo-shadow` CSS variables so the emblem blends natively without dark square artifacts in light mode.
+  - Synchronous pre-paint initialization ensures instant display on page refresh without flicker.
 - **Live Monaco Synchronization**: Theme switches instantly update Monaco Editor between `vs` and `vs-dark`, and persist across browser sessions in `localStorage` and backend settings.
 
 ### 3. Fullscreen & Maximize Editor (Zen / Focus Mode)

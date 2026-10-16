@@ -18,6 +18,10 @@
                 document.documentElement.setAttribute('data-theme', effectiveTheme);
                 document.documentElement.setAttribute('data-theme-preference', pref);
                 
+                window.getThemeLogoSrc = function() {
+                    return '/static/images/logo-' + effectiveTheme + '.png';
+                };
+
                 const fav = document.getElementById('app-favicon');
                 if (fav) {
                     fav.href = '/static/images/logo-' + effectiveTheme + '.png';
@@ -58,16 +62,7 @@
                 <div class="sidebar-brand-wrapper">
                     <a href="{{ url_for('dashboard.index') }}" class="sidebar-brand">
                         <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="sidebar-logo theme-aware-logo" id="app-logo-img">
-                        <script>
-                            (function() {
-                                try {
-                                    var pref = localStorage.getItem('ch_theme_preference') || 'dark';
-                                    var eff = pref === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : pref;
-                                    var el = document.getElementById('app-logo-img');
-                                    if (el) el.src = '/static/images/logo-' + eff + '.png';
-                                } catch(e) {}
-                            })();
-                        </script>
+                        <script>if (window.getThemeLogoSrc) document.currentScript.previousElementSibling.src = window.getThemeLogoSrc();</script>
                         <div class="brand-text">
                             <span class="brand-title">Coding Practice</span>
                             <span class="brand-sub">Daily Hub</span>
