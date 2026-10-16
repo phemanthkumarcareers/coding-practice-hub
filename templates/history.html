@@ -5,8 +5,7 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
     <div style="display:flex; align-items:center; gap:0.85rem;">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="main-content-logo theme-aware-logo" style="width:38px; height:38px; border-radius:8px;">
-        <script>if (window.getThemeLogoSrc) document.currentScript.previousElementSibling.src = window.getThemeLogoSrc();</script>
+        <span class="app-logo-img main-content-logo" style="width:38px; height:38px; border-radius:8px;" role="img" aria-label="Coding Practice Hub Logo"></span>
         <div>
             <h1 style="font-size:1.6rem; font-weight:700;">Practice History</h1>
             <p style="color:var(--text-secondary); font-size:0.9rem;">Review, edit, and continue past daily coding practice sessions</p>
@@ -60,11 +59,9 @@
         <div>
             <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:0.3rem;">Group By:</label>
             <select id="filter-group-by" class="meta-select" style="width:100%;">
-                <option value="date" selected>Date</option>
-                <option value="technology">Technology</option>
-                <option value="status">Status</option>
-                <option value="difficulty">Difficulty</option>
-                <option value="topic">Topic</option>
+                <option value="date" selected>Date (Chronological)</option>
+                <option value="completed">Completed Count (High to Low)</option>
+                <option value="status">Status (Completed / In Progress / Not Started)</option>
             </select>
         </div>
     </div>
@@ -74,18 +71,26 @@
     </div>
 </div>
 
-<!-- Sessions Summary Table (Default View) -->
+<!-- Sessions Summary Table (Consistent UI on refresh & filter) -->
 <div id="default-history-container" class="section-box">
     <div class="section-title">
-        <span>Daily Practice Sessions</span>
+        <div style="display:flex; align-items:center; gap:0.6rem;">
+            <span>Daily Practice Sessions</span>
+            <span id="sessions-count-badge" class="badge badge-IN-PROGRESS" style="font-size:0.75rem; font-weight:normal;">{{ sessions|length }} session(s)</span>
+        </div>
     </div>
 
     {% if sessions|length == 0 %}
-        <div style="text-align:center; padding:2rem; color:var(--text-muted);">
+        <div id="empty-state-notice" style="text-align:center; padding:2rem; color:var(--text-muted);">
             No practice sessions created yet. Click "Create Practice" in the navigation to begin!
         </div>
+        <table class="data-table" id="sessions-history-table" style="display:none;">
     {% else %}
-        <table class="data-table">
+        <div id="empty-state-notice" style="display:none; text-align:center; padding:2rem; color:var(--text-muted);">
+            No sessions match the selected filter criteria.
+        </div>
+        <table class="data-table" id="sessions-history-table">
+    {% endif %}
             <thead>
                 <tr>
                     <th>Date</th>
@@ -99,7 +104,7 @@
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="sessions-table-body">
                 {% for s in sessions %}
                 <tr>
                     <td>
@@ -135,92 +140,142 @@
                 {% endfor %}
             </tbody>
         </table>
-    {% endif %}
-</div>
-
-<!-- Filtered Grouped Container (Populated dynamically when filter is applied) -->
-<div id="filtered-history-container" class="section-box" style="display:none;">
-    <div class="section-title">
-        <span id="filtered-title">Filtered Results</span>
-        <span id="filtered-count-badge" class="badge badge-IN-PROGRESS">0 practices</span>
-    </div>
-    <div id="filtered-groups-content"></div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    async function applyFilters() {
-        const payload = {
-            start_date: document.getElementById('filter-start-date').value || null,
-            end_date: document.getElementById('filter-end-date').value || null,
-            technologies: document.getElementById('filter-technology').value ? [document.getElementById('filter-technology').value] : [],
-            statuses: document.getElementById('filter-status').value ? [document.getElementById('filter-status').value] : [],
-            difficulties: document.getElementById('filter-difficulty').value ? [document.getElementById('filter-difficulty').value] : [],
-            group_by: document.getElementById('filter-group-by').value || 'date'
-        };
+    const allSessions = {{ sessions|tojson }};
+    const allTechs = {{ technologies|tojson }};
 
-        const res = await fetch('/api/history/filter', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function renderRow(s) {
+        const techCells = allTechs.map(tech => {
+            const p = (s.tech_practices && s.tech_practices[tech]) ? s.tech_practices[tech] : null;
+            if (p && p.status) {
+                const badgeClass = 'badge-' + p.status.replace(/\s+/g, '-');
+                return `<td>
+                    <a href="/practice?date=${encodeURIComponent(s.date)}&tech=${encodeURIComponent(tech)}" style="text-decoration:none;">
+                        <span class="badge ${badgeClass}" style="font-size:0.7rem;">${escapeHtml(p.status)}</span>
+                    </a>
+                </td>`;
+            } else {
+                return `<td><span class="badge badge-NOT-STARTED" style="font-size:0.7rem;">NS</span></td>`;
+            }
+        }).join('');
+
+        const compClass = s.completed_count === 6 ? 'badge-COMPLETED' : (s.completed_count > 0 ? 'badge-IN-PROGRESS' : 'badge-NOT-STARTED');
+
+        return `<tr>
+            <td>
+                <a href="/practice?date=${encodeURIComponent(s.date)}" style="font-weight:700; color:var(--text-primary); text-decoration:none;">
+                    📅 ${escapeHtml(s.date)}
+                </a>
+            </td>
+            ${techCells}
+            <td>
+                <span class="badge ${compClass}">
+                    ${s.completed_count || 0} / 6
+                </span>
+            </td>
+            <td>
+                <a href="/practice?date=${encodeURIComponent(s.date)}" class="btn btn-secondary btn-sm">
+                    Open Session
+                </a>
+            </td>
+        </tr>`;
+    }
+
+    function filterSessions() {
+        const startDate = document.getElementById('filter-start-date').value.trim();
+        const endDate = document.getElementById('filter-end-date').value.trim();
+        const selectedTech = document.getElementById('filter-technology').value.trim();
+        const selectedStatus = document.getElementById('filter-status').value.trim();
+        const selectedDiff = document.getElementById('filter-difficulty').value.trim();
+        const groupBy = document.getElementById('filter-group-by').value;
+
+        let filtered = allSessions.filter(s => {
+            if (startDate && s.date < startDate) return false;
+            if (endDate && s.date > endDate) return false;
+
+            if (selectedTech) {
+                const p = s.tech_practices && s.tech_practices[selectedTech];
+                if (!p) return false;
+                if (selectedStatus && p.status !== selectedStatus) return false;
+                if (selectedDiff && p.difficulty !== selectedDiff) return false;
+            } else {
+                if (selectedStatus) {
+                    if (selectedStatus === 'NOT STARTED') {
+                        const hasUnstarted = allTechs.some(tech => !s.tech_practices || !s.tech_practices[tech] || s.tech_practices[tech].status === 'NOT STARTED');
+                        if (!hasUnstarted) return false;
+                    } else {
+                        const matchesStatus = Object.values(s.tech_practices || {}).some(p => p.status === selectedStatus);
+                        if (!matchesStatus) return false;
+                    }
+                }
+                if (selectedDiff) {
+                    const matchesDiff = Object.values(s.tech_practices || {}).some(p => p.difficulty === selectedDiff);
+                    if (!matchesDiff) return false;
+                }
+            }
+            return true;
         });
 
-        const data = await res.json();
-        const defaultContainer = document.getElementById('default-history-container');
-        const filteredContainer = document.getElementById('filtered-history-container');
-        const groupsContent = document.getElementById('filtered-groups-content');
-        const countBadge = document.getElementById('filtered-count-badge');
+        const tbody = document.getElementById('sessions-table-body');
+        const countBadge = document.getElementById('sessions-count-badge');
+        const table = document.getElementById('sessions-history-table');
+        const emptyNotice = document.getElementById('empty-state-notice');
 
-        defaultContainer.style.display = 'none';
-        filteredContainer.style.display = 'block';
-        countBadge.textContent = `${data.count} practice(s) found`;
+        if (table) table.style.display = 'table';
+        if (emptyNotice) emptyNotice.style.display = 'none';
 
-        if (data.count === 0) {
-            groupsContent.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">No practices match the selected criteria.</div>';
+        if (countBadge) {
+            countBadge.textContent = `${filtered.length} session(s)`;
+        }
+
+        if (filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${allTechs.length + 3}" style="text-align:center; padding:2rem; color:var(--text-muted);">No sessions match the selected filter criteria.</td></tr>`;
             return;
         }
 
-        let html = '';
-        for (const [groupKey, items] of Object.entries(data.grouped)) {
-            html += `
-                <div style="margin-bottom:1.5rem; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; overflow:hidden;">
-                    <div style="padding:0.6rem 1rem; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); font-weight:700; display:flex; justify-content:space-between;">
-                        <span>${data.group_by.toUpperCase()}: ${groupKey}</span>
-                        <span style="font-size:0.8rem; color:var(--text-muted);">${items.length} item(s)</span>
-                    </div>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Technology</th>
-                                <th>Title</th>
-                                <th>Status</th>
-                                <th>Difficulty</th>
-                                <th>Executions</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(p => `
-                                <tr>
-                                    <td>${p.session_date}</td>
-                                    <td><strong>${p.technology}</strong></td>
-                                    <td>${p.title || 'Untitled Practice'}</td>
-                                    <td><span class="badge badge-${p.status.replace(/\s+/g, '-')}">${p.status}</span></td>
-                                    <td>${p.difficulty}</td>
-                                    <td>${p.execution_count} runs</td>
-                                    <td>
-                                        <a href="/practice?practice_id=${p.id}&tech=${encodeURIComponent(p.technology)}" class="btn btn-secondary btn-sm">Edit / Run</a>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+        if (groupBy === 'status') {
+            const groups = {
+                'Completed (6/6)': filtered.filter(s => s.completed_count === 6),
+                'In Progress': filtered.filter(s => s.completed_count > 0 && s.completed_count < 6),
+                'Not Started': filtered.filter(s => s.completed_count === 0)
+            };
+            let html = '';
+            for (const [title, list] of Object.entries(groups)) {
+                if (list.length === 0) continue;
+                html += `<tr style="background:var(--bg-tertiary);">
+                    <td colspan="${allTechs.length + 3}" style="font-weight:700; padding:0.6rem 0.85rem; color:var(--text-primary); border-top:2px solid var(--border-color);">
+                        <span style="color:var(--accent-primary);">●</span> ${escapeHtml(title)} (${list.length} session${list.length === 1 ? '' : 's'})
+                    </td>
+                </tr>`;
+                html += list.map(renderRow).join('');
+            }
+            tbody.innerHTML = html;
+        } else if (groupBy === 'completed') {
+            filtered.sort((a, b) => (b.completed_count || 0) - (a.completed_count || 0));
+            tbody.innerHTML = filtered.map(renderRow).join('');
+        } else {
+            // Default: chronological by date desc
+            filtered.sort((a, b) => b.date.localeCompare(a.date));
+            tbody.innerHTML = filtered.map(renderRow).join('');
         }
-        groupsContent.innerHTML = html;
+    }
+
+    function applyFilters() {
+        filterSessions();
     }
 
     function resetFilters() {
@@ -230,8 +285,7 @@
         document.getElementById('filter-status').value = '';
         document.getElementById('filter-difficulty').value = '';
         document.getElementById('filter-group-by').value = 'date';
-        document.getElementById('default-history-container').style.display = 'block';
-        document.getElementById('filtered-history-container').style.display = 'none';
+        filterSessions();
     }
 </script>
 {% endblock %}

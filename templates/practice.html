@@ -48,8 +48,7 @@
 <div class="workspace-header">
     <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
         <a href="{{ url_for('dashboard.index') }}" title="Coding Practice Hub - Dashboard" class="main-content-logo-link">
-            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="main-content-logo theme-aware-logo" id="workspace-logo-img" style="width:28px; height:28px; border-radius:6px;">
-            <script>if (window.getThemeLogoSrc) document.currentScript.previousElementSibling.src = window.getThemeLogoSrc();</script>
+            <span class="app-logo-img main-content-logo" id="workspace-logo-img" style="width:28px; height:28px; border-radius:6px;" role="img" aria-label="Coding Practice Hub Logo"></span>
         </a>
         <div class="active-tech-pill" id="header-active-tech-pill">
             <span id="header-tech-icon">🗄️</span>

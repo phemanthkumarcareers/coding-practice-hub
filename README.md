@@ -190,9 +190,12 @@ Practice/
 │   └── backup_service.py      # Zip archive creation & restore
 ├── static/
 │   ├── images/
-│   │   └── logo.png           # Brand application logo
+│   │   ├── logo-dark.png      # Dark theme brand application logo
+│   │   ├── logo-light.png     # Light theme brand application logo
+│   │   ├── logo-grey.png      # Grey (zinc) theme brand application logo
+│   │   └── logo.png           # Fallback brand logo
 │   ├── css/
-│   │   └── style.css          # Developer-tool dark/light themes, vertical resizer, file tabs
+│   │   └── style.css          # Theme variables (--app-logo-image), vertical resizer, file tabs
 │   └── js/
 │       ├── app.js             # Global shortcuts (Ctrl+K), theme switcher, search modal
 │       └── practice.js        # Monaco controller, tab switcher, multi-file manager, multi-db selector
