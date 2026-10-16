@@ -9,7 +9,7 @@
         <p style="color:var(--text-secondary); font-size:0.9rem;">Daily target: 6/6 technical practices (SQL, Python, PySpark, Databricks, DSA, System Design)</p>
     </div>
     <div style="display:flex; gap:0.75rem; align-items:center;">
-        {% if metrics.today_progress.exists %}
+        {% if metrics.today_progress.exists and metrics.today_progress.status != 'NOT STARTED' %}
             <a href="{{ url_for('practice.practice_workspace', date=today) }}" class="btn btn-primary" style="padding:0.6rem 1.25rem;">
                 ⚡ Continue Today's Practice ({{ today }})
             </a>
