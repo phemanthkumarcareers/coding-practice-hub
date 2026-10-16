@@ -1,19 +1,100 @@
 {% extends "base.html" %}
 
-{% block title %}Dataset Management - Coding Practice Hub{% endblock %}
+{% block title %}Databases & Dataset Management - Coding Practice Hub{% endblock %}
 
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
     <div>
-        <h1 style="font-size:1.6rem; font-weight:700;">Dataset Management</h1>
-        <p style="color:var(--text-secondary); font-size:0.9rem;">Upload CSV, Parquet, or JSON datasets for direct querying in DuckDB, Python (pandas), and PySpark</p>
+        <h1 style="font-size:1.6rem; font-weight:700;">Databases & Datasets Manager</h1>
+        <p style="color:var(--text-secondary); font-size:0.9rem;">Inspect application databases, upload CSV files, and query them directly in practice using just the file name</p>
     </div>
 </div>
 
-<!-- Upload Box -->
+<!-- 1. Databases Created Overview -->
 <div class="section-box">
     <div class="section-title">
-        <span>Upload New Dataset</span>
+        <span>Databases Created</span>
+        <span style="font-size:0.8rem; color:var(--text-secondary); font-weight:normal;">Auto-initialized local storage</span>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap:1.25rem;">
+        <!-- DuckDB Database Card -->
+        <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <span style="font-weight:700; font-size:1rem; color:#38bdf8;">🦆 DuckDB Analytical Practice Database</span>
+                <span class="badge badge-SUCCESS">ACTIVE</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.6rem;">
+                <strong>File:</strong> <code>{{ db_overview.duckdb.filename }}</code> ({{ db_overview.duckdb.size_kb }} KB)
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:0.75rem; word-break:break-all;">
+                {{ db_overview.duckdb.path }}
+            </div>
+            <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Registered Views & Datasets ({{ db_overview.duckdb.views|length }}):</div>
+            <div style="max-height:100px; overflow-y:auto; display:flex; flex-wrap:wrap; gap:0.35rem;">
+                {% for v in db_overview.duckdb.views %}
+                    <span class="kbd-badge" style="font-size:0.75rem; color:var(--accent-primary);">{{ v.name }} {% if v.count is not none %}({{ v.count }}r){% endif %}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- SQLite Database Card -->
+        <div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                <span style="font-weight:700; font-size:1rem; color:#a78bfa;">💾 SQLite Application Metadata Database</span>
+                <span class="badge badge-SUCCESS">ACTIVE</span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.6rem;">
+                <strong>File:</strong> <code>{{ db_overview.sqlite.filename }}</code> ({{ db_overview.sqlite.size_kb }} KB)
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); margin-bottom:0.75rem; word-break:break-all;">
+                {{ db_overview.sqlite.path }}
+            </div>
+            <div style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.35rem;">Application Tables:</div>
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem;">
+                {% for t in db_overview.sqlite.tables %}
+                    <span class="kbd-badge" style="font-size:0.75rem;">{{ t.name }} ({{ t.count }})</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Direct File Name Usage Instructions Banner -->
+<div class="section-box" style="border-left: 4px solid var(--accent-primary);">
+    <div style="font-weight:700; font-size:1rem; margin-bottom:0.5rem; color:var(--accent-primary);">
+        💡 How to Use Uploaded CSVs in Practice Using Just the File Name
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1rem; font-size:0.85rem;">
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px;">
+            <div style="font-weight:600; color:#34d399; margin-bottom:0.3rem;">1. In SQL Practice Editor</div>
+            <p style="color:var(--text-secondary); margin-bottom:0.4rem;">Query directly by filename or clean table name:</p>
+            <pre style="background:var(--editor-bg); padding:0.4rem; border-radius:4px; font-family:var(--font-mono); font-size:0.8rem; overflow:auto;">SELECT * FROM sample_employees.csv LIMIT 5;
+SELECT * FROM sample_employees;
+SELECT * FROM 'sample_employees.csv';</pre>
+        </div>
+
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px;">
+            <div style="font-weight:600; color:#60a5fa; margin-bottom:0.3rem;">2. In Python Practice Editor</div>
+            <p style="color:var(--text-secondary); margin-bottom:0.4rem;">Files are placed directly in your execution directory:</p>
+            <pre style="background:var(--editor-bg); padding:0.4rem; border-radius:4px; font-family:var(--font-mono); font-size:0.8rem; overflow:auto;">import pandas as pd
+df = pd.read_csv('sample_employees.csv')
+print(df.head())</pre>
+        </div>
+
+        <div style="background:var(--bg-tertiary); padding:0.85rem; border-radius:6px;">
+            <div style="font-weight:600; color:#f59e0b; margin-bottom:0.3rem;">3. In PySpark Editor</div>
+            <p style="color:var(--text-secondary); margin-bottom:0.4rem;">Read directly via SparkSession:</p>
+            <pre style="background:var(--editor-bg); padding:0.4rem; border-radius:4px; font-family:var(--font-mono); font-size:0.8rem; overflow:auto;">df = spark.read.csv('sample_employees.csv', header=True)
+df.show(5)</pre>
+        </div>
+    </div>
+</div>
+
+<!-- 3. Upload Box -->
+<div class="section-box">
+    <div class="section-title">
+        <span>Upload New CSV / Dataset</span>
     </div>
 
     <div style="display:flex; gap:1rem; align-items:center; flex-wrap:wrap;">
@@ -24,11 +105,11 @@
         <span id="upload-status-indicator" style="font-size:0.85rem; color:var(--text-secondary);"></span>
     </div>
     <div style="font-size:0.78rem; color:var(--text-muted); margin-top:0.5rem;">
-        Supported file types: <code>.csv</code>, <code>.parquet</code>, <code>.json</code>. Files are registered as queryable views in DuckDB automatically upon upload.
+        Accepted formats: <code>.csv</code>, <code>.parquet</code>, <code>.json</code>. Uploaded CSVs are automatically saved to <code>uploads/csv/</code> and registered as queryable views in DuckDB.
     </div>
 </div>
 
-<!-- Uploaded Datasets Table -->
+<!-- 4. Uploaded Datasets Table -->
 <div class="section-box">
     <div class="section-title">
         <span>Available Practice Datasets ({{ datasets|length }})</span>
@@ -42,24 +123,26 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Table / View Name</th>
-                    <th>Original File</th>
+                    <th>Original File Name</th>
+                    <th>SQL View Names</th>
                     <th>Format</th>
                     <th>Size</th>
                     <th>Rows</th>
                     <th>Columns</th>
-                    <th>Uploaded</th>
+                    <th>Uploaded Date</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for d in datasets %}
                 <tr>
-                    <td><code>{{ d.table_name }}</code></td>
-                    <td>{{ d.original_name }}</td>
+                    <td><strong style="color:var(--accent-primary);">{{ d.original_name }}</strong></td>
+                    <td>
+                        <code>{{ d.original_name }}</code>, <code>{{ d.table_name }}</code>
+                    </td>
                     <td><span class="badge badge-IN-PROGRESS">{{ d.file_type|upper }}</span></td>
                     <td>{{ (d.file_size / 1024)|round(1) }} KB</td>
-                    <td>{{ d.row_count }}</td>
+                    <td><strong>{{ d.row_count }}</strong></td>
                     <td>{{ d.column_count }} cols</td>
                     <td>{{ d.uploaded_at[:16] }}</td>
                     <td>
@@ -119,7 +202,7 @@
         formData.append('file', fileInput.files[0]);
 
         uploadBtn.disabled = true;
-        indicator.textContent = 'Uploading and analyzing schema in DuckDB...';
+        indicator.textContent = 'Uploading and registering in DuckDB...';
 
         try {
             const res = await fetch('/api/datasets/upload', {
@@ -159,7 +242,7 @@
                 return;
             }
 
-            title.textContent = `Preview: ${data.dataset.table_name} (${data.dataset.row_count} rows total)`;
+            title.textContent = `Preview: ${data.dataset.original_name} (${data.dataset.row_count} rows)`;
             
             const p = data.preview;
             if (!p || !p.columns || p.columns.length === 0) {
@@ -203,20 +286,21 @@
                 return;
             }
 
-            title.textContent = `Query Snippets: ${data.dataset.table_name}`;
+            const fileName = data.dataset.original_name;
+            title.textContent = `Direct File Name Snippets: ${fileName}`;
             
             body.innerHTML = `
                 <div style="margin-bottom:1rem;">
-                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">1. DuckDB SQL Query</div>
-                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.sql}</pre>
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">1. DuckDB SQL Query (By File Name)</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">SELECT * FROM "${fileName}" LIMIT 10;\n-- Or without quotes:\nSELECT * FROM ${fileName.replace(/\.[^/.]+$/, '')} LIMIT 10;</pre>
                 </div>
                 <div style="margin-bottom:1rem;">
-                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">2. Python (Pandas)</div>
-                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.python}</pre>
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">2. Python (Pandas - By File Name)</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">import pandas as pd\ndf = pd.read_${data.dataset.file_type}('${fileName}')\nprint(df.head())\nprint(df.info())</pre>
                 </div>
                 <div>
-                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">3. PySpark (SparkSession)</div>
-                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">${data.snippets.pyspark}</pre>
+                    <div style="font-weight:600; margin-bottom:0.35rem; font-size:0.85rem; color:var(--accent-primary);">3. PySpark (By File Name)</div>
+                    <pre style="background:var(--editor-bg); padding:0.6rem; border-radius:4px; font-family:var(--font-mono); font-size:0.82rem; overflow:auto;">df = spark.read.${data.dataset.file_type}('${fileName}', header=True)\ndf.show(5)\ndf.printSchema()</pre>
                 </div>
             `;
         } catch (err) {

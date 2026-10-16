@@ -138,8 +138,8 @@ def get_or_create_daily_session(session_date_str=None):
         
         # Auto-create the 6 technology practice records
         default_templates = {
-            "SQL": "-- Write your SQL query here\nSELECT 'Hello DuckDB SQL Practice' AS greeting, CURRENT_DATE AS today;",
-            "Python": "# Write your Python solution here\ndef solve():\n    print('Hello Python Practice!')\n\nif __name__ == '__main__':\n    solve()",
+            "SQL": "-- Query uploaded datasets directly by file name:\nSELECT * FROM sample_employees.csv LIMIT 5;\n\n-- Department summary:\nSELECT department, count(*) AS count, round(avg(salary), 2) AS avg_sal\nFROM sample_employees.csv\nGROUP BY department\nORDER BY avg_sal DESC;",
+            "Python": "import pandas as pd\n\n# Uploaded CSV files are accessible directly by filename!\ndf = pd.read_csv('sample_employees.csv')\nprint(df.head())\nprint('\\nDepartment Salary Summary:')\nprint(df.groupby('department')['salary'].mean().round(2))",
             "PySpark": "# Write your PySpark code here\n# Note: SparkSession is available or can be initialized\nfrom pyspark.sql import SparkSession\n\nspark = SparkSession.builder.appName('Practice').getOrCreate()\ndf = spark.createDataFrame([(1, 'Spark'), (2, 'DuckDB')], ['id', 'engine'])\ndf.show()",
             "Databricks": "# Databricks Notebook / Code Practice\n# Technology subtype: Delta Lake / PySpark / SQL / Auto Loader\nprint('Databricks Practice Workspace')",
             "DSA": "# Data Structures & Algorithms Practice\nclass Solution:\n    def solve(self, nums):\n        # Implement optimal solution\n        return nums\n\nif __name__ == '__main__':\n    s = Solution()\n    print(s.solve([1, 2, 3]))",

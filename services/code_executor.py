@@ -3,6 +3,7 @@ import sys
 import time
 import uuid
 import json
+import shutil
 from pathlib import Path
 from config import WORKSPACE_DIR, DEFAULT_SETTINGS, SQLITE_PATH
 from models.db import get_setting
@@ -12,20 +13,40 @@ class CodeExecutor:
     def __init__(self):
         pass
 
+    def _sync_datasets_to_workspace(self, target_dir: Path):
+        """Copies or hardlinks all uploaded datasets to the execution workspace so they can be opened by filename."""
+        try:
+            conn = sqlite3.connect(SQLITE_PATH)
+            conn.row_factory = sqlite3.Row
+            datasets = conn.execute("SELECT original_name, file_path FROM datasets").fetchall()
+            conn.close()
+
+            for ds in datasets:
+                src = Path(ds["file_path"])
+                if src.exists():
+                    dst = target_dir / ds["original_name"]
+                    if not dst.exists() or dst.stat().st_mtime < src.stat().st_mtime:
+                        shutil.copy2(src, dst)
+        except Exception as e:
+            print(f"Error syncing dataset files to workspace: {e}")
+
     def _get_dataset_paths_code(self):
         """Generates Python preamble dictionary exposing all uploaded datasets."""
         try:
             conn = sqlite3.connect(SQLITE_PATH)
             conn.row_factory = sqlite3.Row
-            datasets = conn.execute("SELECT table_name, file_path, file_type FROM datasets").fetchall()
+            datasets = conn.execute("SELECT table_name, original_name, file_path, file_type FROM datasets").fetchall()
             conn.close()
+
+            datasets_dict = {d["original_name"]: Path(d["file_path"]).as_posix() for d in datasets}
+            table_dict = {d["table_name"]: Path(d["file_path"]).as_posix() for d in datasets}
             
-            datasets_dict = {d["table_name"]: Path(d["file_path"]).as_posix() for d in datasets}
             preamble = (
-                "# === Preloaded Datasets Mapping ===\n"
-                f"DATASETS = {json.dumps(datasets_dict, indent=2)}\n"
-                "# Example usage: pd.read_csv(DATASETS['your_table']) if available\n"
-                "# ==================================\n\n"
+                "# === Preloaded Datasets Notice ===\n"
+                "# All uploaded files are available directly in your working directory by filename!\n"
+                "# Example: pd.read_csv('sample_employees.csv')\n"
+                f"DATASETS = {json.dumps({**datasets_dict, **table_dict}, indent=2)}\n"
+                "# =================================\n\n"
             )
             return preamble
         except Exception:
@@ -40,6 +61,9 @@ class CodeExecutor:
         target_dir = WORKSPACE_DIR / tech.lower().replace(" ", "_")
         target_dir.mkdir(parents=True, exist_ok=True)
         script_file = target_dir / f"run_{run_id}.py"
+
+        # Sync datasets to workspace directory
+        self._sync_datasets_to_workspace(target_dir)
 
         # Inject dataset dictionary helper preamble
         full_code = self._get_dataset_paths_code() + code
@@ -82,7 +106,6 @@ class CodeExecutor:
             result["stderr"] = f"Execution system error: {str(e)}"
         finally:
             result["duration_ms"] = int((time.time() - start_time) * 1000)
-            # Clean up temporary script file
             try:
                 if script_file.exists():
                     script_file.unlink()

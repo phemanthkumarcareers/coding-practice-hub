@@ -29,11 +29,13 @@ def datasets_view():
     conn.close()
     
     schema_explorer = duckdb_service.get_explorer_schema()
+    db_overview = duckdb_service.get_databases_overview()
 
     return render_template(
         "datasets.html",
         datasets=[dict(d) for d in datasets],
-        schema_explorer=schema_explorer
+        schema_explorer=schema_explorer,
+        db_overview=db_overview
     )
 
 @datasets_bp.route("/api/datasets/upload", methods=["POST"])
