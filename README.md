@@ -143,11 +143,11 @@ All user practice data is strictly isolated and excluded from version control:
 - **Backend**: Python 3.12.10, Flask (served on port `5000`)
 - **Metadata & History**: SQLite (`database/app.db`) with normalized schema, foreign keys, and indexes
 - **SQL Practice Engine**: DuckDB (`database/practice.duckdb` & `database/user_dbs/*.duckdb`) multi-database engine
+- **Big Data & Analytics Engine**: PySpark 4.2.0 + Eclipse Adoptium OpenJDK 17 LTS (automatic JVM discovery and worker configuration)
 - **Code Execution**: Isolated subprocess runner with multi-file support and configurable timeout protection
 - **Frontend**: Flask Jinja2 templates, HTML5, CSS3, Vanilla JavaScript
 - **Code Editor**: Monaco Editor (syntax highlighting, line numbers, automatic indentation, dark/light themes)
 - **Architecture Diagrams**: Live Mermaid.js rendering for System Design
-- **WSGI Callable**: Standard `application.py` / `wsgi.py` compatible with Apache `mod_wsgi`, Gunicorn, and Waitress
 
 ---
 
@@ -155,9 +155,7 @@ All user practice data is strictly isolated and excluded from version control:
 
 ```text
 Practice/
-├── app.py                     # Flask entry point (Port 5000)
-├── application.py             # WSGI application callable
-├── wsgi.py                    # WSGI entrypoint
+├── app.py                     # Flask application server (Port 5000)
 ├── run.bat                    # 1-click launcher (starts server & opens browser)
 ├── config.py                  # Paths, constants, and default configurations
 ├── requirements.txt           # Python dependencies

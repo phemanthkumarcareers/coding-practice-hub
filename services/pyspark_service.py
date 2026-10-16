@@ -29,7 +29,22 @@ class PySparkService:
         except ImportError:
             env_status["diagnostics"].append("PySpark package is not installed in the Python environment (pip install pyspark).")
 
-        # 2. Check Java
+        # 2. Check Java & Auto-discover if not explicitly set
+        if not env_status["java_home"]:
+            search_dirs = [
+                Path("C:/Program Files/Eclipse Adoptium"),
+                Path("C:/Program Files/Java"),
+                Path("C:/Program Files/Microsoft")
+            ]
+            for sdir in search_dirs:
+                if sdir.exists():
+                    for sub in sorted(sdir.iterdir(), reverse=True):
+                        if (sub / "bin" / ("java.exe" if sys.platform == "win32" else "java")).exists():
+                            env_status["java_home"] = str(sub)
+                            break
+                    if env_status["java_home"]:
+                        break
+
         java_cmd = "java"
         if env_status["java_home"]:
             candidate = Path(env_status["java_home"]) / "bin" / ("java.exe" if sys.platform == "win32" else "java")
@@ -84,8 +99,14 @@ class PySparkService:
         env = os.environ.copy()
         if env_status["java_home"]:
             env["JAVA_HOME"] = env_status["java_home"]
+            java_bin = str(Path(env_status["java_home"]) / "bin")
+            env["PATH"] = java_bin + os.pathsep + env.get("PATH", "")
         if env_status["spark_home"]:
             env["SPARK_HOME"] = env_status["spark_home"]
+
+        # Ensure PySpark invokes the active Python binary rather than Windows alias
+        env["PYSPARK_PYTHON"] = python_bin
+        env["PYSPARK_DRIVER_PYTHON"] = python_bin
 
         result = {
             "stdout": "",

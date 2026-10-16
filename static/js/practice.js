@@ -471,15 +471,13 @@ function setupSpecializedUI(tech, extra) {
     const databricksPanel = document.getElementById('databricks-specific-panel');
     const systemDesignPreview = document.getElementById('system-design-preview-container');
     const standardOutput = document.getElementById('standard-output-container');
-    const sqlExplorerBtn = document.getElementById('btn-toggle-sql-explorer');
     const sqlDbToolbar = document.getElementById('sql-db-toolbar');
 
-    // Default hide all
+    // Default hide specialized panels
     if (dsaPanel) dsaPanel.style.display = 'none';
     if (databricksPanel) databricksPanel.style.display = 'none';
     if (systemDesignPreview) systemDesignPreview.style.display = 'none';
     if (standardOutput) standardOutput.style.display = 'flex';
-    if (sqlExplorerBtn) sqlExplorerBtn.style.display = 'none';
     if (sqlDbToolbar) sqlDbToolbar.style.display = 'none';
 
     if (tech === 'DSA') {
@@ -499,9 +497,8 @@ function setupSpecializedUI(tech, extra) {
         if (systemDesignPreview) systemDesignPreview.style.display = 'block';
         if (standardOutput) standardOutput.style.display = 'none';
     } else if (tech === 'SQL') {
-        if (sqlExplorerBtn) sqlExplorerBtn.style.display = 'inline-flex';
         if (sqlDbToolbar) {
-            sqlDbToolbar.style.display = 'flex';
+            sqlDbToolbar.style.display = 'inline-flex';
             loadDatabasesList();
         }
     }

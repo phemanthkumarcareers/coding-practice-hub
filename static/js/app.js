@@ -86,13 +86,20 @@ function applyThemeUI(themePref) {
 
 // Sidebar Collapse / Expand Controller
 function initSidebar() {
-    const isCollapsed = localStorage.getItem('ch_sidebar_collapsed') === 'true';
+    const rawVal = localStorage.getItem('ch_sidebar_collapsed');
+    // By default: OPEN (not collapsed) on first launch or when null/unset
+    const isCollapsed = rawVal === 'true';
     const sidebar = document.getElementById('app-sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle-btn');
 
-    if (isCollapsed && sidebar) {
+    if (!sidebar) return;
+
+    if (isCollapsed) {
         sidebar.classList.add('collapsed');
         if (toggleBtn) toggleBtn.textContent = '▶';
+    } else {
+        sidebar.classList.remove('collapsed');
+        if (toggleBtn) toggleBtn.textContent = '◀';
     }
 }
 

@@ -46,20 +46,32 @@
 {% block content %}
 <!-- Top Header & Actions -->
 <div class="workspace-header">
-    <div style="display:flex; align-items:center; gap:0.75rem;">
+    <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
         <div class="active-tech-pill" id="header-active-tech-pill">
             <span id="header-tech-icon">🗄️</span>
             <span id="header-tech-name" style="font-weight:700;">SQL</span>
             <span id="header-tech-status-badge" class="badge badge-NOT-STARTED" style="font-size:0.7rem; padding:0.15rem 0.45rem;">NOT STARTED</span>
         </div>
+
+        <!-- Inline Database Context Selector for SQL (Zero extra vertical space) -->
+        <div id="sql-db-toolbar" class="header-db-selector" style="display:none; align-items:center; gap:0.4rem;">
+            <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary);">DB:</span>
+            <select id="sql-active-db-select" class="meta-select" style="padding:0.25rem 0.5rem; font-size:0.8rem; min-width:140px;">
+                <option value="main" selected>practice (main)</option>
+            </select>
+            <button type="button" class="btn btn-secondary btn-sm" style="padding:0.25rem 0.5rem; font-size:0.75rem;" onclick="promptCreateDatabase()" title="Create new DuckDB database">
+                + DB
+            </button>
+        </div>
+
         <div id="autosave-indicator" class="autosave-status">
             <span>All changes saved</span>
         </div>
     </div>
 
     <div class="workspace-actions">
-        <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" style="display:none;" title="Databases, Tables & Views Explorer">
-            📊 Database & Table Explorer
+        <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" title="Databases, Tables & Views Explorer">
+            📊 Explorer
         </button>
 
         <button id="btn-exec-history" class="btn btn-secondary btn-sm" title="View execution attempts history">
@@ -191,24 +203,8 @@
 <div class="split-container">
     <!-- Top: Full-Width Code Editor Pane -->
     <div id="editor-pane" class="editor-pane">
-        <!-- SQL Database Selector Toolbar (Active only for SQL) -->
-        <div id="sql-db-toolbar" class="db-selector-bar" style="display:none;">
-            <div style="display:flex; align-items:center; gap:0.6rem;">
-                <span style="font-weight:600; color:var(--text-secondary);">Active Database:</span>
-                <select id="sql-active-db-select" class="meta-select" style="min-width:180px;">
-                    <option value="main" selected>practice (main / default)</option>
-                </select>
-                <button class="btn btn-secondary btn-sm" onclick="openCreateDatabaseModal()">+ Create Database</button>
-            </div>
-            <div style="font-size:0.75rem; color:var(--text-muted);">
-                Default DB queries: <code>SELECT * FROM table</code> | Other attached DBs: <code>SELECT * FROM db_name.table</code>
-            </div>
-        </div>
-
-        <!-- Multi-File Tabs Bar (For Python, DSA, Databricks) -->
-        <div id="multi-file-tabs-bar" class="file-tabs-bar" style="display:none;">
-            <!-- Dynamically populated e.g. [main.py] [utils.py x] [+ New File] -->
-        </div>
+        <!-- Multi-File Tabs Bar -->
+        <div id="multi-file-tabs-bar" class="file-tabs-bar"></div>
 
         <div class="pane-header">
             <span id="editor-title-label">CODE EDITOR</span>

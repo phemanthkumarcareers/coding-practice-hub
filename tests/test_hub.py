@@ -17,10 +17,47 @@ from services.backup_service import backup_service
 
 class TestCodingPracticeHub(unittest.TestCase):
     @classmethod
+    def cleanup_test_data(cls):
+        import glob
+        # 1. Clean SQLite test sessions and practices
+        try:
+            conn = get_connection()
+            conn.execute("DELETE FROM daily_sessions WHERE date LIKE '2099-%';")
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
+        # 2. Clean DuckDB test table
+        try:
+            duckdb_service.execute_query("DROP TABLE IF EXISTS test_col_size_tbl;")
+        except Exception:
+            pass
+
+        # 3. Clean user_dbs test databases
+        for f in glob.glob("database/user_dbs/test_db_*.duckdb*"):
+            try:
+                os.remove(f)
+            except Exception:
+                pass
+
+        # 4. Clean backup zip files created during tests
+        for b in glob.glob("backups/coding_practice_backup_*.zip"):
+            try:
+                os.remove(b)
+            except Exception:
+                pass
+
+    @classmethod
     def setUpClass(cls):
+        cls.cleanup_test_data()
         init_db()
         cls.app = create_app()
         cls.client = cls.app.test_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.cleanup_test_data()
 
     def test_01_database_initialization(self):
         conn = get_connection()
@@ -146,8 +183,9 @@ class TestCodingPracticeHub(unittest.TestCase):
                 self.assertEqual(data["session_status"], "IN PROGRESS")
 
     def test_08_global_search(self):
-        # Insert known keyword into title
-        session = get_or_create_daily_session("2026-10-20")
+        import uuid
+        test_date = f"2099-04-{uuid.uuid4().hex[:4]}"
+        session = get_or_create_daily_session(test_date)
         p = session["practices"][0]
         self.client.post("/api/practice/save", json={
             "id": p["id"],
@@ -214,6 +252,19 @@ class TestCodingPracticeHub(unittest.TestCase):
         dbs = list_res.get_json()["databases"]
         self.assertTrue(any(d["name"] == db_name for d in dbs))
 
+    def test_13_pyspark_execution(self):
+        import uuid
+        from services.pyspark_service import pyspark_service
+        env_check = pyspark_service.check_environment()
+        self.assertTrue(env_check["ready"], f"PySpark environment must be ready: {env_check['diagnostics']}")
+        
+        # Test basic execution
+        code = "print('PySpark Test OK')"
+        res = pyspark_service.execute_pyspark(code)
+        self.assertEqual(res["status"], "SUCCESS")
+        self.assertIn("PySpark Test OK", res["stdout"])
+
 if __name__ == "__main__":
     unittest.main()
+
 
