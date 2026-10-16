@@ -221,6 +221,72 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Fullscreen API Controller
+function isFullScreenActive() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+}
+
+function toggleFullScreen() {
+    try {
+        if (!isFullScreenActive()) {
+            const docEl = document.documentElement;
+            if (docEl.requestFullscreen) {
+                docEl.requestFullscreen();
+            } else if (docEl.webkitRequestFullscreen) {
+                docEl.webkitRequestFullscreen();
+            } else if (docEl.mozRequestFullScreen) {
+                docEl.mozRequestFullScreen();
+            } else if (docEl.msRequestFullscreen) {
+                docEl.msRequestFullscreen();
+            }
+            showToast('Entered Fullscreen (Press F11 or Esc to exit)', 'info', 1800);
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+            showToast('Exited Fullscreen', 'info', 1500);
+        }
+    } catch (err) {
+        console.warn('Fullscreen error:', err);
+    }
+}
+
+function updateFullScreenUI() {
+    const isFs = isFullScreenActive();
+    document.querySelectorAll('.btn-fullscreen-trigger').forEach(btn => {
+        const icon = btn.querySelector('.fullscreen-icon');
+        const text = btn.querySelector('.fullscreen-text');
+        if (isFs) {
+            btn.classList.add('active');
+            if (icon) icon.textContent = '🗗';
+            if (text) text.textContent = 'Exit Fullscreen';
+            btn.title = 'Exit Fullscreen (F11 / Esc)';
+        } else {
+            btn.classList.remove('active');
+            if (icon) icon.textContent = '⛶';
+            if (text) text.textContent = 'Fullscreen';
+            btn.title = 'Toggle Fullscreen (F11)';
+        }
+    });
+
+    setTimeout(() => {
+        if (window.monacoEditorInstance) {
+            window.monacoEditorInstance.layout();
+        }
+    }, 150);
+}
+
+document.addEventListener('fullscreenchange', updateFullScreenUI);
+document.addEventListener('webkitfullscreenchange', updateFullScreenUI);
+document.addEventListener('mozfullscreenchange', updateFullScreenUI);
+document.addEventListener('MSFullscreenChange', updateFullScreenUI);
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();

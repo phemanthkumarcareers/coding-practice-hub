@@ -60,7 +60,12 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   - **🩶 Grey Theme**: Modern zinc/charcoal dark theme (inspired by Zed and JetBrains Fleet) with softer contrast.
 - **Live Monaco Synchronization**: Theme switches instantly update Monaco Editor between `vs` and `vs-dark`, and persist across browser sessions in `localStorage` and backend settings.
 
-### 3. Vertical Split Stack (Full-Width Editor with Bottom Console)
+### 3. Fullscreen & Maximize Editor (Zen / Focus Mode)
+- **⛶ Normal Browser Fullscreen**: Click the `⛶ Fullscreen` button in the sidebar header or practice workspace actions (or press `F11`) to expand the app into true edge-to-edge browser fullscreen mode.
+- **🗖 Maximize Editor (Focus Mode)**: Click the `🗖 Maximize` button to isolate the Monaco Editor into 100% full-screen focus mode. This temporarily hides the sidebar, metadata bar, and console log so you can code without distractions.
+- **1-Click Restore**: Click `🗗 Restore` or press `Esc` to instantly return to the standard layout with console logs and metadata.
+
+### 4. Vertical Split Stack (Full-Width Editor with Bottom Console)
 - **Maximized Coding Width**: The Monaco Editor stretches across 100% of the pane width, ideal for extensive scripts, wide SQL joins, and complex classes.
 - **Draggable Horizontal Resizer**: Drag the horizontal divider bar between the code editor and bottom console to adjust the view heights dynamically.
 - **Integrated Console & Status**: Execution status badges, execution times in milliseconds, formatted output tables for SQL, and terminal stderr logs render in the dedicated console pane below the code.
@@ -196,7 +201,8 @@ Practice/
 - `Ctrl + Enter` : Execute code in the active editor
 - `Ctrl + S` : Manually save current practice state
 - `Ctrl + K` : Open Global Practice Search modal from any page
-- `Escape` : Close modals / dialogs
+- `F11` : Toggle true browser fullscreen
+- `Escape` : Close modals / restore from Maximized Editor mode
 
 ---
 

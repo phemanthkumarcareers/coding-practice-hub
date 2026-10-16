@@ -957,3 +957,41 @@ async function initPracticePage(sessionData, initialTech) {
     // Select initial tab
     await switchTech(initialTech || 'SQL');
 }
+
+// Maximize Editor / Focus Mode Controller
+function toggleMaximizeEditor() {
+    const workspacePage = document.querySelector('.workspace-page');
+    const maxBtn = document.getElementById('btn-maximize-editor');
+    if (!workspacePage) return;
+
+    const isMax = workspacePage.classList.toggle('editor-maximized');
+    if (maxBtn) {
+        if (isMax) {
+            maxBtn.classList.add('active');
+            maxBtn.innerHTML = '<span id="maximize-icon">🗗</span> <span id="maximize-text">Restore</span>';
+            maxBtn.title = 'Restore standard layout with console and metadata (Esc)';
+            showToast('Editor Maximized (Focus Mode) — Press Esc or Restore to exit', 'info', 2000);
+        } else {
+            maxBtn.classList.remove('active');
+            maxBtn.innerHTML = '<span id="maximize-icon">🗖</span> <span id="maximize-text">Maximize</span>';
+            maxBtn.title = 'Maximize Editor / Focus Mode';
+            showToast('Standard View Restored', 'info', 1500);
+        }
+    }
+
+    setTimeout(() => {
+        if (monacoEditor) {
+            monacoEditor.layout();
+        }
+    }, 150);
+}
+
+// Escape key closes maximized editor mode
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const workspacePage = document.querySelector('.workspace-page');
+        if (workspacePage && workspacePage.classList.contains('editor-maximized')) {
+            toggleMaximizeEditor();
+        }
+    }
+});
