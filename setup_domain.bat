@@ -1,26 +1,30 @@
 @echo off
-:: Self-elevate to Administrator if not already elevated
+:: Check for Administrator permissions
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo Requesting Administrator privileges to update Windows hosts file...
-    powershell -Command "Start-Process cmd -ArgumentList '/c \"%~f0\"' -Verb RunAs"
+    echo [ERROR] Please right-click this file and select "Run as administrator"!
+    echo.
+    pause
     exit /b
 )
 
-echo Configuring local domain: coding-practice-hub -> 127.0.0.1 ...
+echo Adding local domain mappings to Windows hosts file...
+
 findstr /i "coding-practice-hub" "%SystemRoot%\System32\drivers\etc\hosts" >nul
-if %errorLevel% equ 0 (
-    echo Entry already exists in %SystemRoot%\System32\drivers\etc\hosts
-) else (
-    echo. >> "%SystemRoot%\System32\drivers\etc\hosts"
+if %errorLevel% neq 0 (
     echo 127.0.0.1 coding-practice-hub >> "%SystemRoot%\System32\drivers\etc\hosts"
-    echo Added: 127.0.0.1 coding-practice-hub
+    echo 127.0.0.1 coding-practice-hub.local >> "%SystemRoot%\System32\drivers\etc\hosts"
+    echo [OK] Added coding-practice-hub to hosts file.
+) else (
+    echo [INFO] coding-practice-hub already present in hosts file.
 )
 
 ipconfig /flushdns >nul
+echo [OK] DNS cache flushed.
 echo.
-echo ========================================================
-echo  Success! Local domain configured:
-echo  http://coding-practice-hub/
-echo ========================================================
-timeout /t 3 >nul
+echo ==========================================================
+echo  Configuration Successful!
+echo  You can now open: http://coding-practice-hub/
+echo ==========================================================
+echo.
+pause
