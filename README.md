@@ -47,6 +47,10 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 ### 1. Left Vertical Sidebar (Maximized Screen Height & Collapsible)
 - **Top Navbar Replaced with Left Sidebar**: Eliminates the top navbar to free up the full vertical height of the screen (100vh) for code editing and result inspection.
 - **Collapsible Mini-Sidebar**: Click the `◀` / `▶` toggle button on the sidebar to collapse it into a compact 68px icon-only mode, maximizing horizontal screen space for wide monitors or split-screen coding.
+- **Integrated Daily Practice Targets (On the Side)**:
+  - Date picker and daily session progress badge (`0 / 6`).
+  - Vertical list of all 6 daily practice targets (SQL, Python, PySpark, Databricks, DSA, System Design) with live status dots (Completed, In Progress, Not Started).
+  - Keeps the top workspace header clean, uncluttered, and free of button collisions.
 - **Integrated Sidebar Utilities**:
   - Brand header & navigation links (Dashboard, Practice, History, Datasets, Reports, Settings).
   - Quick Search trigger button (`Ctrl + K`).
@@ -70,7 +74,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 - **Draggable Horizontal Resizer**: Drag the horizontal divider bar between the code editor and bottom console to adjust the view heights dynamically.
 - **Integrated Console & Status**: Execution status badges, execution times in milliseconds, formatted output tables for SQL, and terminal stderr logs render in the dedicated console pane below the code.
 
-### 4. Multi-File Python Project Workspace
+### 5. Multi-File Python Project Workspace
 - **Multi-File Tab Bar**: Practice real-world project structures directly in the browser across Python, DSA, and Databricks.
 - **`+ New File` Creation**: Add helper modules such as `utils.py`, `models.py`, or `config.py`.
 - **Seamless Cross-Module Imports**: Subprocess runner executes all project files together in an isolated workspace, allowing statements like:
@@ -80,7 +84,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   ```
 - **File Management**: Switch tabs with a single click, delete files, and preserve editor code across all tabs.
 
-### 5. Multi-Database Creation & Context Selection in DuckDB / SQL
+### 6. Multi-Database Creation & Context Selection in DuckDB / SQL
 - **Active Database Selector**: Switch active database context from the top toolbar dropdown (e.g. `main`, `analytics_db`).
 - **Direct Table Querying**: When querying the currently active database, query tables directly without schema prefixes:
   ```sql
@@ -90,7 +94,7 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   ```sql
   SELECT * FROM analytics_db.sales_summary;
   ```
-- **`+ Create Database`**: Create brand new persistent DuckDB databases in `database/user_dbs/` with automatic attachment on startup.
+- **In-App `+ Create Database` Modal**: Create brand new persistent DuckDB databases in `database/user_dbs/` using a clean in-app popup modal (no browser popups) with automatic attachment on startup.
 - **Live DDL Synchronization**: Any `CREATE TABLE ...` or `CREATE VIEW ...` executed in SQL automatically refreshes the Database Explorer modal.
 - **Direct CSV Querying**: Query uploaded CSV files directly using their filename:
   ```sql

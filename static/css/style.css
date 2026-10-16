@@ -373,6 +373,116 @@ body {
   border-radius: 8px;
 }
 
+/* Sidebar Practice Target List (On the Side) */
+.sidebar-practice-section {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sidebar-tech-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.sidebar-tech-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.sidebar-tech-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.sidebar-tech-btn.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.tech-btn-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.tech-btn-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tech-status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #64748b;
+  display: inline-block;
+}
+
+.tech-status-dot.status-COMPLETED {
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.tech-status-dot.status-IN-PROGRESS {
+  background: #3b82f6;
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+}
+
+.tech-status-dot.status-RUNNING {
+  background: #f59e0b;
+}
+
+.tech-status-dot.status-FAILED {
+  background: #ef4444;
+}
+
+.app-sidebar.collapsed .sidebar-practice-section .sidebar-date-box,
+.app-sidebar.collapsed .sidebar-practice-section .nav-section-label,
+.app-sidebar.collapsed .tech-btn-name,
+.app-sidebar.collapsed .tech-status-dot {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-tech-btn {
+  justify-content: center;
+  padding: 0.45rem 0;
+}
+
+/* Active Tech Pill in Workspace Header */
+.active-tech-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
 /* Sidebar Bottom (Theming & Info) */
 .sidebar-bottom {
   padding: 0.75rem;

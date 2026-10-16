@@ -4,32 +4,60 @@
 
 {% block main_class %}workspace-page{% endblock %}
 
-{% block content %}
-<!-- Top Header & Tabs -->
-<div class="workspace-header">
-    <div style="display:flex; align-items:center; gap:1rem;">
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-            <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" onchange="window.location.href='/practice?date=' + this.value;">
-            <span id="session-completion-badge" class="badge {% if session.completed_count == 6 %}badge-COMPLETED{% elif session.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
-                {{ session.completed_count }} / 6
-            </span>
-        </div>
+{% block sidebar_extra %}
+<!-- Daily Practice Targets in Left Sidebar -->
+<div class="sidebar-practice-section">
+    <div class="nav-section-label" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>DAILY TARGETS</span>
+        <span id="session-completion-badge" class="badge {% if session.completed_count == 6 %}badge-COMPLETED{% elif session.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
+            {{ session.completed_count }} / 6
+        </span>
+    </div>
 
-        <div class="tech-tabs">
-            {% for tech in technologies %}
-                {% set p = (session.practices|selectattr('technology', 'equalto', tech)|first) %}
-                <button class="tech-tab {% if tech == selected_tech %}active{% endif %}" data-tech="{{ tech }}" onclick="switchTech('{{ tech }}')">
-                    <span>{{ tech }}</span>
+    <!-- Date Picker in Sidebar -->
+    <div class="sidebar-date-box" style="margin-bottom:0.6rem;">
+        <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" style="width:100%; font-size:0.8rem; padding:0.35rem 0.5rem;" onchange="window.location.href='/practice?date=' + this.value;">
+    </div>
+
+    <!-- 6 Practices in Sidebar -->
+    <ul class="sidebar-tech-list">
+        {% for tech in technologies %}
+            {% set p = (session.practices|selectattr('technology', 'equalto', tech)|first) %}
+            <li>
+                <button class="sidebar-tech-btn {% if tech == selected_tech %}active{% endif %}" data-tech="{{ tech }}" onclick="switchTech('{{ tech }}')" title="{{ tech }} Practice">
+                    <span class="tech-btn-icon">
+                        {% if tech == 'SQL' %}🗄️
+                        {% elif tech == 'Python' %}🐍
+                        {% elif tech == 'PySpark' %}⚡
+                        {% elif tech == 'Databricks' %}🧱
+                        {% elif tech == 'DSA' %}🧩
+                        {% elif tech == 'System Design' %}📐
+                        {% endif %}
+                    </span>
+                    <span class="tech-btn-name">{{ tech }}</span>
+                    <span class="tech-status-dot status-{{ (p.status if p else 'NOT-STARTED')|replace(' ', '-') }}" id="status-dot-{{ tech|lower|replace(' ', '-') }}" title="{{ p.status if p else 'NOT STARTED' }}"></span>
                 </button>
-            {% endfor %}
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="workspace-header">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+        <div class="active-tech-pill" id="header-active-tech-pill">
+            <span id="header-tech-icon">🗄️</span>
+            <span id="header-tech-name" style="font-weight:700;">SQL</span>
+            <span id="header-tech-status-badge" class="badge badge-NOT-STARTED" style="font-size:0.7rem; padding:0.15rem 0.45rem;">NOT STARTED</span>
+        </div>
+        <div id="autosave-indicator" class="autosave-status">
+            <span>All changes saved</span>
         </div>
     </div>
 
     <div class="workspace-actions">
-        <div id="autosave-indicator" class="autosave-status">
-            <span>All changes saved</span>
-        </div>
-
         <button id="btn-toggle-sql-explorer" class="btn btn-secondary btn-sm" style="display:none;" title="Databases, Tables & Views Explorer">
             📊 Database & Table Explorer
         </button>
@@ -170,7 +198,7 @@
                 <select id="sql-active-db-select" class="meta-select" style="min-width:180px;">
                     <option value="main" selected>practice (main / default)</option>
                 </select>
-                <button class="btn btn-secondary btn-sm" onclick="promptCreateDatabase()">+ Create Database</button>
+                <button class="btn btn-secondary btn-sm" onclick="openCreateDatabaseModal()">+ Create Database</button>
             </div>
             <div style="font-size:0.75rem; color:var(--text-muted);">
                 Default DB queries: <code>SELECT * FROM table</code> | Other attached DBs: <code>SELECT * FROM db_name.table</code>
@@ -210,20 +238,22 @@
             </div>
         </div>
 
-        <!-- System Design Live Preview (Markdown + Mermaid) -->
-        <div id="system-design-preview-container" style="display:none; flex:1; padding:1.25rem; overflow:auto; background:var(--output-bg);">
+        <!-- System Design Mermaid & Markdown Preview Output -->
+        <div id="system-design-preview-container" class="system-design-preview" style="display:none;">
+            <div style="color:var(--text-muted); padding:1rem;">Architecture diagrams and notes will render live here.</div>
         </div>
     </div>
 </div>
 
-<!-- Execution History Modal -->
+<!-- Execution Attempts History Modal -->
 <div id="history-modal" class="modal-overlay" onclick="if(event.target === this) this.style.display='none'">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Execution History Snapshots</h3>
+            <h3>Execution History & Snapshots</h3>
             <button class="modal-close-btn" onclick="document.getElementById('history-modal').style.display='none'">&times;</button>
         </div>
         <div class="modal-body" id="history-list-container">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Loading attempts...</div>
         </div>
     </div>
 </div>
@@ -237,13 +267,39 @@
         </div>
         <div class="modal-body">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; padding-bottom:0.75rem; border-bottom:1px solid var(--border-color);">
-                <div style="display:flex; gap:0.5rem; align-items:center;">
-                    <input type="text" id="new-db-input" class="meta-input" placeholder="New Database Name e.g. analytics" style="width:220px;">
-                    <button class="btn btn-primary btn-sm" onclick="createDatabaseFromExplorer()">+ Create Database</button>
-                </div>
+                <button class="btn btn-primary btn-sm" onclick="openCreateDatabaseModal()">+ Create Database</button>
                 <button class="btn btn-secondary btn-sm" onclick="refreshExplorerList()">🔄 Refresh</button>
             </div>
             <div id="duckdb-explorer-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- In-App Create Database Modal -->
+<div id="create-db-modal" class="modal-overlay" onclick="if(event.target === this) closeCreateDatabaseModal()">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.2rem;">🗄️</span>
+                <h3 style="font-size:1.1rem; font-weight:600;">Create New DuckDB Database</h3>
+            </div>
+            <button class="modal-close-btn" onclick="closeCreateDatabaseModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+                Enter a name for your new persistent DuckDB database. It will be stored in <code>database/user_dbs/&lt;name&gt;.duckdb</code> and automatically attached to your practice workspace.
+            </p>
+            <div style="margin-bottom:1rem;">
+                <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.35rem;">Database Name:</label>
+                <input type="text" id="new-db-name-input" class="meta-input" style="width:100%; font-family:var(--font-mono); font-size:0.92rem; padding:0.5rem 0.75rem;" placeholder="e.g. analytics, finance, warehouse" autocomplete="off" onkeydown="if(event.key === 'Enter') submitCreateDatabaseModal();">
+                <span id="create-db-error" style="display:none; color:#ef4444; font-size:0.78rem; margin-top:0.35rem;"></span>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.25rem;">
+                <button class="btn btn-secondary" onclick="closeCreateDatabaseModal()">Cancel</button>
+                <button class="btn btn-primary" id="btn-submit-create-db" onclick="submitCreateDatabaseModal()">
+                    <span>+ Create Database</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>

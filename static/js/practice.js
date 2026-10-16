@@ -235,57 +235,90 @@ async function loadDatabasesList() {
     }
 }
 
-async function promptCreateDatabase() {
-    const dbName = prompt("Enter new database name (e.g. analytics, finance, warehouse):");
-    if (!dbName || !dbName.trim()) return;
+// In-App Database Creation Modal Controller
+function openCreateDatabaseModal() {
+    const modal = document.getElementById('create-db-modal');
+    const input = document.getElementById('new-db-name-input');
+    const err = document.getElementById('create-db-error');
+    if (!modal) return;
+
+    if (err) {
+        err.style.display = 'none';
+        err.textContent = '';
+    }
+    if (input) {
+        input.value = '';
+    }
+    modal.style.display = 'flex';
+    setTimeout(() => input?.focus(), 120);
+}
+
+function closeCreateDatabaseModal() {
+    const modal = document.getElementById('create-db-modal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function submitCreateDatabaseModal() {
+    const input = document.getElementById('new-db-name-input');
+    const err = document.getElementById('create-db-error');
+    const submitBtn = document.getElementById('btn-submit-create-db');
+    const rawName = (input?.value || '').trim();
+
+    if (!rawName) {
+        if (err) {
+            err.textContent = 'Please enter a database name.';
+            err.style.display = 'block';
+        }
+        input?.focus();
+        return;
+    }
+
+    const safeName = rawName.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Creating...';
+    }
 
     try {
         const res = await fetch('/api/practice/database/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: dbName.trim() })
+            body: JSON.stringify({ name: safeName })
         });
         const data = await res.json();
+
         if (data.success) {
-            showToast(`Database '${data.database}' created and attached!`, 'success');
+            showToast(`Database '${data.database}' created and attached! 🎉`, 'success');
             activeDatabaseName = data.database;
             await loadDatabasesList();
             await refreshExplorerList();
+            closeCreateDatabaseModal();
         } else {
-            showToast(data.error || 'Failed to create database', 'error');
+            if (err) {
+                err.textContent = data.error || 'Failed to create database';
+                err.style.display = 'block';
+            }
         }
-    } catch (err) {
-        showToast('Error creating database: ' + err.message, 'error');
+    } catch (e) {
+        if (err) {
+            err.textContent = 'Server error creating database: ' + e.message;
+            err.style.display = 'block';
+        }
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span>+ Create Database</span>';
+        }
     }
 }
 
-async function createDatabaseFromExplorer() {
-    const input = document.getElementById('new-db-input');
-    if (!input || !input.value.trim()) {
-        showToast('Please enter a database name', 'error');
-        return;
-    }
-    const dbName = input.value.trim();
+function promptCreateDatabase() {
+    openCreateDatabaseModal();
+}
 
-    try {
-        const res = await fetch('/api/practice/database/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: dbName })
-        });
-        const data = await res.json();
-        if (data.success) {
-            showToast(`Database '${data.database}' created!`, 'success');
-            input.value = '';
-            activeDatabaseName = data.database;
-            await loadDatabasesList();
-            await refreshExplorerList();
-        } else {
-            showToast(data.error || 'Failed to create database', 'error');
-        }
-    } catch (err) {
-        showToast('Error: ' + err.message, 'error');
-    }
+function createDatabaseFromExplorer() {
+    openCreateDatabaseModal();
 }
 
 // Switch Technology Tab
@@ -299,14 +332,28 @@ async function switchTech(techName) {
 
     activeTechnology = techName;
 
-    // Update tab UI
-    document.querySelectorAll('.tech-tab').forEach(btn => {
+    // Update tab UI (both sidebar tech buttons and any header tabs)
+    document.querySelectorAll('.sidebar-tech-btn, .tech-tab').forEach(btn => {
         if (btn.getAttribute('data-tech') === techName) {
             btn.classList.add('active');
         } else {
             btn.classList.remove('active');
         }
     });
+
+    // Update Header Active Tech Pill
+    const icons = {
+        'SQL': '🗄️',
+        'Python': '🐍',
+        'PySpark': '⚡',
+        'Databricks': '🧱',
+        'DSA': '🧩',
+        'System Design': '📐'
+    };
+    const iconEl = document.getElementById('header-tech-icon');
+    const nameEl = document.getElementById('header-tech-name');
+    if (iconEl) iconEl.textContent = icons[techName] || '💻';
+    if (nameEl) nameEl.textContent = techName;
 
     // Find practice record
     const p = Object.values(practicesMap).find(x => x.technology === techName);
@@ -372,6 +419,21 @@ function updateStatusBadge(status) {
     if (badge) {
         badge.className = `badge badge-${status.replace(/\s+/g, '-')}`;
         badge.textContent = status;
+    }
+
+    const headerBadge = document.getElementById('header-tech-status-badge');
+    if (headerBadge) {
+        headerBadge.className = `badge badge-${status.replace(/\s+/g, '-')}`;
+        headerBadge.textContent = status;
+    }
+
+    if (activeTechnology) {
+        const dotId = `status-dot-${activeTechnology.toLowerCase().replace(/\s+/g, '-')}`;
+        const dot = document.getElementById(dotId);
+        if (dot) {
+            dot.className = `tech-status-dot status-${status.replace(/\s+/g, '-')}`;
+            dot.title = status;
+        }
     }
 }
 
@@ -986,12 +1048,19 @@ function toggleMaximizeEditor() {
     }, 150);
 }
 
-// Escape key closes maximized editor mode
+// Escape key closes maximized editor mode or modal dialogs
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        const createDbModal = document.getElementById('create-db-modal');
+        if (createDbModal && createDbModal.style.display === 'flex') {
+            closeCreateDatabaseModal();
+            return;
+        }
+
         const workspacePage = document.querySelector('.workspace-page');
         if (workspacePage && workspacePage.classList.contains('editor-maximized')) {
             toggleMaximizeEditor();
+            return;
         }
     }
 });
