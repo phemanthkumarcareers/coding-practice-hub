@@ -68,9 +68,9 @@ if __name__ == "__main__":
     localhost_display = "http://localhost" if port == 80 else f"http://localhost:{port}"
 
     print("=" * 65)
-    print(" 🚀 Coding Practice Hub - Local Daily Coding Practice")
-    print(f" 🌐 Custom Domain URL: {domain_display}/")
-    print(f" 🏠 Localhost URL:     {localhost_display}/")
-    print(" 🎯 Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
+    print(" [Coding Practice Hub] Local Daily Coding Practice Application")
+    print(f" * Localhost URL:     {localhost_display}/")
+    print(f" * Custom Domain URL: {domain_display}/")
+    print(" * Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
     print("=" * 65)
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
