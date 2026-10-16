@@ -25,22 +25,40 @@ wheels/
 venv/
 ENV/
 
-# Databases & local state (auto-created on startup)
+# Practice Databases & Local State (DO NOT PUSH TO GITHUB)
+*.db
+*.db-journal
+*.db-wal
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.sqlite3
 database/*.db
 database/*.duckdb
-database/user_dbs/*.duckdb
+database/*.duckdb.wal
+database/user_dbs/*
 !database/.gitkeep
 !database/user_dbs/.gitkeep
 
-# Subprocess temporary execution scripts
-workspace/*/*.py
-workspace/*/*.csv
-workspace/*/*
-!workspace/*/.gitkeep
+# User Practice Datasets & Uploaded Files (DO NOT PUSH TO GITHUB)
+uploads/*
+!uploads/.gitkeep
+!uploads/csv/.gitkeep
+!uploads/json/.gitkeep
+!uploads/parquet/.gitkeep
+
+# Subprocess temporary execution scripts & cached datasets
+workspace/*
+!workspace/python/.gitkeep
+!workspace/sql/.gitkeep
+!workspace/pyspark/.gitkeep
+!workspace/databricks/.gitkeep
+!workspace/dsa/.gitkeep
 
 # Backups & Logs
 backups/*.zip
 logs/*.log
+*.log
 
 # Operating System files
 .DS_Store
