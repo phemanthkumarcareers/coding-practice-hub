@@ -49,6 +49,16 @@ function applyThemeUI(themePref) {
     document.documentElement.setAttribute('data-theme', effectiveTheme);
     document.documentElement.setAttribute('data-theme-preference', themePref);
 
+    // Dynamically update theme-aware logos and favicon
+    const logoUrl = `/static/images/logo-${effectiveTheme}.png`;
+    document.querySelectorAll('.sidebar-logo, .theme-aware-logo, #app-logo-img, #dashboard-logo-img').forEach(img => {
+        img.src = logoUrl;
+    });
+    const fav = document.getElementById('app-favicon');
+    if (fav) {
+        fav.href = logoUrl;
+    }
+
     // Update active highlight on theme buttons
     document.querySelectorAll('.theme-pick-btn').forEach(btn => {
         const val = btn.getAttribute('data-theme-value');

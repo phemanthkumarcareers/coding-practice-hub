@@ -30,6 +30,9 @@
   --editor-bg: #1e1e1e;
   --output-bg: #0d1117;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --logo-bg: #0f141c;
+  --logo-border: rgba(255, 255, 255, 0.12);
+  --logo-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
   --font-mono: 'Consolas', 'Fira Code', 'Monaco', 'Courier New', monospace;
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -66,6 +69,9 @@
   --editor-bg: #ffffff;
   --output-bg: #f8fafc;
   --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --logo-bg: #ffffff;
+  --logo-border: rgba(0, 0, 0, 0.08);
+  --logo-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="grey"] {
@@ -100,6 +106,9 @@
   --editor-bg: #18181b;
   --output-bg: #121214;
   --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --logo-bg: #18181b;
+  --logo-border: rgba(255, 255, 255, 0.1);
+  --logo-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -198,6 +207,17 @@ html.sidebar-is-collapsed .app-sidebar,
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
+  background-color: var(--logo-bg);
+  border: 1px solid var(--logo-border);
+  box-shadow: var(--logo-shadow);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-aware-logo {
+  background-color: var(--logo-bg);
+  border: 1px solid var(--logo-border);
+  box-shadow: var(--logo-shadow);
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .brand-text {

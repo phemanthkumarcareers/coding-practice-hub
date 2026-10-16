@@ -5,11 +5,22 @@
 {% block content %}
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
     <div style="display:flex; align-items:center; gap:1rem;">
-        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" style="width:48px; height:48px; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo" class="theme-aware-logo" id="dashboard-logo-img" style="width:48px; height:48px; border-radius:10px; object-fit:cover;">
+        <script>
+            (function() {
+                try {
+                    var pref = localStorage.getItem('ch_theme_preference') || 'dark';
+                    var eff = pref === 'system' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : pref;
+                    var el = document.getElementById('dashboard-logo-img');
+                    if (el) el.src = '/static/images/logo-' + eff + '.png';
+                } catch(e) {}
+            })();
+        </script>
         <div>
             <h1 style="font-size:1.6rem; font-weight:700;">Daily Coding Practice Dashboard</h1>
             <p style="color:var(--text-secondary); font-size:0.9rem;">Daily target: 6/6 technical practices (SQL, Python, PySpark, Databricks, DSA, System Design)</p>
         </div>
+    </div>
     </div>
     <div style="display:flex; gap:0.75rem; align-items:center;">
         {% if metrics.today_progress.exists %}
