@@ -1,7 +1,8 @@
 import os
 import sys
-import socket
+import threading
 from flask import Flask
+from werkzeug.serving import run_simple
 from config import BASE_DIR
 from models.db import init_db
 from services.duckdb_service import duckdb_service
@@ -35,42 +36,28 @@ def create_app():
 
     return app
 
-def find_preferred_port():
-    # Check environment variable
-    if os.environ.get("PORT"):
-        try:
-            return int(os.environ["PORT"])
-        except ValueError:
-            pass
-
-    # Check CLI arguments e.g. python app.py --port 5000
-    for i, arg in enumerate(sys.argv):
-        if arg in ("--port", "-p") and i + 1 < len(sys.argv):
-            try:
-                return int(sys.argv[i + 1])
-            except ValueError:
-                pass
-
-    # Attempt to bind port 80 so http://coding-practice-hub/ works without specifying a port number
+def serve_on_port(application, port):
     try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.bind(("0.0.0.0", 80))
-        s.close()
-        return 80
-    except Exception:
-        return 5000
+        run_simple("0.0.0.0", port, application, threaded=True)
+    except Exception as e:
+        print(f" * Notice: Port {port} could not be bound ({e})")
 
 if __name__ == "__main__":
     app = create_app()
-    port = find_preferred_port()
-
-    domain_display = "http://coding-practice-hub" if port == 80 else f"http://coding-practice-hub:{port}"
-    localhost_display = "http://localhost" if port == 80 else f"http://localhost:{port}"
 
     print("=" * 65)
     print(" [Coding Practice Hub] Local Daily Coding Practice Application")
-    print(f" * Localhost URL:     {localhost_display}/")
-    print(f" * Custom Domain URL: {domain_display}/")
-    print(" * Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
+    print(" Active Access URLs:")
+    print("  -> http://localhost:5000/")
+    print("  -> http://localhost/")
+    print("  -> http://127.0.0.1:5000/")
+    print("  -> http://coding-practice-hub/ (requires hosts entry)")
+    print(" Daily Target: 6 practices (SQL, Python, PySpark, Databricks, DSA, Design)")
     print("=" * 65)
-    app.run(host="0.0.0.0", port=port, debug=False)
+
+    # Start Port 80 in a background daemon thread
+    t80 = threading.Thread(target=serve_on_port, args=(app, 80), daemon=True)
+    t80.start()
+
+    # Serve Port 5000 on main thread
+    serve_on_port(app, 5000)
