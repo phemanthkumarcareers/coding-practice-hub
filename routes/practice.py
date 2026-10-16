@@ -453,3 +453,52 @@ def get_file_content():
 
     return jsonify({"success": False, "error": "File not found"}), 404
 
+@practice_bp.route("/api/practice/files/delete", methods=["POST"])
+def delete_practice_file():
+    data = request.get_json() or {}
+    practice_id = data.get("practice_id")
+    filename = data.get("filename")
+
+    if not practice_id or not filename:
+        return jsonify({"success": False, "error": "Missing practice_id or filename"}), 400
+
+    conn = get_connection()
+    row = conn.execute("SELECT id, extra_metadata FROM practices WHERE id = ?", (practice_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"success": False, "error": "Practice not found"}), 404
+
+    extra = {}
+    try:
+        extra = json.loads(row["extra_metadata"] or "{}")
+    except Exception:
+        extra = {}
+
+    files = extra.get("files", {})
+    if filename in files:
+        del files[filename]
+
+    open_tabs = extra.get("open_tabs", [])
+    if filename in open_tabs:
+        open_tabs = [f for f in open_tabs if f != filename]
+
+    if extra.get("active_file") == filename:
+        extra["active_file"] = open_tabs[-1] if open_tabs else None
+
+    extra["files"] = files
+    extra["open_tabs"] = open_tabs
+
+    if extra.get("active_file") and extra["active_file"] in files:
+        new_code = files[extra["active_file"]]
+        conn.execute("UPDATE practices SET code = ?, extra_metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (new_code, json.dumps(extra), practice_id))
+    elif files:
+        first_file = next(iter(files.values()))
+        conn.execute("UPDATE practices SET code = ?, extra_metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (first_file, json.dumps(extra), practice_id))
+    else:
+        conn.execute("UPDATE practices SET code = '', extra_metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (json.dumps(extra), practice_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True, "deleted": filename, "remaining_files": list(files.keys())})
+

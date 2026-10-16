@@ -227,23 +227,6 @@ function renderMultiFileTabs() {
     newBtn.title = 'Create new file directly in workspace';
     newBtn.onclick = createNewFileTabDirect;
     bar.appendChild(newBtn);
-
-    // 4. "📂 Open File ▾" Dropdown (For loading saved files manually into tabs)
-    const openMenuContainer = document.createElement('div');
-    openMenuContainer.style.position = 'relative';
-    openMenuContainer.style.display = 'inline-flex';
-
-    const openBtn = document.createElement('button');
-    openBtn.type = 'button';
-    openBtn.className = 'btn-open-files';
-    openBtn.innerHTML = '<span>📂 Open File ▾</span>';
-    openBtn.title = 'Load existing saved files, folder library, or disk files';
-    openBtn.onclick = (e) => {
-        e.stopPropagation();
-        toggleOpenFilesDropdown(openMenuContainer);
-    };
-    openMenuContainer.appendChild(openBtn);
-    bar.appendChild(openMenuContainer);
 }
 
 // Remove Tab from editor view (File remains saved in currentProjectFiles)
@@ -269,11 +252,12 @@ function removeTabFromWorkspace(filename) {
     refreshFilesTree();
     isDirty = true;
     scheduleAutosave();
-    showToast(`Closed tab '${filename}'. File remains saved in 📂 Open File & 📁 Files.`, 'info', 2500);
+    showToast(`Closed tab '${filename}'. File remains saved in 📁 Files.`, 'info', 2500);
 }
 
 // Permanently Delete File with in-app confirmation popup
-async function deleteProjectFilePermanently(filename) {
+async function deleteProjectFilePermanently(filename, targetPracticeId = null) {
+    const practiceId = targetPracticeId || activePracticeId;
     const isConfirmed = await showAppConfirm({
         title: 'Delete File Permanently',
         message: `Are you sure you want to permanently delete '${filename}'? This action cannot be undone.`,
@@ -284,21 +268,48 @@ async function deleteProjectFilePermanently(filename) {
 
     if (!isConfirmed) return;
 
-    delete currentProjectFiles[filename];
-    openTabFileNames = openTabFileNames.filter(f => f !== filename);
-    ensureOpenTabsConsistent();
+    try {
+        if (practiceId) {
+            const resp = await fetch('/api/practice/files/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ practice_id: practiceId, filename: filename })
+            });
+            const result = await resp.json();
+            if (!result.success) {
+                showToast(`Failed to delete file: ${result.error || 'Unknown error'}`, 'error');
+                return;
+            }
+        }
 
-    if (activeFileName && currentProjectFiles[activeFileName]) {
-        const code = currentProjectFiles[activeFileName] || '';
-        const lang = getLanguageForFile(activeFileName, activeTechnology);
-        createOrUpdateEditor(code, lang);
+        delete currentProjectFiles[filename];
+        openTabFileNames = openTabFileNames.filter(f => f !== filename);
+        ensureOpenTabsConsistent();
+
+        if (activeFileName === filename) {
+            if (openTabFileNames.length > 0) {
+                activeFileName = openTabFileNames[openTabFileNames.length - 1];
+            } else if (Object.keys(currentProjectFiles).length > 0) {
+                activeFileName = Object.keys(currentProjectFiles)[0];
+                openTabFileNames = [activeFileName];
+            } else {
+                activeFileName = null;
+            }
+        }
+
+        if (activeFileName && currentProjectFiles[activeFileName]) {
+            const code = currentProjectFiles[activeFileName] || '';
+            const lang = getLanguageForFile(activeFileName, activeTechnology);
+            createOrUpdateEditor(code, lang);
+        }
+
+        renderMultiFileTabs();
+        refreshFilesTree();
+        showToast(`Permanently deleted '${filename}'.`, 'info', 2200);
+    } catch (err) {
+        console.error('Delete file error:', err);
+        showToast(`Error deleting file: ${err.message}`, 'error');
     }
-
-    renderMultiFileTabs();
-    refreshFilesTree();
-    isDirty = true;
-    scheduleAutosave();
-    showToast(`Permanently deleted '${filename}'.`, 'info', 2200);
 }
 
 // Load / Open a saved file into an editor tab
@@ -1290,6 +1301,9 @@ async function saveCurrentPractice(markCompleted = false) {
 async function runCurrentCode() {
     if (!activePracticeId) return;
 
+    // Ensure console is visible when user runs code
+    showConsolePane();
+
     // If no tab is currently open, load the first available file or warn
     if (!activeFileName || openTabFileNames.length === 0) {
         const availableFiles = Object.keys(currentProjectFiles);
@@ -1425,7 +1439,7 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
 
     if (stderr) {
         const errDiv = document.createElement('div');
-        errDiv.className = 'output-error';
+        errDiv.className = 'output-error shake-error';
         errDiv.style.marginTop = stdout ? '0.75rem' : '0';
         errDiv.textContent = stderr;
         container.appendChild(errDiv);
@@ -1574,6 +1588,83 @@ function initResizer() {
             if (monacoEditor) monacoEditor.layout();
         }
     });
+}
+
+// Output / Console Pane Visibility & Controls
+function hideConsolePane() {
+    const outputPane = document.getElementById('output-pane');
+    const resizer = document.getElementById('workspace-resizer');
+    const editorPane = document.getElementById('editor-pane');
+    const toggleBtn = document.getElementById('btn-toggle-console');
+
+    if (!outputPane) return;
+
+    outputPane.style.display = 'none';
+    if (resizer) resizer.style.display = 'none';
+    if (editorPane) {
+        editorPane.dataset.savedFlex = editorPane.style.flex || '0 0 65%';
+        editorPane.style.flex = '1 1 100%';
+        editorPane.style.height = '100%';
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.remove('active');
+        toggleBtn.title = 'Show Console Output Log';
+    }
+    setTimeout(() => {
+        if (monacoEditor) monacoEditor.layout();
+    }, 40);
+}
+
+function showConsolePane() {
+    const outputPane = document.getElementById('output-pane');
+    const resizer = document.getElementById('workspace-resizer');
+    const editorPane = document.getElementById('editor-pane');
+    const toggleBtn = document.getElementById('btn-toggle-console');
+
+    if (!outputPane) return;
+    if (outputPane.style.display === 'flex' || (!outputPane.style.display && window.getComputedStyle(outputPane).display === 'flex')) {
+        return; // already visible
+    }
+
+    outputPane.style.display = 'flex';
+    if (resizer) resizer.style.display = 'block';
+    if (editorPane) {
+        const savedFlex = editorPane.dataset.savedFlex || '0 0 65%';
+        editorPane.style.flex = savedFlex;
+        editorPane.style.height = '';
+    }
+    if (toggleBtn) {
+        toggleBtn.classList.add('active');
+        toggleBtn.title = 'Hide Console Output Log';
+    }
+    setTimeout(() => {
+        if (monacoEditor) monacoEditor.layout();
+    }, 40);
+}
+
+function toggleConsolePane() {
+    const outputPane = document.getElementById('output-pane');
+    if (!outputPane) return;
+    const isHidden = outputPane.style.display === 'none';
+    if (isHidden) {
+        showConsolePane();
+    } else {
+        hideConsolePane();
+    }
+}
+
+function clearConsoleOutput() {
+    const container = document.getElementById('output-console');
+    if (container) {
+        container.innerHTML = '<span style="color:var(--text-muted);">Console cleared. Ready.</span>';
+    }
+    const timerBadge = document.getElementById('output-duration-badge');
+    if (timerBadge) timerBadge.textContent = '';
+    const sysContainer = document.getElementById('system-design-preview-container');
+    if (sysContainer) {
+        sysContainer.innerHTML = '<div style="color:var(--text-muted); padding:1rem;">Architecture diagrams and notes will render live here.</div>';
+    }
+    showToast('Console output cleared', 'info', 1200);
 }
 
 // DuckDB Table & Database Explorer

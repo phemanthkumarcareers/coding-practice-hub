@@ -268,7 +268,51 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(res["status"], "SUCCESS")
         self.assertIn("PySpark Test OK", res["stdout"])
 
+    def test_14_delete_practice_file(self):
+        # Create a session and practice in test DB
+        sess = get_or_create_daily_session(date.today())
+        practices = sess["practices"]
+        self.assertTrue(len(practices) > 0)
+        p_id = practices[0]["id"]
+
+        # Save files to practice
+        save_res = self.client.post("/api/practice/save", json={
+            "id": p_id,
+            "technology": practices[0]["technology"],
+            "code": "print('file1')",
+            "files": {
+                "file1.py": "print('file1')",
+                "file_to_del.py": "print('to be deleted')"
+            },
+            "entry_file": "file1.py",
+            "extra_metadata": {
+                "open_tabs": ["file1.py", "file_to_del.py"],
+                "active_file": "file_to_del.py"
+            }
+        })
+        self.assertEqual(save_res.status_code, 200)
+
+        # Delete file_to_del.py
+        del_res = self.client.post("/api/practice/files/delete", json={
+            "practice_id": p_id,
+            "filename": "file_to_del.py"
+        })
+        self.assertEqual(del_res.status_code, 200)
+        del_data = del_res.get_json()
+        self.assertTrue(del_data["success"])
+        self.assertEqual(del_data["deleted"], "file_to_del.py")
+        self.assertNotIn("file_to_del.py", del_data["remaining_files"])
+
+        # Fetch practice again and verify
+        conn = get_connection()
+        row = conn.execute("SELECT extra_metadata FROM practices WHERE id = ?", (p_id,)).fetchone()
+        conn.close()
+        extra = json.loads(row["extra_metadata"])
+        self.assertNotIn("file_to_del.py", extra.get("files", {}))
+        self.assertNotIn("file_to_del.py", extra.get("open_tabs", []))
+
 if __name__ == "__main__":
     unittest.main()
+
 
 

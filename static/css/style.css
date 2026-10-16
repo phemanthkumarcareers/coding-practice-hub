@@ -999,6 +999,12 @@ html.sidebar-is-collapsed .sidebar-footer-info,
   border-color: var(--accent-primary);
 }
 
+.pane-icon-btn.active {
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
 .btn.active {
   background: var(--accent-subtle);
   border-color: var(--accent-primary);
@@ -1883,8 +1889,68 @@ html.sidebar-is-collapsed .sidebar-footer-info,
   color: var(--text-primary);
 }
 
+.console-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.console-mini-btn {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.72rem;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.console-mini-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.console-mini-btn.console-close-btn {
+  font-size: 1.05rem;
+  line-height: 1;
+  padding: 0.05rem 0.4rem;
+  color: var(--text-muted);
+}
+
+.console-mini-btn.console-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  15%, 45%, 75% { transform: translateX(-6px); }
+  30%, 60%, 90% { transform: translateX(6px); }
+}
+
+.shake-error {
+  animation: errorShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 .output-error {
   color: #f87171;
+  background: rgba(239, 68, 68, 0.08);
+  border-left: 3px solid #ef4444;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0 4px 4px 0;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
 }
 
 .output-table {

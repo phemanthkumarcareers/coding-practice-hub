@@ -210,7 +210,10 @@ function showToast(message, type = 'info', duration = 3000) {
 
     const toast = document.createElement('div');
     toast.className = 'toast';
-    if (type === 'error') toast.style.borderColor = '#ef4444';
+    if (type === 'error') {
+        toast.style.borderColor = '#ef4444';
+        toast.classList.add('shake-error');
+    }
     if (type === 'success') toast.style.borderColor = '#10b981';
     toast.textContent = message;
 

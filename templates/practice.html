@@ -217,7 +217,8 @@
             </div>
             <div class="editor-quick-controls">
                 <span class="editor-shortcut-hint">Ctrl+Enter to Run | Ctrl+S to Save</span>
-                <button type="button" class="pane-icon-btn" onclick="toggleMaximizeEditor()" title="Maximize Editor / Restore (Zen Mode)">🗖</button>
+                <button type="button" id="btn-toggle-console" class="pane-icon-btn btn-console-toggle active" onclick="toggleConsolePane()" title="Toggle Console Output Log (Hide / Show)">📺</button>
+                <button type="button" id="btn-maximize-editor" class="pane-icon-btn" onclick="toggleMaximizeEditor()" title="Maximize Editor / Restore (Zen Mode)">🗖</button>
                 <button type="button" class="pane-icon-btn btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
             </div>
         </div>
@@ -261,8 +262,14 @@
     <!-- Bottom: Output / Console Log Pane -->
     <div id="output-pane" class="output-pane">
         <div class="pane-header">
-            <span id="output-title">CONSOLE LOG / OUTPUT</span>
-            <span id="output-duration-badge" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);"></span>
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span id="output-title">CONSOLE LOG / OUTPUT</span>
+                <span id="output-duration-badge" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);"></span>
+            </div>
+            <div class="console-header-actions">
+                <button type="button" class="console-mini-btn" onclick="clearConsoleOutput()" title="Clear Console Log">🧹 Clear</button>
+                <button type="button" class="console-mini-btn console-close-btn" onclick="hideConsolePane()" title="Remove/Hide Console Pane">&times;</button>
+            </div>
         </div>
 
         <!-- Standard Output (for SQL, Python, PySpark, Databricks, DSA) -->
