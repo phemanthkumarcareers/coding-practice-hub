@@ -2513,3 +2513,536 @@ html[data-theme="light"] .ripple-effect {
   gap: 0.6rem;
   align-items: center;
 }
+
+/* ==========================================================================
+   Key Notes & Confluence Knowledge Base Workspace
+   ========================================================================== */
+.confluence-workspace {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  height: calc(100vh - var(--header-height, 60px));
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+@media (max-width: 900px) {
+  .confluence-workspace {
+    grid-template-columns: 1fr;
+  }
+  .confluence-sidebar {
+    display: none;
+  }
+}
+
+.confluence-sidebar {
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.confluence-sidebar-header {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-tertiary);
+}
+
+.confluence-sidebar-search {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+.confluence-tree-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.6rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tree-section-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.25rem 0.4rem 0.2rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tree-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.tree-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-subtle);
+}
+
+.tree-item.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.15);
+}
+
+.tree-item-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.tree-item-pin {
+  color: #f59e0b;
+  font-size: 0.75rem;
+}
+
+/* Confluence Document Pane */
+.confluence-doc-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.confluence-doc-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.85rem 1.25rem 0.65rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.confluence-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.confluence-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: inherit;
+  outline: none;
+  padding: 0.2rem 0;
+  border-bottom: 2px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.confluence-title-input:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.confluence-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.confluence-meta-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+}
+
+.confluence-meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+}
+
+.confluence-meta-pill label {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.meta-input-compact, .meta-select-compact {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  outline: none;
+  font-family: inherit;
+}
+
+.meta-select-compact option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.autosave-status {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Confluence Toolbar Bar */
+.confluence-toolbar-bar {
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.4rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.confluence-mode-switcher {
+  display: flex;
+  align-items: center;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.mode-btn {
+  background: transparent;
+  border: none;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.mode-btn.active {
+  background: var(--accent-primary);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.confluence-format-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.tool-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.tool-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  margin: 0 0.25rem;
+}
+
+.template-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.template-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 250px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  padding: 0.4rem;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.template-dropdown-menu button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  padding: 0.5rem 0.65rem;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.template-dropdown-menu button:hover {
+  background: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+/* Confluence Split Editor / Preview */
+.confluence-body-split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.confluence-editor-pane, .confluence-preview-pane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-y: auto;
+  position: relative;
+}
+
+.confluence-editor-pane {
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.confluence-textarea {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  padding: 1.25rem 1.5rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-primary);
+  resize: none;
+}
+
+.confluence-rendered-view {
+  padding: 1.5rem 2rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+/* Confluence Alert Callouts */
+.confluence-callout {
+  border-radius: 8px;
+  padding: 0.85rem 1.15rem;
+  margin: 1.15rem 0;
+  border-left: 4px solid var(--accent-primary);
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.callout-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+}
+
+.callout-content {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.callout-note {
+  border-left-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--text-primary);
+}
+.callout-note .callout-title {
+  color: #3b82f6;
+}
+
+.callout-tip {
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--text-primary);
+}
+.callout-tip .callout-title {
+  color: #10b981;
+}
+
+.callout-warning {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--text-primary);
+}
+.callout-warning .callout-title {
+  color: #f59e0b;
+}
+
+.callout-important {
+  border-left-color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--text-primary);
+}
+.callout-important .callout-title {
+  color: #ef4444;
+}
+
+/* Practice Workspace Key Notes Drawer */
+.workspace-notes-drawer {
+  width: 440px;
+  min-width: 340px;
+  max-width: 550px;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 25;
+  height: 100%;
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+.notes-drawer-header {
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notes-drawer-toolbar {
+  padding: 0.4rem 0.85rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.drawer-mode-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.74rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.drawer-mode-btn.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.drawer-tool-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.drawer-tool-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+}
+
+.notes-drawer-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.workspace-notes-textarea {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  padding: 0.85rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.workspace-notes-preview {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.85rem 1rem;
+  line-height: 1.6;
+  font-size: 0.86rem;
+}
+

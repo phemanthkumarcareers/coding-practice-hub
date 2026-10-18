@@ -68,7 +68,7 @@ class TestCodingPracticeHub(unittest.TestCase):
         tables = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
         conn.close()
         
-        expected_tables = ["daily_sessions", "practices", "executions", "datasets", "tags", "practice_tags", "settings"]
+        expected_tables = ["daily_sessions", "practices", "executions", "datasets", "tags", "practice_tags", "settings", "key_notes"]
         for t in expected_tables:
             self.assertIn(t, tables, f"Table {t} should be initialized")
 
@@ -406,6 +406,86 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertIn(b"action-btn-view", tech_res.data)
         self.assertIn(b"action-btn-edit", tech_res.data)
         self.assertIn(b"action-btn-delete", tech_res.data)
+
+    def test_20_key_notes_crud(self):
+        # 1. Create a new note
+        note_payload = {
+            "title": "Unit Test SQL Optimization Note",
+            "category": "Technology Tips",
+            "date_str": "2026-11-05",
+            "technology": "SQL",
+            "tags": "sql, indexing, performance",
+            "content": "# SQL Tips\n- Use covering indexes\n- Avoid SELECT *",
+            "is_pinned": 1
+        }
+        res_create = self.client.post("/api/notes/save", json=note_payload)
+        self.assertEqual(res_create.status_code, 200)
+        data_create = res_create.get_json()
+        self.assertTrue(data_create["success"])
+        note_id = data_create["note"]["id"]
+        self.assertIsNotNone(note_id)
+        self.assertEqual(data_create["note"]["title"], "Unit Test SQL Optimization Note")
+
+        # 2. Read note by ID
+        res_get = self.client.get(f"/api/notes/{note_id}")
+        self.assertEqual(res_get.status_code, 200)
+        data_get = res_get.get_json()
+        self.assertTrue(data_get["success"])
+        self.assertEqual(data_get["note"]["category"], "Technology Tips")
+        self.assertEqual(data_get["note"]["technology"], "SQL")
+
+        # 3. List notes and verify presence
+        res_list = self.client.get("/api/notes/list")
+        self.assertEqual(res_list.status_code, 200)
+        data_list = res_list.get_json()
+        self.assertTrue(data_list["success"])
+        ids = [n["id"] for n in data_list["notes"]]
+        self.assertIn(note_id, ids)
+
+        # 4. Update the note
+        update_payload = {
+            "id": note_id,
+            "title": "Updated SQL Optimization Note",
+            "category": "Technology Tips",
+            "date_str": "2026-11-05",
+            "technology": "SQL",
+            "tags": "sql, indexing, explain",
+            "content": "# Updated SQL Tips\n- Run EXPLAIN ANALYZE",
+            "is_pinned": 0
+        }
+        res_update = self.client.post("/api/notes/save", json=update_payload)
+        self.assertEqual(res_update.status_code, 200)
+        data_update = res_update.get_json()
+        self.assertTrue(data_update["success"])
+        self.assertEqual(data_update["note"]["title"], "Updated SQL Optimization Note")
+
+        # 5. Delete note
+        res_del = self.client.post("/api/notes/delete", json={"id": note_id})
+        self.assertEqual(res_del.status_code, 200)
+        data_del = res_del.get_json()
+        self.assertTrue(data_del["success"])
+
+        # Verify deleted
+        res_check = self.client.get(f"/api/notes/{note_id}")
+        self.assertEqual(res_check.status_code, 404)
+
+    def test_21_daily_note_retrieval(self):
+        test_date = "2026-12-25"
+        res = self.client.get(f"/api/notes/by-date/{test_date}")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data["success"])
+        note = data["note"]
+        self.assertEqual(note["date_str"], test_date)
+        self.assertEqual(note["category"], "Daily Practice")
+
+    def test_22_notes_page_render(self):
+        res = self.client.get("/notes")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"Key Notes", res.data)
+        self.assertIn(b"confluence-workspace", res.data)
+        self.assertIn(b"notes-tree-sidebar", res.data)
+        self.assertIn(b"confluence-doc-pane", res.data)
 
 if __name__ == "__main__":
     unittest.main()

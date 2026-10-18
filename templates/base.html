@@ -95,6 +95,12 @@
                             </a>
                         </li>
                         <li>
+                            <a href="{{ url_for('notes.notes_view') }}" class="sidebar-link {% if request.endpoint and request.endpoint.startswith('notes.') %}active{% endif %}" title="Key Notes & Knowledge Base (Daily Notes, Tips & Confluence Docs)">
+                                <span class="sidebar-icon">📝</span>
+                                <span class="sidebar-label">Key Notes</span>
+                            </a>
+                        </li>
+                        <li>
                             <a href="{{ url_for('history.history_view') }}" class="sidebar-link {% if request.endpoint == 'history.history_view' or request.endpoint == 'history.tech_view' %}active{% endif %}" title="Practice History & Archives">
                                 <span class="sidebar-icon">📜</span>
                                 <span class="sidebar-label">Practice History</span>

@@ -1,0 +1,685 @@
+{% extends "base.html" %}
+
+{% block title %}Key Notes & Knowledge Base - Coding Practice Hub{% endblock %}
+
+{% block head_extra %}
+<!-- Markdown & Mermaid Support -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="confluence-workspace">
+    <!-- Left Navigation Tree Sidebar -->
+    <aside class="confluence-sidebar" id="notes-tree-sidebar">
+        <div class="confluence-sidebar-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <span style="font-size:1.25rem;">📝</span>
+                <span style="font-weight:700; font-size:1rem; color:var(--text-primary);">Key Notes</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="createNewNote()" title="Create New Note">
+                + New Note
+            </button>
+        </div>
+
+        <!-- Quick Search & Today Shortcut -->
+        <div class="confluence-sidebar-search">
+            <input type="text" id="notes-search-input" class="meta-input" placeholder="🔍 Search notes, tags, tips..." oninput="filterNotesTree(this.value)">
+            <button class="btn btn-secondary btn-sm" style="width:100%; margin-top:0.4rem; font-size:0.75rem;" onclick="openTodayDailyNote()" title="Jump to Today's Practice Notes">
+                📅 Today's Practice Notes
+            </button>
+        </div>
+
+        <!-- Tree List of Notes -->
+        <div class="confluence-tree-container" id="notes-tree-list">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted);">
+                Loading notes...
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Confluence Document Area -->
+    <main class="confluence-doc-pane" id="notes-doc-pane">
+        <!-- Document Header / Metadata -->
+        <div class="confluence-doc-header">
+            <div class="confluence-header-top">
+                <input type="text" id="note-title-input" class="confluence-title-input" placeholder="Untitled Note Title..." oninput="markNoteDirty()">
+                <div class="confluence-header-actions">
+                    <button type="button" id="btn-pin-note" class="btn btn-secondary btn-sm" onclick="togglePinCurrentNote()" title="Pin this note to top">
+                        📌 <span id="pin-text">Pin</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyCurrentNoteMarkdown()" title="Copy Markdown to Clipboard">
+                        📋 Copy
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteCurrentNote()" title="Delete this note">
+                        🗑️ Delete
+                    </button>
+                    <button type="button" id="btn-save-note" class="btn btn-primary btn-sm" onclick="saveCurrentNote(false)" title="Save note changes (Ctrl+S)">
+                        💾 Save
+                    </button>
+                </div>
+            </div>
+
+            <!-- Metadata Fields (Category, Date, Tech, Tags) -->
+            <div class="confluence-meta-bar">
+                <div class="confluence-meta-pill">
+                    <label>Category:</label>
+                    <select id="note-category-select" class="meta-select-compact" onchange="markNoteDirty()">
+                        {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="confluence-meta-pill">
+                    <label>Date:</label>
+                    <input type="date" id="note-date-input" class="meta-input-compact" onchange="markNoteDirty()">
+                </div>
+
+                <div class="confluence-meta-pill">
+                    <label>Tech:</label>
+                    <select id="note-tech-select" class="meta-select-compact" onchange="markNoteDirty()">
+                        <option value="">None / General</option>
+                        {% for tech in technologies %}
+                            <option value="{{ tech }}">{{ tech }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="confluence-meta-pill" style="flex:1; min-width:180px;">
+                    <label>Tags:</label>
+                    <input type="text" id="note-tags-input" class="meta-input-compact" style="width:100%;" placeholder="e.g. sql, window-func, interview" oninput="markNoteDirty()">
+                </div>
+
+                <div id="note-autosave-indicator" class="autosave-status" style="margin-left:auto;">
+                    <span>All changes saved</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confluence Toolbar & View Mode Switcher -->
+        <div class="confluence-toolbar-bar">
+            <!-- Mode Selector: Edit, Preview, Split -->
+            <div class="confluence-mode-switcher">
+                <button type="button" class="mode-btn active" id="btn-mode-split" onclick="setNoteViewMode('split')" title="Side-by-side Edit and Live Preview">
+                    🗖 Split
+                </button>
+                <button type="button" class="mode-btn" id="btn-mode-edit" onclick="setNoteViewMode('edit')" title="Full Editor Only">
+                    ✏️ Edit
+                </button>
+                <button type="button" class="mode-btn" id="btn-mode-preview" onclick="setNoteViewMode('preview')" title="Rendered Document Only">
+                    👁️ Preview
+                </button>
+            </div>
+
+            <!-- Formatting Actions -->
+            <div class="confluence-format-controls">
+                <button type="button" class="tool-btn" onclick="insertMarkdown('# ')" title="Heading 1">H1</button>
+                <button type="button" class="tool-btn" onclick="insertMarkdown('## ')" title="Heading 2">H2</button>
+                <button type="button" class="tool-btn" onclick="insertMarkdown('### ')" title="Heading 3">H3</button>
+                <span class="tool-divider"></span>
+                <button type="button" class="tool-btn" onclick="wrapSelection('**', '**')" title="Bold (Ctrl+B)"><b>B</b></button>
+                <button type="button" class="tool-btn" onclick="wrapSelection('*', '*')" title="Italic (Ctrl+I)"><i>I</i></button>
+                <button type="button" class="tool-btn" onclick="wrapSelection('`', '`')" title="Inline Code">`code`</button>
+                <button type="button" class="tool-btn" onclick="insertCodeBlock()" title="Code Block">```</button>
+                <button type="button" class="tool-btn" onclick="insertTableTemplate()" title="Insert Table">📊 Table</button>
+                <button type="button" class="tool-btn" onclick="insertMarkdown('- [ ] ')" title="Task Checklist">☑ Checkbox</button>
+                <span class="tool-divider"></span>
+                <!-- Callout Boxes -->
+                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('NOTE')" title="Info Note Callout">ℹ️ Note</button>
+                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('TIP')" title="Tip Callout">💡 Tip</button>
+                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('WARNING')" title="Warning Callout">⚠️ Warning</button>
+                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('IMPORTANT')" title="Important Callout">⚡ Important</button>
+                <span class="tool-divider"></span>
+                <!-- Templates Dropdown -->
+                <div class="template-dropdown-wrapper">
+                    <button type="button" class="tool-btn" onclick="toggleTemplateMenu()" title="Insert Confluence Prebuilt Template">
+                        📄 Templates ▾
+                    </button>
+                    <div class="template-dropdown-menu" id="template-dropdown-menu" style="display:none;">
+                        <button type="button" onclick="applyNoteTemplate('daily_summary')">📅 Daily Practice Summary</button>
+                        <button type="button" onclick="applyNoteTemplate('sql_tips')">🗄️ SQL Optimization & Tips</button>
+                        <button type="button" onclick="applyNoteTemplate('pyspark_cheatsheet')">⚡ PySpark Transformation Cheatsheet</button>
+                        <button type="button" onclick="applyNoteTemplate('dsa_patterns')">🧩 DSA Problem Pattern & Complexity</button>
+                        <button type="button" onclick="applyNoteTemplate('system_design')">📐 System Design Blueprint</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Editor & Live Preview Body -->
+        <div class="confluence-body-split" id="confluence-body-container">
+            <!-- Left: Text Editor -->
+            <div class="confluence-editor-pane" id="editor-column">
+                <textarea id="note-markdown-textarea" class="confluence-textarea" placeholder="Start typing your notes, tips, and code snippets in Markdown...&#10;&#10;Use # for headers, ``` for code blocks, and > [!TIP] for callouts." oninput="handleNoteEditorInput()"></textarea>
+            </div>
+
+            <!-- Right: Confluence Rendered Document Preview -->
+            <div class="confluence-preview-pane" id="preview-column">
+                <div class="confluence-rendered-view markdown-body" id="note-rendered-content">
+                    <div style="color:var(--text-muted); padding:2rem; text-align:center;">Preview will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // State
+    let allNotes = {{ notes|tojson }};
+    let currentNoteId = {{ active_note.id if active_note else 'null' }};
+    let isNoteDirty = false;
+    let noteAutosaveTimer = null;
+    let currentViewMode = 'split'; // 'split', 'edit', 'preview'
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize mermaid
+        if (window.mermaid) {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'default' : 'dark',
+                securityLevel: 'loose'
+            });
+        }
+
+        renderNotesTree();
+        if (currentNoteId) {
+            loadNoteById(currentNoteId);
+        } else {
+            createNewNote();
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+                if (document.getElementById('notes-doc-pane')) {
+                    e.preventDefault();
+                    saveCurrentNote(false);
+                }
+            }
+        });
+
+        // Tab indentation in textarea
+        const textarea = document.getElementById('note-markdown-textarea');
+        if (textarea) {
+            textarea.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 4;
+                    handleNoteEditorInput();
+                }
+            });
+        }
+    });
+
+    // Render tree in left navigation
+    function renderNotesTree(filterQuery = '') {
+        const container = document.getElementById('notes-tree-list');
+        if (!container) return;
+
+        let filtered = allNotes;
+        if (filterQuery && filterQuery.trim()) {
+            const q = filterQuery.toLowerCase();
+            filtered = allNotes.filter(n =>
+                (n.title && n.title.toLowerCase().includes(q)) ||
+                (n.tags && n.tags.toLowerCase().includes(q)) ||
+                (n.category && n.category.toLowerCase().includes(q)) ||
+                (n.content && n.content.toLowerCase().includes(q))
+            );
+        }
+
+        if (filtered.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem;">No matching notes found.</div>';
+            return;
+        }
+
+        // Categorize notes
+        const pinned = filtered.filter(n => n.is_pinned);
+        const dailyNotes = filtered.filter(n => n.category === 'Daily Practice');
+        const techNotes = filtered.filter(n => ['SQL', 'Python', 'PySpark', 'Databricks', 'DSA', 'System Design'].includes(n.category));
+        const otherNotes = filtered.filter(n => !n.is_pinned && n.category !== 'Daily Practice' && !['SQL', 'Python', 'PySpark', 'Databricks', 'DSA', 'System Design'].includes(n.category));
+
+        let html = '';
+
+        // 1. Pinned Notes
+        if (pinned.length > 0) {
+            html += `<div class="tree-section-header">📌 Pinned Notes (${pinned.length})</div>`;
+            html += pinned.map(renderTreeItem).join('');
+        }
+
+        // 2. Daily Practice Notes
+        if (dailyNotes.length > 0) {
+            dailyNotes.sort((a, b) => (b.date_str || '').localeCompare(a.date_str || ''));
+            html += `<div class="tree-section-header">📅 Daily Practice Notes (${dailyNotes.length})</div>`;
+            html += dailyNotes.map(renderTreeItem).join('');
+        }
+
+        // 3. Technology Tips & Cheatsheets
+        if (techNotes.length > 0) {
+            html += `<div class="tree-section-header">💡 Technology Tips & Cheat Sheets (${techNotes.length})</div>`;
+            html += techNotes.map(renderTreeItem).join('');
+        }
+
+        // 4. Other / General Notes
+        if (otherNotes.length > 0) {
+            html += `<div class="tree-section-header">📚 General Knowledge & Concepts (${otherNotes.length})</div>`;
+            html += otherNotes.map(renderTreeItem).join('');
+        }
+
+        container.innerHTML = html;
+    }
+
+    function renderTreeItem(note) {
+        const isActive = note.id === currentNoteId;
+        const iconMap = {
+            'Daily Practice': '📅',
+            'SQL': '🗄️',
+            'Python': '🐍',
+            'PySpark': '⚡',
+            'Databricks': '🧱',
+            'DSA': '🧩',
+            'System Design': '📐',
+            'Interview Tips': '🎯',
+            'Cheat Sheets': '📑'
+        };
+        const icon = iconMap[note.category] || '📝';
+
+        return `
+            <div class="tree-item ${isActive ? 'active' : ''}" onclick="selectNote(${note.id})" data-note-id="${note.id}">
+                <div class="tree-item-icon">${icon}</div>
+                <div class="tree-item-info">
+                    <div class="tree-item-title">${escapeHtml(note.title || 'Untitled Note')}</div>
+                    <div class="tree-item-meta">
+                        <span>${note.date_str || note.category}</span>
+                        ${note.is_pinned ? '<span style="color:#f59e0b;">📌</span>' : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function filterNotesTree(q) {
+        renderNotesTree(q);
+    }
+
+    async function selectNote(noteId) {
+        if (isNoteDirty && currentNoteId) {
+            await saveCurrentNote(false);
+        }
+        loadNoteById(noteId);
+    }
+
+    function loadNoteById(noteId) {
+        const note = allNotes.find(n => n.id === noteId);
+        if (!note) return;
+
+        currentNoteId = note.id;
+        document.getElementById('note-title-input').value = note.title || '';
+        document.getElementById('note-category-select').value = note.category || 'Daily Practice';
+        document.getElementById('note-date-input').value = note.date_str || new Date().toISOString().slice(0, 10);
+        document.getElementById('note-tech-select').value = note.technology || '';
+        document.getElementById('note-tags-input').value = note.tags || '';
+        document.getElementById('note-markdown-textarea').value = note.content || '';
+
+        updatePinBtnUI(Boolean(note.is_pinned));
+        renderMarkdownPreview();
+        renderNotesTree(document.getElementById('notes-search-input')?.value || '');
+
+        isNoteDirty = false;
+        updateAutosaveIndicator('All changes saved');
+
+        // Update URL query string
+        const url = new URL(window.location);
+        url.searchParams.set('id', note.id);
+        window.history.replaceState({}, '', url);
+    }
+
+    function updatePinBtnUI(isPinned) {
+        const btn = document.getElementById('btn-pin-note');
+        const text = document.getElementById('pin-text');
+        if (isPinned) {
+            btn.className = 'btn btn-primary btn-sm';
+            text.textContent = 'Pinned';
+        } else {
+            btn.className = 'btn btn-secondary btn-sm';
+            text.textContent = 'Pin';
+        }
+    }
+
+    function togglePinCurrentNote() {
+        const note = allNotes.find(n => n.id === currentNoteId);
+        const newPinned = note ? (note.is_pinned ? 0 : 1) : 1;
+        if (note) note.is_pinned = newPinned;
+        updatePinBtnUI(Boolean(newPinned));
+        markNoteDirty();
+        saveCurrentNote(false);
+    }
+
+    function createNewNote(category = 'Daily Practice', initialTitle = '') {
+        currentNoteId = null;
+        const todayStr = new Date().toISOString().slice(0, 10);
+        document.getElementById('note-title-input').value = initialTitle || `New ${category} Note`;
+        document.getElementById('note-category-select').value = category;
+        document.getElementById('note-date-input').value = todayStr;
+        document.getElementById('note-tech-select').value = '';
+        document.getElementById('note-tags-input').value = '';
+
+        const defaultContent = `# ${initialTitle || `New ${category} Note`}\n\n> [!NOTE]\n> Start documenting your key takeaways and tips here.\n\n## 📝 Notes & Key Points\n- \n\n## 💡 Tips & Best Practices\n- \n`;
+        document.getElementById('note-markdown-textarea').value = defaultContent;
+
+        updatePinBtnUI(false);
+        renderMarkdownPreview();
+        isNoteDirty = true;
+        saveCurrentNote(false);
+    }
+
+    async function openTodayDailyNote() {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const existing = allNotes.find(n => n.category === 'Daily Practice' && n.date_str === todayStr);
+        if (existing) {
+            selectNote(existing.id);
+        } else {
+            try {
+                const res = await fetch(`/api/notes/by-date/${todayStr}`);
+                const data = await res.json();
+                if (data.success && data.note) {
+                    allNotes.unshift(data.note);
+                    renderNotesTree();
+                    selectNote(data.note.id);
+                }
+            } catch (err) {
+                createNewNote('Daily Practice', `Daily Practice Notes - ${todayStr}`);
+            }
+        }
+    }
+
+    function markNoteDirty() {
+        isNoteDirty = true;
+        updateAutosaveIndicator('● Unsaved changes');
+        scheduleNoteAutosave();
+    }
+
+    function handleNoteEditorInput() {
+        markNoteDirty();
+        renderMarkdownPreview();
+    }
+
+    function scheduleNoteAutosave() {
+        clearTimeout(noteAutosaveTimer);
+        noteAutosaveTimer = setTimeout(() => {
+            saveCurrentNote(false);
+        }, 3000); // 3-second debounce
+    }
+
+    async function saveCurrentNote(isManual = false) {
+        const title = document.getElementById('note-title-input').value.trim() || 'Untitled Note';
+        const category = document.getElementById('note-category-select').value;
+        const date_str = document.getElementById('note-date-input').value;
+        const technology = document.getElementById('note-tech-select').value;
+        const tags = document.getElementById('note-tags-input').value;
+        const content = document.getElementById('note-markdown-textarea').value;
+        const noteObj = allNotes.find(n => n.id === currentNoteId);
+        const is_pinned = noteObj ? (noteObj.is_pinned ? 1 : 0) : 0;
+
+        updateAutosaveIndicator('Saving...');
+
+        const payload = {
+            id: currentNoteId,
+            title,
+            category,
+            date_str,
+            technology,
+            tags,
+            content,
+            is_pinned
+        };
+
+        try {
+            const res = await fetch('/api/notes/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success && data.note) {
+                const saved = data.note;
+                const idx = allNotes.findIndex(n => n.id === saved.id);
+                if (idx !== -1) {
+                    allNotes[idx] = saved;
+                } else {
+                    allNotes.unshift(saved);
+                }
+                currentNoteId = saved.id;
+                isNoteDirty = false;
+                updateAutosaveIndicator(`All changes saved (${new Date().toLocaleTimeString()})`);
+                renderNotesTree(document.getElementById('notes-search-input')?.value || '');
+                if (isManual) {
+                    showToast('Note saved successfully!', 'success');
+                }
+            } else {
+                updateAutosaveIndicator('Save failed');
+            }
+        } catch (err) {
+            updateAutosaveIndicator('Save error');
+            console.error('Note save error:', err);
+        }
+    }
+
+    async function deleteCurrentNote() {
+        if (!currentNoteId) return;
+        const note = allNotes.find(n => n.id === currentNoteId);
+        const title = note ? note.title : 'this note';
+
+        const confirmed = await showAppConfirm({
+            title: 'Delete Key Note',
+            message: `Are you sure you want to delete note "${title}"? This cannot be undone.`,
+            confirmText: 'Delete Note',
+            isDanger: true,
+            icon: '🗑️'
+        });
+        if (!confirmed) return;
+
+        try {
+            const res = await fetch('/api/notes/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ note_id: currentNoteId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast('Note deleted successfully', 'success');
+                allNotes = allNotes.filter(n => n.id !== currentNoteId);
+                renderNotesTree();
+                if (allNotes.length > 0) {
+                    loadNoteById(allNotes[0].id);
+                } else {
+                    createNewNote();
+                }
+            } else {
+                showToast(data.error || 'Failed to delete note', 'error');
+            }
+        } catch (err) {
+            showToast('Delete error: ' + err.message, 'error');
+        }
+    }
+
+    function updateAutosaveIndicator(text) {
+        const el = document.getElementById('note-autosave-indicator');
+        if (el) el.textContent = text;
+    }
+
+    // Markdown Parser & Confluence Live Preview
+    function renderMarkdownPreview() {
+        const textarea = document.getElementById('note-markdown-textarea');
+        const preview = document.getElementById('note-rendered-content');
+        if (!textarea || !preview) return;
+
+        let raw = textarea.value;
+
+        // Transform GitHub/Confluence alert boxes: > [!NOTE], > [!TIP], > [!WARNING], > [!IMPORTANT]
+        raw = raw.replace(/^>\s*\[!NOTE\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
+            const clean = body.replace(/^>\s?/gm, '');
+            return `<div class="confluence-callout callout-note"><div class="callout-header">ℹ️ NOTE</div><div class="callout-content">${clean}</div></div>\n`;
+        });
+        raw = raw.replace(/^>\s*\[!TIP\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
+            const clean = body.replace(/^>\s?/gm, '');
+            return `<div class="confluence-callout callout-tip"><div class="callout-header">💡 TIP</div><div class="callout-content">${clean}</div></div>\n`;
+        });
+        raw = raw.replace(/^>\s*\[!WARNING\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
+            const clean = body.replace(/^>\s?/gm, '');
+            return `<div class="confluence-callout callout-warning"><div class="callout-header">⚠️ WARNING</div><div class="callout-content">${clean}</div></div>\n`;
+        });
+        raw = raw.replace(/^>\s*\[!IMPORTANT\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
+            const clean = body.replace(/^>\s?/gm, '');
+            return `<div class="confluence-callout callout-important"><div class="callout-header">⚡ IMPORTANT</div><div class="callout-content">${clean}</div></div>\n`;
+        });
+
+        // Parse with marked.js
+        if (window.marked) {
+            try {
+                let html = marked.parse(raw);
+                preview.innerHTML = html;
+            } catch (e) {
+                preview.innerHTML = `<pre>${escapeHtml(raw)}</pre>`;
+            }
+        } else {
+            preview.innerHTML = `<pre>${escapeHtml(raw)}</pre>`;
+        }
+
+        // Render Mermaid Diagrams
+        if (window.mermaid) {
+            const mermaidBlocks = preview.querySelectorAll('pre code.language-mermaid');
+            mermaidBlocks.forEach((codeEl, i) => {
+                const parent = codeEl.parentElement;
+                const diagramText = codeEl.textContent;
+                const mDiv = document.createElement('div');
+                mDiv.className = 'mermaid';
+                mDiv.textContent = diagramText;
+                parent.replaceWith(mDiv);
+            });
+            try {
+                mermaid.run({ nodes: preview.querySelectorAll('.mermaid') });
+            } catch (err) {}
+        }
+    }
+
+    // View Mode Switcher ('split', 'edit', 'preview')
+    function setNoteViewMode(mode) {
+        currentViewMode = mode;
+        const editorCol = document.getElementById('editor-column');
+        const previewCol = document.getElementById('preview-column');
+        ['split', 'edit', 'preview'].forEach(m => {
+            const btn = document.getElementById(`btn-mode-${m}`);
+            if (btn) btn.classList.toggle('active', m === mode);
+        });
+
+        if (mode === 'split') {
+            if (editorCol) editorCol.style.display = 'block';
+            if (previewCol) previewCol.style.display = 'block';
+            if (editorCol) editorCol.style.width = '50%';
+            if (previewCol) previewCol.style.width = '50%';
+            renderMarkdownPreview();
+        } else if (mode === 'edit') {
+            if (editorCol) editorCol.style.display = 'block';
+            if (previewCol) previewCol.style.display = 'none';
+            if (editorCol) editorCol.style.width = '100%';
+        } else if (mode === 'preview') {
+            if (editorCol) editorCol.style.display = 'none';
+            if (previewCol) previewCol.style.display = 'block';
+            if (previewCol) previewCol.style.width = '100%';
+            renderMarkdownPreview();
+        }
+    }
+
+    // Formatting Helpers
+    function insertMarkdown(prefix) {
+        const textarea = document.getElementById('note-markdown-textarea');
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const sel = textarea.value.substring(start, end);
+        textarea.value = textarea.value.substring(0, start) + prefix + sel + textarea.value.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + prefix.length + sel.length;
+        handleNoteEditorInput();
+    }
+
+    function wrapSelection(before, after) {
+        const textarea = document.getElementById('note-markdown-textarea');
+        if (!textarea) return;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const sel = textarea.value.substring(start, end);
+        textarea.value = textarea.value.substring(0, start) + before + sel + after + textarea.value.substring(end);
+        textarea.focus();
+        textarea.selectionStart = start + before.length;
+        textarea.selectionEnd = end + before.length;
+        handleNoteEditorInput();
+    }
+
+    function insertCodeBlock() {
+        wrapSelection('```sql\n', '\n```\n');
+    }
+
+    function insertTableTemplate() {
+        const table = `\n| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Data A | Value 1 | Active |\n| Data B | Value 2 | Verified |\n\n`;
+        insertMarkdown(table);
+    }
+
+    function insertCallout(type) {
+        const template = `\n> [!${type}]\n> Key takeaway or important rule for this topic.\n\n`;
+        insertMarkdown(template);
+    }
+
+    function toggleTemplateMenu() {
+        const menu = document.getElementById('template-dropdown-menu');
+        if (menu) {
+            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.template-dropdown-wrapper')) {
+            const menu = document.getElementById('template-dropdown-menu');
+            if (menu) menu.style.display = 'none';
+        }
+    });
+
+    function applyNoteTemplate(templateKey) {
+        const textarea = document.getElementById('note-markdown-textarea');
+        const menu = document.getElementById('template-dropdown-menu');
+        if (menu) menu.style.display = 'none';
+
+        const templates = {
+            'daily_summary': `## 🎯 Practice Objectives & Problems\n- [ ] SQL: \n- [ ] Python: \n- [ ] PySpark: \n- [ ] DSA: \n\n## 💡 Key Tips & Techniques Learned\n> [!TIP]\n> Write the most valuable shortcut or trick you learned today.\n\n## ⚠️ Common Pitfalls & Mistakes\n- \n\n## 📌 Code Snippets & Quick Ref\n\`\`\`sql\n-- Snippet\n\`\`\`\n`,
+            'sql_tips': `## 🗄️ SQL Optimization & Tips\n\n> [!TIP]\n> Prefer window functions (ROW_NUMBER, DENSE_RANK) over expensive self-joins.\n\n### 1. Windowing Syntax Pattern\n\`\`\`sql\nSELECT *,\n       DENSE_RANK() OVER (PARTITION BY dept_id ORDER BY salary DESC) as rank\nFROM employees;\n\`\`\`\n\n### 2. SARGable Conditions\n- Always compare raw indexed columns without wrapping them in functions.\n`,
+            'pyspark_cheatsheet': `## ⚡ PySpark Transformations Cheatsheet\n\n> [!NOTE]\n> Reference guide for common DataFrame operations.\n\n### Window Aggregations\n\`\`\`python\nfrom pyspark.sql.window import Window\nimport pyspark.sql.functions as F\n\nwin = Window.partitionBy('dept').orderBy(F.desc('salary'))\ndf = df.withColumn('rank', F.row_number().over(win))\n\`\`\`\n\n### Skewed Data Optimization\n- Use Broadcast joins for small lookup tables (< 100MB):\n\`\`\`python\nresult = large_df.join(F.broadcast(small_df), 'id', 'inner')\n\`\`\`\n`,
+            'dsa_patterns': `## 🧩 DSA Pattern & Complexity Notes\n\n> [!TIP]\n> Always verify array bounds and constraints first.\n\n### Pattern: Two Pointers\n- **When to use:** Sorted arrays, pair sums, palindrome checks.\n- **Time:** $O(N)$ | **Space:** $O(1)$\n\n\`\`\`python\ndef two_sum_sorted(nums, target):\n    l, r = 0, len(nums) - 1\n    while l < r:\n        s = nums[l] + nums[r]\n        if s == target: return [l, r]\n        elif s < target: l += 1\n        else: r -= 1\n    return []\n\`\`\`\n`,
+            'system_design': `## 📐 System Design Blueprint\n\n### 1. Requirements\n- **Functional:** Users can create, view, and share notes in real-time.\n- **Non-Functional:** 99.99% availability, latency < 100ms, eventual consistency.\n\n### 2. High-Level Architecture\n\`\`\`mermaid\ngraph TD\n    Client --> CDN\n    Client --> API_Gateway\n    API_Gateway --> Notes_Service\n    Notes_Service --> Cache[(Redis)]\n    Notes_Service --> Primary_DB[(PostgreSQL)]\n\`\`\`\n`
+        };
+
+        if (templates[templateKey]) {
+            textarea.value += '\n' + templates[templateKey];
+            handleNoteEditorInput();
+            showToast('Template appended to note!', 'info');
+        }
+    }
+
+    function copyCurrentNoteMarkdown() {
+        const textarea = document.getElementById('note-markdown-textarea');
+        if (textarea && textarea.value) {
+            navigator.clipboard.writeText(textarea.value);
+            showToast('Note markdown copied to clipboard!', 'info');
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+</script>
+{% endblock %}

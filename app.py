@@ -12,6 +12,7 @@ from routes.history import history_bp
 from routes.datasets import datasets_bp
 from routes.reports import reports_bp
 from routes.settings import settings_bp
+from routes.notes import notes_bp
 
 def create_app():
     # Detect & initialize database and required directories
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(datasets_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(notes_bp)
 
     return app
 

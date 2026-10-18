@@ -2356,3 +2356,165 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+// Workspace Key Notes Drawer Controller
+let isWorkspaceNotesOpen = false;
+let currentWorkspaceNote = null;
+let workspaceNotesAutosaveTimer = null;
+
+async function toggleWorkspaceKeyNotesDrawer() {
+    const drawer = document.getElementById('workspace-notes-drawer');
+    const toggleBtn = document.getElementById('btn-toggle-key-notes');
+    const quickBtn = document.getElementById('btn-quick-notes');
+    if (!drawer) return;
+
+    isWorkspaceNotesOpen = drawer.style.display !== 'none';
+    if (isWorkspaceNotesOpen) {
+        drawer.style.display = 'none';
+        if (toggleBtn) toggleBtn.classList.remove('active');
+        if (quickBtn) quickBtn.classList.remove('active');
+    } else {
+        drawer.style.display = 'flex';
+        if (toggleBtn) toggleBtn.classList.add('active');
+        if (quickBtn) quickBtn.classList.add('active');
+        await loadWorkspaceNoteForCurrentSession();
+    }
+
+    setTimeout(() => {
+        if (monacoEditor) monacoEditor.layout();
+    }, 100);
+}
+
+async function loadWorkspaceNoteForCurrentSession() {
+    const sessionPicker = document.getElementById('session-date-picker');
+    const sessionDate = sessionPicker ? sessionPicker.value : new Date().toISOString().slice(0, 10);
+    const dateBadge = document.getElementById('drawer-note-date-badge');
+    if (dateBadge) dateBadge.textContent = sessionDate;
+
+    const textarea = document.getElementById('workspace-notes-textarea');
+    if (textarea) textarea.placeholder = `Loading notes for ${sessionDate}...`;
+
+    try {
+        const res = await fetch(`/api/notes/by-date/${sessionDate}?tech=${encodeURIComponent(activeTechnology || '')}`);
+        const data = await res.json();
+        if (data.success && data.note) {
+            currentWorkspaceNote = data.note;
+            if (textarea) {
+                textarea.value = currentWorkspaceNote.content || '';
+                textarea.placeholder = `Write notes and tips for ${sessionDate}...`;
+            }
+            renderDrawerNotesPreview();
+            updateDrawerAutosaveIndicator('All changes saved');
+        }
+    } catch (err) {
+        console.error('Failed to load workspace note:', err);
+    }
+}
+
+function handleWorkspaceNotesInput() {
+    updateDrawerAutosaveIndicator('● Unsaved');
+    renderDrawerNotesPreview();
+    clearTimeout(workspaceNotesAutosaveTimer);
+    workspaceNotesAutosaveTimer = setTimeout(() => {
+        saveWorkspaceNotes(false);
+    }, 2500);
+}
+
+async function saveWorkspaceNotes(isManual = false) {
+    if (!currentWorkspaceNote) return;
+    const textarea = document.getElementById('workspace-notes-textarea');
+    if (!textarea) return;
+
+    updateDrawerAutosaveIndicator('Saving...');
+    currentWorkspaceNote.content = textarea.value;
+
+    try {
+        const res = await fetch('/api/notes/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentWorkspaceNote)
+        });
+        const data = await res.json();
+        if (data.success && data.note) {
+            currentWorkspaceNote = data.note;
+            updateDrawerAutosaveIndicator('Saved');
+            if (isManual) {
+                showToast('Key Notes saved successfully!', 'success');
+            }
+        } else {
+            updateDrawerAutosaveIndicator('Save failed');
+        }
+    } catch (err) {
+        updateDrawerAutosaveIndicator('Error saving');
+    }
+}
+
+function updateDrawerAutosaveIndicator(text) {
+    const el = document.getElementById('drawer-notes-autosave');
+    if (el) el.textContent = text;
+}
+
+function setDrawerNotesMode(mode) {
+    const textarea = document.getElementById('workspace-notes-textarea');
+    const preview = document.getElementById('workspace-notes-preview');
+    const editBtn = document.getElementById('drawer-notes-btn-edit');
+    const prevBtn = document.getElementById('drawer-notes-btn-preview');
+
+    if (mode === 'edit') {
+        if (textarea) textarea.style.display = 'block';
+        if (preview) preview.style.display = 'none';
+        if (editBtn) editBtn.classList.add('active');
+        if (prevBtn) prevBtn.classList.remove('active');
+    } else {
+        if (textarea) textarea.style.display = 'none';
+        if (preview) preview.style.display = 'block';
+        if (editBtn) editBtn.classList.remove('active');
+        if (prevBtn) prevBtn.classList.add('active');
+        renderDrawerNotesPreview();
+    }
+}
+
+function renderDrawerNotesPreview() {
+    const textarea = document.getElementById('workspace-notes-textarea');
+    const preview = document.getElementById('workspace-notes-preview');
+    if (!textarea || !preview) return;
+
+    let raw = textarea.value;
+    if (window.marked) {
+        try {
+            preview.innerHTML = marked.parse(raw);
+        } catch (e) {
+            preview.innerHTML = `<pre>${escapeHtml(raw)}</pre>`;
+        }
+    } else {
+        let html = raw
+            .replace(/^### (.*$)/gim, '<h3 style="color:var(--accent-primary); margin-top:0.6rem;">$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2 style="border-bottom:1px solid var(--border-color); padding-bottom:0.2rem; margin-top:0.8rem;">$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1 style="margin-bottom:0.4rem;">$1</h1>')
+            .replace(/^\- \[ \] (.*$)/gim, '<div style="display:flex; align-items:center; gap:0.4rem;"><input type="checkbox" disabled> <span>$1</span></div>')
+            .replace(/^\- (.*$)/gim, '<li style="margin-left:1rem;">$1</li>')
+            .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>')
+            .replace(/`(.*?)`/gim, '<code style="background:var(--bg-tertiary); padding:0.15rem 0.35rem; border-radius:3px; font-family:var(--font-mono); font-size:0.82rem;">$1</code>');
+        preview.innerHTML = html;
+    }
+}
+
+function insertDrawerNoteText(text) {
+    const textarea = document.getElementById('workspace-notes-textarea');
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + text + textarea.value.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    handleWorkspaceNotesInput();
+}
+
+// Global shortcut: Ctrl+J toggles Key Notes drawer
+document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'j') {
+        e.preventDefault();
+        toggleWorkspaceKeyNotesDrawer();
+    }
+});
+
