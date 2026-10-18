@@ -2125,20 +2125,41 @@ html.sidebar-is-collapsed .sidebar-footer-info,
   border: 1px solid var(--border-color);
 }
 
-.console-run-copy-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.72rem;
-  transition: all 0.15s ease;
+.console-run-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
+.console-run-btn,
+.console-run-copy-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.console-run-btn:hover,
 .console-run-copy-btn:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+}
+
+.console-run-btn.console-run-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: #ef4444;
 }
 
 .console-run-body {

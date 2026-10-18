@@ -1798,7 +1798,10 @@ function renderOutput(stdout, stderr, durationMs, structuredResult, options = {}
                 <span class="console-run-badge badge-tech">${options.tech || activeTechnology}</span>
                 <span class="console-run-badge badge-time">${durationMs ? `${durationMs} ms` : ''}</span>
             </div>
-            <button type="button" class="console-run-copy-btn" title="Copy this output" onclick="copyRunOutput(this)">📋 Copy</button>
+            <div class="console-run-header-actions">
+                <button type="button" class="console-run-btn" title="Copy this output" onclick="copyRunOutput(this)">📋 Copy</button>
+                <button type="button" class="console-run-btn console-run-clear-btn" title="Clear this individual output" onclick="clearIndividualRun(this)">✕ Clear</button>
+            </div>
         `;
         entry.appendChild(header);
 
@@ -1841,7 +1844,10 @@ function renderOutput(stdout, stderr, durationMs, structuredResult, options = {}
                 <span class="console-run-badge badge-tech">${tech}${warmBadge}</span>
                 <span class="console-run-badge ${statusBadgeClass}">${statusText}</span>
             </div>
-            <button type="button" class="console-run-copy-btn" title="Copy this run output" onclick="copyRunOutput(this)">📋 Copy</button>
+            <div class="console-run-header-actions">
+                <button type="button" class="console-run-btn" title="Copy this run output" onclick="copyRunOutput(this)">📋 Copy</button>
+                <button type="button" class="console-run-btn console-run-clear-btn" title="Clear this individual output" onclick="clearIndividualRun(this)">✕ Clear</button>
+            </div>
         `;
         entry.appendChild(header);
 
@@ -1957,6 +1963,33 @@ async function copyRunOutput(btn) {
     }
 }
 window.copyRunOutput = copyRunOutput;
+
+// Clear individual run output from console
+function clearIndividualRun(btn) {
+    const entry = btn.closest('.console-run-entry');
+    if (!entry) return;
+    const container = document.getElementById('output-console');
+
+    // Smooth fade/removal animation
+    entry.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    entry.style.opacity = '0';
+    entry.style.transform = 'translateY(-6px)';
+
+    setTimeout(() => {
+        entry.remove();
+        if (container) {
+            const remaining = container.querySelectorAll('.console-run-entry');
+            if (remaining.length === 0) {
+                container.innerHTML = '<div class="console-placeholder" style="color:var(--text-muted); font-size:0.82rem;">Console cleared. Ready. Click Run to execute code.</div>';
+                const timerBadge = document.getElementById('output-duration-badge');
+                if (timerBadge) timerBadge.textContent = '';
+                consoleRunIndex = 0;
+            }
+        }
+        showToast('Run output cleared', 'info', 1200);
+    }, 200);
+}
+window.clearIndividualRun = clearIndividualRun;
 
 // Render System Design Preview
 function renderSystemDesignPreview(markdownText) {
