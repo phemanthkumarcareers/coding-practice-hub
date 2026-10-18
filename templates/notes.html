@@ -286,7 +286,7 @@
     });
 
     // Topic Category Switcher
-    function selectTopicCategory(cat) {
+    async function selectTopicCategory(cat) {
         activeCategory = cat;
         // Update tabs active state
         document.querySelectorAll('.topic-tab').forEach(btn => {
@@ -303,7 +303,13 @@
                     selectNote(matches[0].id);
                 }
             } else {
-                const confirmed = confirm(`No documents found in "${cat}". Would you like to create one now?`);
+                const confirmed = await showAppConfirm({
+                    title: 'Create Document',
+                    message: `No documents found in "${cat}". Would you like to create one now?`,
+                    confirmText: 'Create Document',
+                    isDanger: false,
+                    icon: '📝'
+                });
                 if (confirmed) {
                     createNewNote(cat, `${cat} - Document`);
                 }
