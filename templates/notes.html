@@ -23,23 +23,8 @@
             </button>
         </div>
 
-        <!-- Quick Search -->
-        <div class="confluence-sidebar-search">
-            <input type="text" id="notes-search-input" class="meta-input" placeholder="🔍 Search documents, tags, content..." oninput="filterNotesTree(this.value)">
-        </div>
-
-        <!-- Tree List of Notes -->
-        <div class="confluence-tree-container" id="notes-tree-list">
-            <div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem;">
-                Loading documents...
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Document Area -->
-    <main class="confluence-doc-pane" id="notes-doc-pane">
-        <!-- Horizontal Topic Tabs Bar (Clean tabs without 'Notes' suffix, no Daily Practice, no Q&A) -->
-        <div class="doc-topic-tabs-bar" id="doc-topic-tabs-bar">
+        <!-- Horizontal Topic Filter Tabs inside Sidebar -->
+        <div class="doc-topic-tabs-bar sidebar-topic-tabs" id="doc-topic-tabs-bar">
             <button type="button" class="topic-tab active" onclick="selectTopicCategory('all')" data-cat="all">
                 🌟 All
             </button>
@@ -71,6 +56,22 @@
                 🤝 HR & Behavioral
             </button>
         </div>
+
+        <!-- Quick Search -->
+        <div class="confluence-sidebar-search">
+            <input type="text" id="notes-search-input" class="meta-input" placeholder="🔍 Search documents, tags, content..." oninput="filterNotesTree(this.value)">
+        </div>
+
+        <!-- Tree List of Notes -->
+        <div class="confluence-tree-container" id="notes-tree-list">
+            <div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem;">
+                Loading documents...
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Document Area (Clean editor without top filter line) -->
+    <main class="confluence-doc-pane" id="notes-doc-pane">
 
         <!-- Document Header / Metadata -->
         <div class="confluence-doc-header">
@@ -271,6 +272,17 @@
                 }
             }
         });
+
+        // Enable horizontal scrolling with mouse wheel on sidebar topic tabs
+        const topicTabsBar = document.getElementById('doc-topic-tabs-bar');
+        if (topicTabsBar) {
+            topicTabsBar.addEventListener('wheel', (e) => {
+                if (e.deltaY !== 0) {
+                    e.preventDefault();
+                    topicTabsBar.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+        }
     });
 
     // Topic Category Switcher

@@ -4,60 +4,72 @@
 
 {% block main_class %}workspace-page{% endblock %}
 
-{% block sidebar_extra %}
-<!-- Daily Practice Targets in Left Sidebar -->
-<div class="sidebar-practice-section">
-    <div class="nav-section-label" style="display:flex; justify-content:space-between; align-items:center;">
-        <span>IDEs</span>
-        <span id="session-completion-badge" class="badge {% if session.completed_count == 6 %}badge-COMPLETED{% elif session.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
-            {{ session.completed_count }} / 6
-        </span>
-    </div>
-
-    <!-- Date Picker in Sidebar -->
-    <div class="sidebar-date-box" style="margin-bottom:0.6rem;">
-        <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" style="width:100%; font-size:0.8rem; padding:0.35rem 0.5rem;" onchange="window.location.href='/practice?date=' + this.value;">
-    </div>
-
-    <!-- 6 Practices in Sidebar -->
-    <ul class="sidebar-tech-list">
-        {% for tech in technologies %}
-            {% set p = (session.practices|selectattr('technology', 'equalto', tech)|first) %}
-            <li>
-                <button class="sidebar-tech-btn {% if tech == selected_tech %}active{% endif %}" data-tech="{{ tech }}" onclick="switchTech('{{ tech }}')" title="{{ tech }} Practice">
-                    <span class="tech-btn-icon">
-                        {% if tech == 'SQL' %}🗄️
-                        {% elif tech == 'Python' %}🐍
-                        {% elif tech == 'PySpark' %}⚡
-                        {% elif tech == 'Databricks' %}🧱
-                        {% elif tech == 'DSA' %}🧩
-                        {% elif tech == 'System Design' %}📐
-                        {% endif %}
-                    </span>
-                    <span class="tech-btn-name">{{ tech }}</span>
-                    <span class="tech-status-dot status-{{ (p.status if p else 'NOT-STARTED')|replace(' ', '-') }}" id="status-dot-{{ tech|lower|replace(' ', '-') }}" title="{{ p.status if p else 'NOT STARTED' }}"></span>
-                </button>
-            </li>
-        {% endfor %}
-        <!-- Key Notes Target in Left Sidebar -->
-        <li style="margin-top:0.35rem; border-top:1px solid var(--border-color); padding-top:0.35rem;">
-            <button type="button" class="sidebar-tech-btn btn-keynotes-tab" data-tech="Key Notes" onclick="toggleWorkspaceKeyNotesDrawer()" title="Documentation & Prep Notes Drawer (Ctrl+J)">
-                <span class="tech-btn-icon">📚</span>
-                <span class="tech-btn-name">Documentation</span>
-                <span class="badge" style="font-size:0.65rem; background:rgba(59,130,246,0.15); color:#60a5fa; margin-left:auto; padding:0.15rem 0.4rem;">Docs</span>
-            </button>
-        </li>
-    </ul>
-</div>
-{% endblock %}
-
 {% block content %}
-<!-- Top Header & Actions -->
-<div class="workspace-header">
-    <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-        <div class="active-tech-pill" id="header-active-tech-pill">
-            <span id="header-tech-icon">🗄️</span>
-            <span id="header-tech-name" style="font-weight:700;">SQL</span>
+<div class="practice-workspace-wrapper" id="practice-workspace-wrapper">
+    <!-- Dedicated IDEs Sidebar Beside App Sidebar (Matching Documentation Hub Architecture) -->
+    <aside class="practice-ide-sidebar" id="practice-ide-sidebar">
+        <!-- Sidebar Header with Completion Progress -->
+        <div class="practice-sidebar-header">
+            <div style="display:flex; align-items:center; gap:0.45rem;">
+                <span style="font-size:1.15rem;">💻</span>
+                <span style="font-weight:700; font-size:0.92rem; color:var(--text-primary);">IDEs</span>
+            </div>
+            <span id="session-completion-badge" class="badge {% if session.completed_count == 6 %}badge-COMPLETED{% elif session.completed_count > 0 %}badge-IN-PROGRESS{% else %}badge-NOT-STARTED{% endif %}">
+                {{ session.completed_count }} / 6
+            </span>
+        </div>
+
+        <!-- Date Picker in Practice Sidebar -->
+        <div class="practice-sidebar-date">
+            <label style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.25rem; display:block;">Session Date:</label>
+            <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" style="width:100%; font-size:0.8rem; padding:0.35rem 0.5rem;" onchange="window.location.href='/practice?date=' + this.value;">
+        </div>
+
+        <!-- IDEs Navigation List -->
+        <div class="practice-sidebar-menu">
+            <div class="tree-section-header" style="padding:0.2rem 0.4rem; margin-bottom:0.35rem;">
+                <span>Practice Targets</span>
+            </div>
+            <ul class="sidebar-tech-list">
+                {% for tech in technologies %}
+                    {% set p = (session.practices|selectattr('technology', 'equalto', tech)|first) %}
+                    <li>
+                        <button class="sidebar-tech-btn {% if tech == selected_tech %}active{% endif %}" data-tech="{{ tech }}" onclick="switchTech('{{ tech }}')" title="{{ tech }} Practice">
+                            <span class="tech-btn-icon">
+                                {% if tech == 'SQL' %}🗄️
+                                {% elif tech == 'Python' %}🐍
+                                {% elif tech == 'PySpark' %}⚡
+                                {% elif tech == 'Databricks' %}🧱
+                                {% elif tech == 'DSA' %}🧩
+                                {% elif tech == 'System Design' %}📐
+                                {% endif %}
+                            </span>
+                            <span class="tech-btn-name">{{ tech }}</span>
+                            <span class="tech-status-dot status-{{ (p.status if p else 'NOT-STARTED')|replace(' ', '-') }}" id="status-dot-{{ tech|lower|replace(' ', '-') }}" title="{{ p.status if p else 'NOT STARTED' }}"></span>
+                        </button>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <!-- Quick Navigation to Documentation -->
+            <div style="margin-top:0.8rem; padding-top:0.6rem; border-top:1px solid var(--border-subtle);">
+                <button type="button" class="sidebar-tech-btn btn-keynotes-tab" data-tech="Key Notes" onclick="toggleWorkspaceKeyNotesDrawer()" title="Documentation & Prep Notes Drawer (Ctrl+J)">
+                    <span class="tech-btn-icon">📚</span>
+                    <span class="tech-btn-name">Documentation</span>
+                    <span class="badge" style="font-size:0.65rem; background:rgba(59,130,246,0.15); color:#60a5fa; margin-left:auto; padding:0.15rem 0.4rem;">Docs</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Practice Area -->
+    <main class="practice-main-pane" id="practice-main-pane">
+        <!-- Top Header & Actions -->
+        <div class="workspace-header">
+            <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+                <div class="active-tech-pill" id="header-active-tech-pill">
+                    <span id="header-tech-icon">🗄️</span>
+                    <span id="header-tech-name" style="font-weight:700;">SQL</span>
             <span id="header-tech-status-badge" class="badge badge-NOT-STARTED" style="font-size:0.7rem; padding:0.15rem 0.45rem;">NOT STARTED</span>
         </div>
 
@@ -345,6 +357,8 @@
             <div style="color:var(--text-muted); padding:1rem;">Architecture diagrams and notes will render live here.</div>
         </div>
     </div>
+</div>
+    </main>
 </div>
 
 <!-- Execution Attempts History Modal -->
