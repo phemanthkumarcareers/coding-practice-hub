@@ -24,6 +24,8 @@ def create_app():
     app = Flask(__name__)
     app.config["SECRET_KEY"] = "coding-practice-hub-secret-key-2026"
     app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024 # 100MB max dataset upload
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.jinja_env.auto_reload = True
 
     # Register blueprints
     app.register_blueprint(dashboard_bp)

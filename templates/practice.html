@@ -382,7 +382,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/practice.js') }}?v=2.5"></script>
+<script src="{{ url_for('static', filename='js/practice.js') }}?v=2.6"></script>
 <script>
     const sessionData = {{ session|tojson }};
     const initialTech = "{{ selected_tech }}";
