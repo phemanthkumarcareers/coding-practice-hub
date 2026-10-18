@@ -435,23 +435,7 @@
 
         // Load Content into Word Document Sheet
         const sheet = document.getElementById('word-document-sheet');
-        if (sheet) {
-            let content = note.content || '';
-            // If the content is markdown formatted, convert to rich HTML for Word editor
-            if (content.startsWith('#') || content.startsWith('>') || content.includes('```') || !content.includes('<')) {
-                if (window.marked) {
-                    try {
-                        sheet.innerHTML = marked.parse(content);
-                    } catch (e) {
-                        sheet.innerHTML = `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
-                    }
-                } else {
-                    sheet.innerHTML = `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
-                }
-            } else {
-                sheet.innerHTML = content;
-            }
-        }
+        renderNoteContentToSheet(sheet, note.content || '');
 
         updatePinBtnUI(Boolean(note.is_pinned));
         renderNotesTree(document.getElementById('notes-search-input')?.value || '');
@@ -636,6 +620,64 @@
     function updateAutosaveIndicator(text) {
         const el = document.getElementById('note-autosave-indicator');
         if (el) el.textContent = text;
+    }
+
+    function transformCalloutsInHtml(html) {
+        if (!html) return '';
+        return html
+            .replace(/<blockquote>\s*<p>\[!NOTE\]<br>([\s\S]*?)<\/p>\s*<\/blockquote>/gi,
+                '<div class="doc-callout callout-note" contenteditable="false"><div class="callout-header">ℹ️ NOTE</div><div class="callout-body" contenteditable="true"><p>$1</p></div></div>')
+            .replace(/<blockquote>\s*<p>\[!TIP\]<br>([\s\S]*?)<\/p>\s*<\/blockquote>/gi,
+                '<div class="doc-callout callout-tip" contenteditable="false"><div class="callout-header">💡 TIP</div><div class="callout-body" contenteditable="true"><p>$1</p></div></div>')
+            .replace(/<blockquote>\s*<p>\[!WARNING\]<br>([\s\S]*?)<\/p>\s*<\/blockquote>/gi,
+                '<div class="doc-callout callout-warning" contenteditable="false"><div class="callout-header">⚠️ WARNING</div><div class="callout-body" contenteditable="true"><p>$1</p></div></div>')
+            .replace(/<blockquote>\s*<p>\[!IMPORTANT\]<br>([\s\S]*?)<\/p>\s*<\/blockquote>/gi,
+                '<div class="doc-callout callout-important" contenteditable="false"><div class="callout-header">⚡ IMPORTANT</div><div class="callout-body" contenteditable="true"><p>$1</p></div></div>');
+    }
+
+    function renderNoteContentToSheet(sheet, rawContent) {
+        if (!sheet) return;
+        if (!rawContent || !rawContent.trim()) {
+            sheet.innerHTML = '<p><br></p>';
+            return;
+        }
+
+        let content = rawContent.trim();
+
+        // Check if content has markdown indicators (headings, tables, code fences, blockquotes, list markers)
+        const hasMarkdownIndicators = content.startsWith('#') ||
+                                      content.startsWith('>') ||
+                                      content.startsWith('```') ||
+                                      content.includes('\n#') ||
+                                      content.includes('\n```') ||
+                                      content.includes('\n|') ||
+                                      content.startsWith('|') ||
+                                      content.startsWith('<p>#') ||
+                                      content.startsWith('<p>&gt;') ||
+                                      content.startsWith('<p>|');
+
+        const isPureHtml = (content.includes('<h1') || content.includes('<h2') || content.includes('<h3')) &&
+                           !content.includes('\n|') && !content.includes('\n```') && !content.startsWith('<p>#');
+
+        if (hasMarkdownIndicators && !isPureHtml && window.marked) {
+            let cleanMd = content;
+            if (cleanMd.startsWith('<p>') || cleanMd.includes('<br>')) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = cleanMd;
+                cleanMd = tempDiv.innerText || tempDiv.textContent || cleanMd;
+            }
+            try {
+                let parsedHtml = marked.parse(cleanMd);
+                parsedHtml = transformCalloutsInHtml(parsedHtml);
+                sheet.innerHTML = parsedHtml;
+                return;
+            } catch (e) {
+                console.warn('Marked parsing error:', e);
+            }
+        }
+
+        // Direct HTML rendering
+        sheet.innerHTML = transformCalloutsInHtml(content);
     }
 
     // View / Edit Mode Switcher

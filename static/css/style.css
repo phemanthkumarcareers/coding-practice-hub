@@ -2754,6 +2754,7 @@ html[data-theme="light"] .ripple-effect {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  flex-shrink: 0;
 }
 
 .confluence-header-top {
@@ -2845,6 +2846,7 @@ html[data-theme="light"] .ripple-effect {
   align-items: center;
   gap: 0.4rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
   user-select: none;
 }
 
@@ -2898,23 +2900,28 @@ html[data-theme="light"] .ripple-effect {
 .word-canvas-wrapper {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg-primary);
-  padding: 2rem 1.5rem;
+  padding: 2rem 1.5rem 6rem 1.5rem;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   min-height: 0;
-  cursor: text;
+  cursor: default;
 }
 
 .word-document-sheet {
   width: 100%;
-  max-width: 860px;
-  min-height: calc(100vh - 220px);
+  max-width: 880px;
+  min-height: calc(100vh - 260px);
+  height: auto;
+  flex-shrink: 0;
+  box-sizing: border-box;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px var(--border-subtle);
-  padding: 2.5rem 3rem;
+  padding: 2.5rem 3rem 4rem 3rem;
   outline: none;
   font-size: 0.98rem;
   line-height: 1.7;
@@ -2922,6 +2929,8 @@ html[data-theme="light"] .ripple-effect {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   cursor: text;
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin-bottom: 2rem;
 }
 
 .word-document-sheet:focus {
@@ -2959,6 +2968,14 @@ html[data-theme="light"] .ripple-effect {
   color: var(--text-primary);
 }
 
+.word-document-sheet h4 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-top: 0.8rem;
+  margin-bottom: 0.35rem;
+  color: var(--text-primary);
+}
+
 .word-document-sheet p {
   margin-top: 0.4rem;
   margin-bottom: 0.6rem;
@@ -2972,26 +2989,48 @@ html[data-theme="light"] .ripple-effect {
   margin-bottom: 0.25rem;
 }
 
-/* Word Document Tables */
+/* Checkbox lists and items */
+.word-document-sheet input[type="checkbox"],
+.word-document-sheet input[type="radio"] {
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+}
+
+.word-document-sheet .task-list-item {
+  list-style-type: none;
+  margin-left: -1rem;
+}
+
+/* Word Document Tables (both custom .doc-table and markdown <table>) */
+.word-document-sheet table,
 .doc-table {
   width: 100%;
   border-collapse: collapse;
   margin: 1.2rem 0;
   font-size: 0.92rem;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
-.doc-table th, .doc-table td {
+.word-document-sheet th,
+.word-document-sheet td,
+.doc-table th,
+.doc-table td {
   border: 1px solid var(--border-color);
-  padding: 0.6rem 0.85rem;
+  padding: 0.65rem 0.9rem;
   text-align: left;
 }
 
+.word-document-sheet th,
 .doc-table th {
   background: var(--bg-tertiary);
   font-weight: 600;
   color: var(--text-primary);
 }
 
+.word-document-sheet tr:hover td,
 .doc-table tr:hover td {
   background: var(--bg-hover);
 }
@@ -3018,7 +3057,8 @@ html[data-theme="light"] .ripple-effect {
   outline: none;
 }
 
-/* Code Blocks & Inline Code */
+/* Code Blocks & Inline Code (both custom classes and markdown <pre>/<code>) */
+.word-document-sheet code:not(pre code),
 .doc-inline-code {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
@@ -3029,11 +3069,12 @@ html[data-theme="light"] .ripple-effect {
   color: var(--accent-primary);
 }
 
+.word-document-sheet pre,
 .doc-code-block {
   background: var(--bg-tertiary);
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  padding: 1rem 1.2rem;
+  padding: 1rem 1.25rem;
   font-family: var(--font-mono);
   font-size: 0.88rem;
   line-height: 1.55;
@@ -3041,13 +3082,33 @@ html[data-theme="light"] .ripple-effect {
   overflow-x: auto;
   margin: 1.2rem 0;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
+.word-document-sheet pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+}
+
+.word-document-sheet hr,
 .doc-hr {
   border: none;
   height: 1px;
   background: var(--border-color);
   margin: 1.5rem 0;
+}
+
+/* Blockquotes / Callout conversion */
+.word-document-sheet blockquote {
+  border-left: 4px solid var(--accent-primary);
+  background: rgba(99, 102, 241, 0.08);
+  border-radius: 0 8px 8px 0;
+  padding: 0.8rem 1.2rem;
+  margin: 1.2rem 0;
+  color: var(--text-primary);
 }
 
 /* Document Callouts */
