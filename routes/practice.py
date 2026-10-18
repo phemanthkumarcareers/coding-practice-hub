@@ -217,143 +217,167 @@ def run_practice():
     active_db = data.get("active_db", "main")
     files = data.get("files")  # Multi-file support: {"main.py": "...", "utils.py": "..."}
     entry_file = data.get("entry_file", "main.py")
+    stdin_input = data.get("stdin_input", "")
+    pyspark_mode = data.get("pyspark_mode") or data.get("extra_metadata", {}).get("pyspark_mode", "spark")
 
     if not practice_id:
         return jsonify({"success": False, "error": "Practice ID required"}), 400
 
-    output_text = ""
-    error_text = ""
-    run_status = "SUCCESS"
-    duration_ms = 0
-    structured_result = None
-    updated_schemas = None
+    try:
+        output_text = ""
+        error_text = ""
+        run_status = "SUCCESS"
+        duration_ms = 0
+        structured_result = None
+        updated_schemas = None
+        res = None
 
-    full_code = data.get("code", "")
-    if files and isinstance(files, dict) and entry_file in files:
-        full_code = files[entry_file]
+        full_code = data.get("code", "")
+        if files and isinstance(files, dict) and entry_file in files:
+            full_code = files[entry_file]
 
-    selected_code = data.get("selected_code")
-    if selected_code and selected_code.strip():
-        code_to_run = selected_code.strip()
-    else:
-        code_to_run = full_code
-
-    if technology == "SQL":
-        duckdb_service.sync_dataset_views()
-        res = duckdb_service.execute_query(code_to_run, active_db=active_db)
-        run_status = res["status"]
-        duration_ms = res["duration_ms"]
-        structured_result = res
-        if res["error"]:
-            error_text = res["error"]
-            output_text = ""
-        else:
-            output_text = f"Executed in {duration_ms} ms. Rows returned: {res['row_count']}"
-        
-        # Refresh schemas so newly created tables/views show up immediately
-        updated_schemas = duckdb_service.get_explorer_schema()
-
-    elif technology in ("Python", "DSA"):
+        selected_code = data.get("selected_code")
         if selected_code and selected_code.strip():
-            res = code_executor.execute_python(code_to_run, tech=technology)
-        elif files and isinstance(files, dict) and len(files) > 0:
-            res = code_executor.execute_python_project(files, entry_file=entry_file, tech=technology)
+            code_to_run = selected_code.strip()
         else:
-            res = code_executor.execute_python(code_to_run, tech=technology)
-        run_status = res["status"]
-        duration_ms = res["duration_ms"]
-        output_text = res["stdout"]
-        error_text = res["stderr"]
+            code_to_run = full_code
 
-    elif technology == "PySpark":
-        res = pyspark_service.execute_pyspark(code_to_run)
-        run_status = res["status"]
-        duration_ms = res["duration_ms"]
-        output_text = res["stdout"]
-        error_text = res["stderr"]
-
-    elif technology == "Databricks":
-        subtype = data.get("extra_metadata", {}).get("subtype", "Python")
-        if subtype == "SQL":
+        if technology == "SQL":
             duckdb_service.sync_dataset_views()
             res = duckdb_service.execute_query(code_to_run, active_db=active_db)
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             structured_result = res
-            error_text = res.get("error", "")
-            output_text = f"Databricks SQL simulated on DuckDB. Rows: {res['row_count']}"
-            updated_schemas = duckdb_service.get_explorer_schema()
-        elif subtype in ["PySpark", "Structured Streaming", "Delta Lake"]:
-            res = pyspark_service.execute_pyspark(code_to_run)
-            run_status = res["status"]
-            duration_ms = res["duration_ms"]
-            output_text = res["stdout"]
-            error_text = res["stderr"]
-        else:
-            if selected_code and selected_code.strip():
-                res = code_executor.execute_python(code_to_run, tech="databricks")
-            elif files and isinstance(files, dict) and len(files) > 0:
-                res = code_executor.execute_python_project(files, entry_file=entry_file, tech="databricks")
+            if res["error"]:
+                error_text = res["error"]
+                output_text = ""
             else:
-                res = code_executor.execute_python(code_to_run, tech="databricks")
+                output_text = f"Executed in {duration_ms} ms. Rows returned: {res['row_count']}"
+            
+            # Refresh schemas so newly created tables/views show up immediately
+            updated_schemas = duckdb_service.get_explorer_schema()
+
+        elif technology in ("Python", "DSA"):
+            if selected_code and selected_code.strip():
+                res = code_executor.execute_python(code_to_run, tech=technology, stdin_input=stdin_input)
+            elif files and isinstance(files, dict) and len(files) > 0:
+                res = code_executor.execute_python_project(files, entry_file=entry_file, tech=technology, stdin_input=stdin_input)
+            else:
+                res = code_executor.execute_python(code_to_run, tech=technology, stdin_input=stdin_input)
             run_status = res["status"]
             duration_ms = res["duration_ms"]
             output_text = res["stdout"]
             error_text = res["stderr"]
 
-    else:
-        output_text = "System Design workspace updated."
-        run_status = "SUCCESS"
+        elif technology == "PySpark":
+            # Two options: 'spark' (Full SparkSession) or 'python' (Python Fast Mode / Interview / Mock)
+            if pyspark_mode == "python":
+                if selected_code and selected_code.strip():
+                    res = code_executor.execute_python(code_to_run, tech="pyspark", stdin_input=stdin_input)
+                elif files and isinstance(files, dict) and len(files) > 0:
+                    res = code_executor.execute_python_project(files, entry_file=entry_file, tech="pyspark", stdin_input=stdin_input)
+                else:
+                    res = code_executor.execute_python(code_to_run, tech="pyspark", stdin_input=stdin_input)
+                res["session_mode"] = "PYTHON_FAST"
+            else:
+                res = pyspark_service.execute_pyspark(code_to_run)
 
-    # Persist execution snapshot in database
-    conn = get_connection()
-    cursor = conn.cursor()
+            run_status = res["status"]
+            duration_ms = res["duration_ms"]
+            output_text = res["stdout"]
+            error_text = res["stderr"]
 
-    cursor.execute("""
-        INSERT INTO executions (practice_id, code_snapshot, output, error_output, status, duration_ms)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (practice_id, code_to_run, output_text, error_text, run_status, duration_ms))
+        elif technology == "Databricks":
+            subtype = data.get("extra_metadata", {}).get("subtype", "Python")
+            if subtype == "SQL":
+                duckdb_service.sync_dataset_views()
+                res = duckdb_service.execute_query(code_to_run, active_db=active_db)
+                run_status = res["status"]
+                duration_ms = res["duration_ms"]
+                structured_result = res
+                error_text = res.get("error", "")
+                output_text = f"Databricks SQL simulated on DuckDB. Rows: {res['row_count']}"
+                updated_schemas = duckdb_service.get_explorer_schema()
+            elif subtype in ["PySpark", "Structured Streaming", "Delta Lake"]:
+                res = pyspark_service.execute_pyspark(code_to_run)
+                run_status = res["status"]
+                duration_ms = res["duration_ms"]
+                output_text = res["stdout"]
+                error_text = res["stderr"]
+            else:
+                if selected_code and selected_code.strip():
+                    res = code_executor.execute_python(code_to_run, tech="databricks", stdin_input=stdin_input)
+                elif files and isinstance(files, dict) and len(files) > 0:
+                    res = code_executor.execute_python_project(files, entry_file=entry_file, tech="databricks", stdin_input=stdin_input)
+                else:
+                    res = code_executor.execute_python(code_to_run, tech="databricks", stdin_input=stdin_input)
+                run_status = res["status"]
+                duration_ms = res["duration_ms"]
+                output_text = res["stdout"]
+                error_text = res["stderr"]
 
-    cursor.execute("SELECT status FROM practices WHERE id = ?", (practice_id,))
-    cur_p = cursor.fetchone()
-    new_status = cur_p["status"]
-    if cur_p["status"] != "COMPLETED":
-        new_status = run_status
+        else:
+            output_text = "System Design workspace updated."
+            run_status = "SUCCESS"
 
-    cursor.execute("""
-        UPDATE practices
-        SET code = ?,
-            latest_output = ?,
-            latest_error = ?,
-            duration_ms = ?,
-            status = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    """, (full_code, output_text, error_text, duration_ms, new_status, practice_id))
+        # Persist execution snapshot in database
+        conn = get_connection()
+        cursor = conn.cursor()
 
-    cursor.execute("SELECT session_id FROM practices WHERE id = ?", (practice_id,))
-    s_row = cursor.fetchone()
-    conn.commit()
-    conn.close()
+        cursor.execute("""
+            INSERT INTO executions (practice_id, code_snapshot, output, error_output, status, duration_ms)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (practice_id, code_to_run, output_text, error_text, run_status, duration_ms))
 
-    if s_row:
-        update_session_completion_status(s_row["session_id"])
+        cursor.execute("SELECT status FROM practices WHERE id = ?", (practice_id,))
+        cur_p = cursor.fetchone()
+        new_status = cur_p["status"] if cur_p else "NOT STARTED"
+        if cur_p and cur_p["status"] != "COMPLETED":
+            new_status = run_status
 
-    session_mode = None
-    if technology == "PySpark":
-        session_mode = res.get("session_mode", "WARM")
+        cursor.execute("""
+            UPDATE practices
+            SET code = ?,
+                latest_output = ?,
+                latest_error = ?,
+                duration_ms = ?,
+                status = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (full_code, output_text, error_text, duration_ms, new_status, practice_id))
 
-    return jsonify({
-        "success": True,
-        "status": run_status,
-        "duration_ms": duration_ms,
-        "output": output_text,
-        "error": error_text,
-        "structured_result": structured_result,
-        "practice_status": new_status,
-        "updated_schemas": updated_schemas,
-        "session_mode": session_mode
-    })
+        cursor.execute("SELECT session_id FROM practices WHERE id = ?", (practice_id,))
+        s_row = cursor.fetchone()
+        conn.commit()
+        conn.close()
+
+        if s_row:
+            update_session_completion_status(s_row["session_id"])
+
+        session_mode = res.get("session_mode") if res else None
+
+        return jsonify({
+            "success": True,
+            "status": run_status,
+            "duration_ms": duration_ms,
+            "output": output_text,
+            "error": error_text,
+            "structured_result": structured_result,
+            "practice_status": new_status,
+            "updated_schemas": updated_schemas,
+            "session_mode": session_mode
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "status": "FAILED",
+            "duration_ms": 0,
+            "output": "",
+            "error": f"Execution request error: {str(e)}",
+            "practice_status": "FAILED"
+        }), 200
 
 @practice_bp.route("/api/practice/executions/<int:practice_id>")
 def get_executions(practice_id):

@@ -75,6 +75,15 @@
             </button>
         </div>
 
+        <!-- Inline Execution Mode Selector for PySpark (Spark Engine vs. Python Fast Mode) -->
+        <div id="pyspark-mode-toolbar" class="header-pyspark-selector" style="display:none; align-items:center; gap:0.4rem;">
+            <span style="font-size:0.78rem; font-weight:600; color:var(--text-secondary);">Mode:</span>
+            <select id="pyspark-exec-mode-select" class="meta-select" style="padding:0.25rem 0.5rem; font-size:0.8rem; min-width:185px;" onchange="onPySparkModeChange(this.value)" title="Choose execution engine: Full SparkSession with JVM or Fast Python runner for interview questions">
+                <option value="spark" selected>⚡ Spark Engine (SparkSession)</option>
+                <option value="python">🐍 Python Fast Mode (Interview / Mock)</option>
+            </select>
+        </div>
+
         <div id="autosave-indicator" class="autosave-status">
             <span>All changes saved</span>
         </div>
@@ -290,10 +299,22 @@
                 <span id="output-duration-badge" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);"></span>
             </div>
             <div class="console-header-actions">
+                <button type="button" id="btn-toggle-custom-input" class="console-mini-btn" onclick="toggleCustomInputDrawer()" title="Provide custom input data / standard input (stdin) for execution">📥 Input</button>
                 <button type="button" class="console-mini-btn" onclick="copyConsoleOutput()" title="Copy Console Content (Ctrl+C)">📋 Copy</button>
                 <button type="button" class="console-mini-btn" onclick="clearConsoleOutput()" title="Clear Console Log">🧹 Clear</button>
                 <button type="button" class="console-mini-btn console-close-btn" onclick="hideConsolePane()" title="Remove/Hide Console Pane">&times;</button>
             </div>
+        </div>
+
+        <!-- Collapsible Custom Input Drawer (stdin / test cases) -->
+        <div id="custom-input-drawer" style="display:none; padding:0.45rem 0.75rem; background:var(--bg-secondary); border-bottom:1px solid var(--border-color);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.25rem;">
+                <span style="font-size:0.75rem; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:0.35rem;">
+                    <span>📥</span> Test Input / Standard Input (stdin):
+                </span>
+                <span style="font-size:0.72rem; color:var(--text-muted);">Passed to input() or sys.stdin during Python / PySpark execution</span>
+            </div>
+            <textarea id="custom-stdin-input" class="meta-input" style="width:100%; height:55px; font-family:var(--font-mono); font-size:0.82rem; resize:vertical; padding:0.35rem 0.5rem;" placeholder="Type or paste input here (e.g. sample rows, test case strings, or lines for input())..."></textarea>
         </div>
 
         <!-- Standard Output (for SQL, Python, PySpark, Databricks, DSA) -->

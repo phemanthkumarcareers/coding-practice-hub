@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import time
@@ -29,11 +30,40 @@ class CodeExecutor:
         except Exception as e:
             print(f"Error syncing dataset files to workspace: {e}")
 
-    def execute_python_project(self, files: dict, entry_file: str = "main.py", tech: str = "python", custom_timeout: int = None) -> dict:
+    def _build_env(self) -> dict:
+        """Constructs subprocess environment with Java and Spark paths configured."""
+        env = os.environ.copy()
+        try:
+            java_home = get_setting("java_home") or os.environ.get("JAVA_HOME", "")
+            if not java_home:
+                from config import detect_java_home
+                java_home = detect_java_home() or ""
+            if java_home and Path(java_home).exists():
+                env["JAVA_HOME"] = str(java_home)
+                java_bin = str(Path(java_home) / "bin")
+                env["PATH"] = java_bin + os.pathsep + env.get("PATH", "")
+
+            spark_home = get_setting("spark_home") or os.environ.get("SPARK_HOME", "")
+            if not spark_home:
+                from config import detect_spark_home
+                spark_home = detect_spark_home() or ""
+            if spark_home and Path(spark_home).exists():
+                env["SPARK_HOME"] = str(spark_home)
+
+            py_exec = get_setting("python_executable", sys.executable) or sys.executable
+            env["PYSPARK_PYTHON"] = py_exec
+            env["PYSPARK_DRIVER_PYTHON"] = py_exec
+            env["PYTHONUNBUFFERED"] = "1"
+        except Exception as e:
+            print(f"Notice: building code executor env: {e}")
+        return env
+
+    def execute_python_project(self, files: dict, entry_file: str = "main.py", tech: str = "python", custom_timeout: int = None, stdin_input: str = None) -> dict:
         """
         Executes a multi-file Python project.
         files: dict mapping filename -> code content, e.g. {"main.py": "...", "utils.py": "..."}
         entry_file: the file to execute (defaults to "main.py")
+        stdin_input: optional text to feed via standard input (stdin) for input() calls
         """
         start_time = time.time()
         timeout = custom_timeout or int(get_setting("execution_timeout", DEFAULT_SETTINGS["execution_timeout"]))
@@ -69,13 +99,15 @@ class CodeExecutor:
                 entry_file = py_files[0] if py_files else "main.py"
                 target_script = target_dir / entry_file
 
-            # Run in isolated subprocess with cwd set to project folder
+            # Run in isolated subprocess with cwd set to project folder and full environment
             proc = subprocess.run(
                 [python_bin, str(target_script)],
+                input=stdin_input if stdin_input is not None else "",
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                cwd=str(target_dir)
+                cwd=str(target_dir),
+                env=self._build_env()
             )
 
             result["stdout"] = proc.stdout
@@ -101,8 +133,8 @@ class CodeExecutor:
 
         return result
 
-    def execute_python(self, code: str, tech: str = "python", custom_timeout: int = None) -> dict:
-        """Backward-compatible single-file execution wrapper."""
-        return self.execute_python_project({"main.py": code}, entry_file="main.py", tech=tech, custom_timeout=custom_timeout)
+    def execute_python(self, code: str, tech: str = "python", custom_timeout: int = None, stdin_input: str = None) -> dict:
+        """Backward-compatible single-file execution wrapper with stdin support."""
+        return self.execute_python_project({"main.py": code}, entry_file="main.py", tech=tech, custom_timeout=custom_timeout, stdin_input=stdin_input)
 
 code_executor = CodeExecutor()

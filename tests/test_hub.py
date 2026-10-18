@@ -109,6 +109,12 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(res_timeout["status"], "FAILED")
         self.assertTrue(res_timeout["timed_out"])
 
+        # 4. Standard input (stdin) handling
+        code_stdin = "name = input()\nprint('Hello ' + name)"
+        res_stdin = code_executor.execute_python(code_stdin, tech="python", stdin_input="Antigravity")
+        self.assertEqual(res_stdin["status"], "SUCCESS")
+        self.assertIn("Hello Antigravity", res_stdin["stdout"])
+
     def test_05_duckdb_sql_execution(self):
         # Test basic query
         res = duckdb_service.execute_query("SELECT 100 AS num, 'DuckDB' AS engine;")
@@ -530,6 +536,45 @@ class TestCodingPracticeHub(unittest.TestCase):
                     backup_file.unlink()
                 except Exception:
                     pass
+
+    def test_24_pyspark_modes_and_custom_input(self):
+        # 1. Fetch or create a PySpark practice in the test session
+        conn = get_connection()
+        pyspark_p = conn.execute("SELECT id FROM practices WHERE technology = 'PySpark' LIMIT 1").fetchone()
+        conn.close()
+        self.assertIsNotNone(pyspark_p)
+        p_id = pyspark_p["id"]
+
+        # 2. Test PySpark in Python Fast Mode (instant execution without SparkSession)
+        py_code = "data = [1, 2, 3, 4]\nprint('SUM:', sum(data))"
+        payload_fast = {
+            "id": p_id,
+            "technology": "PySpark",
+            "pyspark_mode": "python",
+            "code": py_code
+        }
+        res_fast = self.client.post("/api/practice/run", json=payload_fast)
+        self.assertEqual(res_fast.status_code, 200)
+        data_fast = res_fast.get_json()
+        self.assertTrue(data_fast["success"])
+        self.assertEqual(data_fast["status"], "SUCCESS")
+        self.assertEqual(data_fast["session_mode"], "PYTHON_FAST")
+        self.assertIn("SUM: 10", data_fast["output"])
+
+        # 3. Test PySpark Python Fast Mode with custom stdin input
+        stdin_code = "line = input()\nprint('INTERVIEW INPUT:', line)"
+        payload_stdin = {
+            "id": p_id,
+            "technology": "PySpark",
+            "pyspark_mode": "python",
+            "code": stdin_code,
+            "stdin_input": "department_id=42"
+        }
+        res_stdin = self.client.post("/api/practice/run", json=payload_stdin)
+        self.assertEqual(res_stdin.status_code, 200)
+        data_stdin = res_stdin.get_json()
+        self.assertTrue(data_stdin["success"])
+        self.assertIn("INTERVIEW INPUT: department_id=42", data_stdin["output"])
 
 if __name__ == "__main__":
     unittest.main()

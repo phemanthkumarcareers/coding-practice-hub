@@ -1261,6 +1261,8 @@ function setupSpecializedUI(tech, extra) {
     const systemDesignPreview = document.getElementById('system-design-preview-container');
     const standardOutput = document.getElementById('standard-output-container');
     const sqlDbToolbar = document.getElementById('sql-db-toolbar');
+    const pysparkModeToolbar = document.getElementById('pyspark-mode-toolbar');
+    const pysparkModeSelect = document.getElementById('pyspark-exec-mode-select');
 
     // Default hide specialized panels
     if (dsaPanel) dsaPanel.style.display = 'none';
@@ -1268,16 +1270,32 @@ function setupSpecializedUI(tech, extra) {
     if (systemDesignPreview) systemDesignPreview.style.display = 'none';
     if (standardOutput) standardOutput.style.display = 'flex';
     if (sqlDbToolbar) sqlDbToolbar.style.display = 'none';
+    if (pysparkModeToolbar) pysparkModeToolbar.style.display = 'none';
 
     // Toggle Spark session reset button and trigger background warm-up
     const sparkRestartBtn = document.getElementById('btn-spark-restart');
-    if (sparkRestartBtn) {
-        if (tech === 'PySpark' || (tech === 'Databricks' && (!extra.subtype || extra.subtype !== 'SQL'))) {
-            sparkRestartBtn.style.display = 'inline-block';
-            fetch('/api/pyspark/warmup', { method: 'POST' }).catch(() => {});
-        } else {
-            sparkRestartBtn.style.display = 'none';
+    const currentPySparkMode = extra.pyspark_mode || 'spark';
+
+    if (tech === 'PySpark') {
+        if (pysparkModeToolbar) pysparkModeToolbar.style.display = 'inline-flex';
+        if (pysparkModeSelect) pysparkModeSelect.value = currentPySparkMode;
+        if (sparkRestartBtn) {
+            sparkRestartBtn.style.display = currentPySparkMode === 'spark' ? 'inline-block' : 'none';
+            if (currentPySparkMode === 'spark') {
+                fetch('/api/pyspark/warmup', { method: 'POST' }).catch(() => {});
+            }
         }
+    } else if (tech === 'Databricks') {
+        if (sparkRestartBtn) {
+            if (!extra.subtype || extra.subtype !== 'SQL') {
+                sparkRestartBtn.style.display = 'inline-block';
+                fetch('/api/pyspark/warmup', { method: 'POST' }).catch(() => {});
+            } else {
+                sparkRestartBtn.style.display = 'none';
+            }
+        }
+    } else {
+        if (sparkRestartBtn) sparkRestartBtn.style.display = 'none';
     }
 
     if (tech === 'DSA') {
@@ -1314,6 +1332,8 @@ function gatherExtraMetadata() {
         extra.test_cases = document.getElementById('dsa-test-cases')?.value || '';
     } else if (activeTechnology === 'Databricks') {
         extra.subtype = document.getElementById('databricks-subtype')?.value || 'PySpark';
+    } else if (activeTechnology === 'PySpark') {
+        extra.pyspark_mode = document.getElementById('pyspark-exec-mode-select')?.value || 'spark';
     }
 
     // Persist multi-file project across all technologies
@@ -1677,6 +1697,11 @@ async function runCurrentCode(runAll = false) {
         showToast(`Running ${executionNote}`, 'info', 1800);
     }
 
+    const pysparkModeSelect = document.getElementById('pyspark-exec-mode-select');
+    const pysparkMode = (activeTechnology === 'PySpark' && pysparkModeSelect) ? pysparkModeSelect.value : 'spark';
+    const customStdin = document.getElementById('custom-stdin-input');
+    const stdinInput = customStdin ? customStdin.value : '';
+
     const payload = {
         id: activePracticeId,
         technology: activeTechnology,
@@ -1685,7 +1710,9 @@ async function runCurrentCode(runAll = false) {
         active_db: activeDatabaseName,
         files: currentProjectFiles,
         entry_file: activeFileName || Object.keys(currentProjectFiles)[0] || '',
-        extra_metadata: gatherExtraMetadata()
+        extra_metadata: gatherExtraMetadata(),
+        pyspark_mode: pysparkMode,
+        stdin_input: stdinInput
     };
 
     try {
@@ -1718,7 +1745,12 @@ async function runCurrentCode(runAll = false) {
         }
 
         if (data.status === 'SUCCESS') {
-            const modeText = data.session_mode === 'WARM' ? ' • ⚡ Warm Spark' : '';
+            let modeText = '';
+            if (data.session_mode === 'PYTHON_FAST') {
+                modeText = ' • 🐍 Python Fast Mode';
+            } else if (data.session_mode === 'WARM') {
+                modeText = ' • ⚡ Warm Spark';
+            }
             showToast(`Execution succeeded (${data.duration_ms}ms${modeText})`, 'success');
         } else {
             showToast('Execution finished with errors', 'error');
@@ -1726,7 +1758,11 @@ async function runCurrentCode(runAll = false) {
 
     } catch (err) {
         console.error('Run error:', err);
-        renderOutput('', `Client-side execution request error: ${err.message}`, 0, null, {
+        let errorMsg = `Client-side execution request error: ${err.message}`;
+        if (err.message && err.message.includes('Failed to fetch')) {
+            errorMsg = `Connection error: Failed to reach the local practice server (http://127.0.0.1:5000).\nPlease make sure the Python application server is running.`;
+        }
+        renderOutput('', errorMsg, 0, null, {
             append: true,
             status: 'FAILED',
             tech: activeTechnology
@@ -1739,6 +1775,51 @@ async function runCurrentCode(runAll = false) {
         }
     }
 }
+
+// Handle switching execution mode in PySpark editor
+function onPySparkModeChange(mode) {
+    const sparkRestartBtn = document.getElementById('btn-spark-restart');
+    const p = practicesMap[activePracticeId];
+    if (p) {
+        let extra = {};
+        try {
+            extra = typeof p.extra_metadata === 'string' ? JSON.parse(p.extra_metadata || '{}') : (p.extra_metadata || {});
+        } catch (e) {
+            extra = {};
+        }
+        extra.pyspark_mode = mode;
+        p.extra_metadata = extra;
+    }
+
+    if (mode === 'python') {
+        if (sparkRestartBtn) sparkRestartBtn.style.display = 'none';
+        showToast('Switched to Python Fast Mode (instant execution for interview questions & logic)', 'info', 2500);
+    } else {
+        if (sparkRestartBtn) sparkRestartBtn.style.display = 'inline-block';
+        fetch('/api/pyspark/warmup', { method: 'POST' }).catch(() => {});
+        showToast('Switched to Apache Spark Engine (SparkSession with JVM)', 'info', 2500);
+    }
+    savePractice(true);
+}
+window.onPySparkModeChange = onPySparkModeChange;
+
+// Toggle Custom Input Drawer
+function toggleCustomInputDrawer() {
+    const drawer = document.getElementById('custom-input-drawer');
+    const btn = document.getElementById('btn-toggle-custom-input');
+    if (!drawer) return;
+    const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+    drawer.style.display = isHidden ? 'block' : 'none';
+    if (btn) {
+        btn.style.color = isHidden ? 'var(--accent-primary)' : '';
+        btn.style.borderColor = isHidden ? 'var(--accent-primary)' : '';
+    }
+    if (isHidden) {
+        const textarea = document.getElementById('custom-stdin-input');
+        if (textarea) textarea.focus();
+    }
+}
+window.toggleCustomInputDrawer = toggleCustomInputDrawer;
 
 // Restart PySpark / Databricks SparkSession daemon
 async function restartSparkSession() {
