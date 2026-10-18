@@ -408,10 +408,10 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertIn(b"action-btn-delete", tech_res.data)
 
     def test_20_key_notes_crud(self):
-        # 1. Create a new Interview Q&A note
+        # 1. Create a new PySpark note
         note_payload = {
             "title": "Unit Test Spark Skew Join Q&A",
-            "category": "Interview Q&A",
+            "category": "PySpark",
             "date_str": "2026-11-05",
             "technology": "PySpark",
             "tags": "pyspark, skew, interview, salting",
@@ -431,7 +431,7 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(res_get.status_code, 200)
         data_get = res_get.get_json()
         self.assertTrue(data_get["success"])
-        self.assertEqual(data_get["note"]["category"], "Interview Q&A")
+        self.assertEqual(data_get["note"]["category"], "PySpark")
         self.assertEqual(data_get["note"]["technology"], "PySpark")
 
         # 3. List notes and verify presence
@@ -446,7 +446,7 @@ class TestCodingPracticeHub(unittest.TestCase):
         update_payload = {
             "id": note_id,
             "title": "Updated Spark Skew Join Q&A",
-            "category": "Interview Q&A",
+            "category": "PySpark",
             "date_str": "2026-11-05",
             "technology": "PySpark",
             "tags": "pyspark, skew, aqe",
@@ -477,7 +477,7 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertTrue(data["success"])
         note = data["note"]
         self.assertEqual(note["date_str"], test_date)
-        self.assertEqual(note["category"], "Daily Practice")
+        self.assertEqual(note["category"], "Key Notes")
 
     def test_22_notes_page_render(self):
         # Test /documentation endpoint

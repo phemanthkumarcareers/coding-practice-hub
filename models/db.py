@@ -132,17 +132,8 @@ def init_db():
                 1
             ),
             (
-                "Top Technical & Data Engineering Interview Q&A",
-                "Interview Q&A",
-                today_str,
-                "General",
-                "interview, questions, answers, preparation",
-                "# 🎯 Top Technical & Data Engineering Interview Q&A\n\n> [!TIP]\n> Curated bank of real-world interview questions and structured answers for revision.\n\n---\n\n### Q1: What is the difference between `ROW_NUMBER()`, `RANK()`, and `DENSE_RANK()`?\n**Answer:**\n- `ROW_NUMBER()`: Assigns a unique sequential integer to each row within a partition, never producing ties (e.g., 1, 2, 3, 4).\n- `RANK()`: Assigns the same rank to identical values, but skips the next numbers according to tie count (e.g., 1, 2, 2, 4).\n- `DENSE_RANK()`: Assigns identical ranks to ties without skipping subsequent ranks (e.g., 1, 2, 2, 3).\n\n```sql\nSELECT val,\n       ROW_NUMBER() OVER (ORDER BY val DESC) AS rn,\n       RANK() OVER (ORDER BY val DESC)       AS rk,\n       DENSE_RANK() OVER (ORDER BY val DESC) AS drk\nFROM (VALUES (100), (90), (90), (80)) t(val);\n```\n\n---\n\n### Q2: How does Spark handle data skew and what strategies mitigate it?\n**Answer:**\nData skew happens when partitions receive uneven amounts of data due to high-cardinality keys (e.g., NULL values or popular merchant IDs).\n**Mitigation Strategies:**\n1. **Salting**: Append random integer suffixes (e.g., `key_0` to `key_9`) to divide the hot key across multiple partitions during join, then replicate the right table.\n2. **Broadcast Hash Join**: If one table is small, eliminate shuffling completely with `broadcast(small_df)`.\n3. **Adaptive Query Execution (AQE)**: Enable `spark.sql.adaptive.skewJoin.enabled = true` in Spark 3.x+ to split oversized skewed partitions automatically.\n\n---\n\n### Q3: What is the Medallion Architecture in Modern Data Lakehouses?\n**Answer:**\n- **Bronze Layer (Raw)**: Raw append-only immutable data ingested directly from sources (APIs, CDC, Kafka) in native formats with metadata.\n- **Silver Layer (Cleansed / Conformed)**: Cleaned, deduplicated, enriched, and validated data with business schema enforcement.\n- **Gold Layer (Curated / Aggregated)**: Business-level aggregated reporting tables, star schemas, and KPIs ready for BI tools and ML models.",
-                1
-            ),
-            (
-                "SQL Query Optimization & Performance Tips",
-                "SQL Notes",
+                "SQL Optimization & Performance Tips",
+                "SQL",
                 today_str,
                 "SQL",
                 "sql, performance, tips, indexing",
@@ -151,7 +142,7 @@ def init_db():
             ),
             (
                 "Python Core Concepts, Generators & OOP",
-                "Python Notes",
+                "Python",
                 today_str,
                 "Python",
                 "python, generators, decorators, memory",
@@ -160,7 +151,7 @@ def init_db():
             ),
             (
                 "PySpark Common Patterns & Transformations Cheatsheet",
-                "PySpark Notes",
+                "PySpark",
                 today_str,
                 "PySpark",
                 "pyspark, spark, cheatsheet, bigdata",
@@ -169,7 +160,7 @@ def init_db():
             ),
             (
                 "Databricks Lakehouse, Delta Lake & Unity Catalog",
-                "Databricks Notes",
+                "Databricks",
                 today_str,
                 "Databricks",
                 "databricks, delta, lakehouse, unity-catalog",
@@ -178,7 +169,7 @@ def init_db():
             ),
             (
                 "Cloud Data Architecture: AWS vs Azure Comparison",
-                "Cloud (AWS & Azure)",
+                "Cloud",
                 today_str,
                 "General",
                 "cloud, aws, azure, architecture, interview",
@@ -187,7 +178,7 @@ def init_db():
             ),
             (
                 "DSA Patterns & Time Complexity Reference",
-                "DSA Notes",
+                "DSA",
                 today_str,
                 "DSA",
                 "dsa, algorithms, interview, patterns",
@@ -210,15 +201,6 @@ def init_db():
                 "General",
                 "hr, behavioral, star, interview, leadership",
                 "# 🤝 HR & Behavioral Interview Preparation (STAR Method)\n\n> [!TIP]\n> Structure every behavioral response using the **STAR** framework: Situation, Task, Action, Result.\n\n### 1. STAR Framework Structure\n- **Situation (20%)**: Context, project background, scope, and timeline.\n- **Task (15%)**: What was your specific responsibility or problem to solve?\n- **Action (50%)**: What concrete technical/collaborative actions did you take? Use 'I', not just 'we'.\n- **Result (15%)**: Quantifiable outcome (e.g., 'reduced pipeline runtime by 45%', 'saved \\$12k/month').\n\n### 2. Common Scenarios to Prepare\n1. A time you handled ambiguous requirements from stakeholders.\n2. Resolving a critical production outage or data quality pipeline break.\n3. Handling disagreement with a peer or engineering manager.",
-                0
-            ),
-            (
-                f"Daily Practice Notes - {today_str}",
-                "Daily Practice",
-                today_str,
-                "SQL",
-                "daily, practice, tips",
-                "# Daily Practice Notes\n\n> [!NOTE]\n> Record your daily practice insights, problem-solving approaches, and interview takeaways here.\n\n## 🎯 Today's Goals & Focus Areas\n- [ ] SQL: Advanced window functions and analytical queries\n- [ ] Python: Pandas data transformation and vectorized operations\n- [ ] PySpark: Dataframe joins, aggregation patterns, and caching\n- [ ] DSA: Sliding window or binary search problem",
                 0
             )
         ]
@@ -390,7 +372,7 @@ def get_or_create_daily_note(date_str=None, tech=""):
 """
         cursor.execute("""
             INSERT INTO key_notes (title, category, date_str, technology, tags, content, is_pinned)
-            VALUES (?, 'Daily Practice', ?, ?, 'daily, practice', ?, 0)
+            VALUES (?, 'Key Notes', ?, ?, 'daily, practice', ?, 0)
         """, (f"Daily Notes - {date_str}", date_str, tech, default_content))
         conn.commit()
         note_id = cursor.lastrowid
@@ -403,7 +385,7 @@ def get_or_create_daily_note(date_str=None, tech=""):
 def save_key_note(note_data):
     note_id = note_data.get("id")
     title = (note_data.get("title") or "Untitled Note").strip()
-    category = (note_data.get("category") or "Daily Practice").strip()
+    category = (note_data.get("category") or "Key Notes").strip()
     date_str = (note_data.get("date_str") or date.today().isoformat()).strip()
     technology = (note_data.get("technology") or "").strip()
     tags = (note_data.get("tags") or "").strip()

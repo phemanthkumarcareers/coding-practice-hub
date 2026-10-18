@@ -1,15 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Documentation & Interview Preparation - Coding Practice Hub{% endblock %}
+{% block title %}Documentation & Prep Hub - Coding Practice Hub{% endblock %}
 
 {% block head_extra %}
-<!-- Markdown & Mermaid Support -->
+<!-- Markdown Parser for migrating legacy notes to rich Word document format -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 {% endblock %}
 
 {% block content %}
-<!-- Confluence Documentation Workspace -->
+<!-- Documentation Workspace -->
 <div class="confluence-workspace">
     <!-- Left Navigation Tree Sidebar -->
     <aside class="confluence-sidebar" id="notes-tree-sidebar">
@@ -23,57 +23,46 @@
             </button>
         </div>
 
-        <!-- Quick Search & Today Shortcut -->
+        <!-- Quick Search -->
         <div class="confluence-sidebar-search">
-            <input type="text" id="notes-search-input" class="meta-input" placeholder="🔍 Search documentation, Q&A, tags..." oninput="filterNotesTree(this.value)">
-            <div style="display:flex; gap:0.35rem; margin-top:0.4rem;">
-                <button class="btn btn-secondary btn-sm" style="flex:1; font-size:0.75rem;" onclick="openTodayDailyNote()" title="Jump to Today's Practice Notes">
-                    📅 Today's Notes
-                </button>
-                <button class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="createNewNote('Interview Q&A')" title="Quick Create Interview Q&A">
-                    🎯 + Q&A
-                </button>
-            </div>
+            <input type="text" id="notes-search-input" class="meta-input" placeholder="🔍 Search documents, tags, content..." oninput="filterNotesTree(this.value)">
         </div>
 
         <!-- Tree List of Notes -->
         <div class="confluence-tree-container" id="notes-tree-list">
             <div style="text-align:center; padding:1.5rem; color:var(--text-muted); font-size:0.85rem;">
-                Loading documentation...
+                Loading documents...
             </div>
         </div>
     </aside>
 
-    <!-- Main Confluence Document Area -->
+    <!-- Main Document Area -->
     <main class="confluence-doc-pane" id="notes-doc-pane">
-        <!-- Horizontal Topic / Editor Tabs Bar -->
+        <!-- Horizontal Topic Tabs Bar (Clean tabs without 'Notes' suffix, no Daily Practice, no Q&A) -->
         <div class="doc-topic-tabs-bar" id="doc-topic-tabs-bar">
             <button type="button" class="topic-tab active" onclick="selectTopicCategory('all')" data-cat="all">
-                🌟 All Docs
+                🌟 All
             </button>
             <button type="button" class="topic-tab" onclick="selectTopicCategory('Key Notes')" data-cat="Key Notes">
                 📝 Key Notes
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('Interview Q&A')" data-cat="Interview Q&A">
-                🎯 Interview Q&A
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('SQL')" data-cat="SQL">
+                🗄️ SQL
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('SQL Notes')" data-cat="SQL Notes">
-                🗄️ SQL Notes
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('Python')" data-cat="Python">
+                🐍 Python
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('Python Notes')" data-cat="Python Notes">
-                🐍 Python Notes
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('PySpark')" data-cat="PySpark">
+                ⚡ PySpark
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('PySpark Notes')" data-cat="PySpark Notes">
-                ⚡ PySpark Notes
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('Databricks')" data-cat="Databricks">
+                🧱 Databricks
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('Databricks Notes')" data-cat="Databricks Notes">
-                🧱 Databricks Notes
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('Cloud')" data-cat="Cloud">
+                ☁️ Cloud
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('Cloud (AWS & Azure)')" data-cat="Cloud (AWS & Azure)">
-                ☁️ Cloud (AWS & Azure)
-            </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('DSA Notes')" data-cat="DSA Notes">
-                🧩 DSA Notes
+            <button type="button" class="topic-tab" onclick="selectTopicCategory('DSA')" data-cat="DSA">
+                🧩 DSA
             </button>
             <button type="button" class="topic-tab" onclick="selectTopicCategory('System Design')" data-cat="System Design">
                 📐 System Design
@@ -81,23 +70,20 @@
             <button type="button" class="topic-tab" onclick="selectTopicCategory('HR & Behavioral')" data-cat="HR & Behavioral">
                 🤝 HR & Behavioral
             </button>
-            <button type="button" class="topic-tab" onclick="selectTopicCategory('Daily Practice')" data-cat="Daily Practice">
-                📅 Daily Practice
-            </button>
         </div>
 
         <!-- Document Header / Metadata -->
         <div class="confluence-doc-header">
             <div class="confluence-header-top">
-                <input type="text" id="note-title-input" class="confluence-title-input" placeholder="Untitled Document Title..." oninput="markNoteDirty()">
+                <input type="text" id="note-title-input" class="confluence-title-input" placeholder="Untitled Document..." oninput="markNoteDirty()">
                 <div class="confluence-header-actions">
                     <button type="button" id="btn-pin-note" class="btn btn-secondary btn-sm" onclick="togglePinCurrentNote()" title="Pin this document to top">
                         📌 <span id="pin-text">Pin</span>
                     </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyCurrentNoteMarkdown()" title="Copy Markdown to Clipboard">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="copyDocumentText()" title="Copy document content to clipboard">
                         📋 Copy
                     </button>
-                    <button type="button" id="btn-maximize-doc" class="btn btn-secondary btn-sm" onclick="toggleMaximizeDoc()" title="Maximize Editor & Document / Restore (Esc)">
+                    <button type="button" id="btn-maximize-doc" class="btn btn-secondary btn-sm" onclick="toggleMaximizeDoc()" title="Maximize Editor / Restore (Esc)">
                         <span id="maximize-doc-icon">🗖</span> <span id="maximize-doc-text">Maximize</span>
                     </button>
                     <button type="button" id="btn-fullscreen-doc" class="btn btn-secondary btn-sm btn-fullscreen-trigger" onclick="toggleFullScreenDoc()" title="Toggle Fullscreen (F11)">
@@ -144,7 +130,7 @@
 
                 <div class="confluence-meta-pill" style="flex:1; min-width:180px;">
                     <label>Tags:</label>
-                    <input type="text" id="note-tags-input" class="meta-input-compact" style="width:100%;" placeholder="e.g. sql, indexing, interview-qa, star-method" oninput="markNoteDirty()">
+                    <input type="text" id="note-tags-input" class="meta-input-compact" style="width:100%;" placeholder="e.g. sql, indexing, interview, notes" oninput="markNoteDirty()">
                 </div>
 
                 <div id="note-autosave-indicator" class="autosave-status" style="margin-left:auto;">
@@ -153,80 +139,98 @@
             </div>
         </div>
 
-        <!-- Confluence Toolbar & View Mode Switcher -->
-        <div class="confluence-toolbar-bar" id="confluence-toolbar-bar">
-            <!-- Mode Selector: Edit, Preview, Split -->
-            <div class="confluence-mode-switcher">
-                <button type="button" class="mode-btn active" id="btn-mode-split" onclick="setNoteViewMode('split')" title="Side-by-side Edit and Live Preview">
-                    🗖 Split
-                </button>
-                <button type="button" class="mode-btn" id="btn-mode-edit" onclick="setNoteViewMode('edit')" title="Full Editor (Markdown)">
+        <!-- Word Document Formatting Toolbar -->
+        <div class="word-toolbar" id="word-toolbar">
+            <!-- Edit / Read-Only View Mode Toggle -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn active" id="btn-mode-edit" onclick="setDocMode('edit')" title="Edit Document Directly">
                     ✏️ Edit
                 </button>
-                <button type="button" class="mode-btn" id="btn-mode-preview" onclick="setNoteViewMode('preview')" title="Full Document (Read-Only Revision)">
+                <button type="button" class="word-btn" id="btn-mode-view" onclick="setDocMode('view')" title="Read-Only Document View">
                     👁️ View
                 </button>
             </div>
 
-            <!-- Formatting Actions -->
-            <div class="confluence-format-controls" id="confluence-format-controls">
-                <button type="button" class="tool-btn" onclick="insertMarkdown('# ')" title="Heading 1">H1</button>
-                <button type="button" class="tool-btn" onclick="insertMarkdown('## ')" title="Heading 2">H2</button>
-                <button type="button" class="tool-btn" onclick="insertMarkdown('### ')" title="Heading 3">H3</button>
-                <span class="tool-divider"></span>
-                <button type="button" class="tool-btn" onclick="wrapSelection('**', '**')" title="Bold (Ctrl+B)"><b>B</b></button>
-                <button type="button" class="tool-btn" onclick="wrapSelection('*', '*')" title="Italic (Ctrl+I)"><i>I</i></button>
-                <button type="button" class="tool-btn" onclick="wrapSelection('`', '`')" title="Inline Code">`code`</button>
-                <button type="button" class="tool-btn" onclick="insertCodeBlock()" title="Code Block">```</button>
-                <button type="button" class="tool-btn" onclick="insertTableTemplate()" title="Insert Table">📊 Table</button>
-                <button type="button" class="tool-btn" onclick="insertMarkdown('- [ ] ')" title="Task Checklist">☑ Checkbox</button>
-                <span class="tool-divider"></span>
-                <!-- Callout Boxes -->
-                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('NOTE')" title="Info Note Callout">ℹ️ Note</button>
-                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('TIP')" title="Tip Callout">💡 Tip</button>
-                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('WARNING')" title="Warning Callout">⚠️ Warning</button>
-                <button type="button" class="tool-btn callout-tool-btn" onclick="insertCallout('IMPORTANT')" title="Important Callout">⚡ Important</button>
-                <span class="tool-divider"></span>
-                <!-- Templates Dropdown -->
-                <div class="template-dropdown-wrapper">
-                    <button type="button" class="tool-btn" onclick="toggleTemplateMenu()" title="Insert Prebuilt Knowledge Template">
-                        📄 Templates ▾
-                    </button>
-                    <div class="template-dropdown-menu" id="template-dropdown-menu" style="display:none;">
-                        <button type="button" onclick="applyNoteTemplate('interview_qa')">🎯 Interview Question & Answer</button>
-                        <button type="button" onclick="applyNoteTemplate('key_learnings')">📝 Key Notes & Core Learnings</button>
-                        <button type="button" onclick="applyNoteTemplate('sql_tips')">🗄️ SQL Optimization & Tuning</button>
-                        <button type="button" onclick="applyNoteTemplate('python_concepts')">🐍 Python Advanced Concepts</button>
-                        <button type="button" onclick="applyNoteTemplate('pyspark_cheatsheet')">⚡ PySpark Transformations Cheatsheet</button>
-                        <button type="button" onclick="applyNoteTemplate('databricks_notes')">🧱 Databricks Delta Lake Architecture</button>
-                        <button type="button" onclick="applyNoteTemplate('cloud_aws_azure')">☁️ Cloud (AWS vs Azure) Architecture</button>
-                        <button type="button" onclick="applyNoteTemplate('dsa_patterns')">🧩 DSA Problem Pattern & Complexity</button>
-                        <button type="button" onclick="applyNoteTemplate('system_design')">📐 System Design Medallion Blueprint</button>
-                        <button type="button" onclick="applyNoteTemplate('hr_star')">🤝 HR Behavioral STAR Response</button>
-                        <button type="button" onclick="applyNoteTemplate('daily_summary')">📅 Daily Practice Summary</button>
-                    </div>
-                </div>
+            <span class="toolbar-divider"></span>
+
+            <!-- Headings -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="formatHeading('h1')" title="Heading 1"><b>H1</b></button>
+                <button type="button" class="word-btn" onclick="formatHeading('h2')" title="Heading 2"><b>H2</b></button>
+                <button type="button" class="word-btn" onclick="formatHeading('h3')" title="Heading 3"><b>H3</b></button>
+                <button type="button" class="word-btn" onclick="formatHeading('p')" title="Normal Paragraph">P</button>
             </div>
 
-            <!-- Window Controls (Maximize / Restore, Fullscreen) -->
+            <span class="toolbar-divider"></span>
+
+            <!-- Font Styles: Bold, Italic, Underline, Strikethrough -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="execCmd('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+                <button type="button" class="word-btn" onclick="execCmd('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+                <button type="button" class="word-btn" onclick="execCmd('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button type="button" class="word-btn" onclick="execCmd('strikeThrough')" title="Strikethrough"><s>S</s></button>
+            </div>
+
+            <span class="toolbar-divider"></span>
+
+            <!-- Content Alignment: Left, Center, Right, Justify -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="execCmd('justifyLeft')" title="Align Left">⇤ Left</button>
+                <button type="button" class="word-btn" onclick="execCmd('justifyCenter')" title="Align Center">☰ Center</button>
+                <button type="button" class="word-btn" onclick="execCmd('justifyRight')" title="Align Right">⇥ Right</button>
+                <button type="button" class="word-btn" onclick="execCmd('justifyFull')" title="Justify">☷ Justify</button>
+            </div>
+
+            <span class="toolbar-divider"></span>
+
+            <!-- Lists & Interactive Checkbox / Radio -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="execCmd('insertUnorderedList')" title="Bulleted List">• List</button>
+                <button type="button" class="word-btn" onclick="execCmd('insertOrderedList')" title="Numbered List">1. Number</button>
+                <button type="button" class="word-btn" onclick="insertCheckbox()" title="Insert Interactive Checkbox">☑ Checkbox</button>
+                <button type="button" class="word-btn" onclick="insertRadio()" title="Insert Interactive Radio Option">🔘 Radio</button>
+            </div>
+
+            <span class="toolbar-divider"></span>
+
+            <!-- Code & Tables -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="insertInlineCode()" title="Inline Code">`code`</button>
+                <button type="button" class="word-btn" onclick="insertCodeBlock()" title="Code Block">```</button>
+                <button type="button" class="word-btn" onclick="insertTable()" title="Insert Table">📊 Table</button>
+                <button type="button" class="word-btn" onclick="insertHorizontalRule()" title="Horizontal Line">── Line</button>
+            </div>
+
+            <span class="toolbar-divider"></span>
+
+            <!-- Callout Alert Boxes: Note, Tip, Warning, Important -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn callout-btn-note" onclick="insertCallout('NOTE')" title="Info Note Callout">ℹ️ Note</button>
+                <button type="button" class="word-btn callout-btn-tip" onclick="insertCallout('TIP')" title="Tip Callout">💡 Tip</button>
+                <button type="button" class="word-btn callout-btn-warning" onclick="insertCallout('WARNING')" title="Warning Callout">⚠️ Warning</button>
+                <button type="button" class="word-btn callout-btn-important" onclick="insertCallout('IMPORTANT')" title="Important Callout">⚡ Important</button>
+            </div>
+
+            <span class="toolbar-divider"></span>
+
+            <!-- Undo / Redo / Clear -->
+            <div class="toolbar-group">
+                <button type="button" class="word-btn" onclick="execCmd('undo')" title="Undo (Ctrl+Z)">↺</button>
+                <button type="button" class="word-btn" onclick="execCmd('redo')" title="Redo (Ctrl+Y)">↻</button>
+                <button type="button" class="word-btn" onclick="execCmd('removeFormat')" title="Clear Formatting">🧹</button>
+            </div>
+
+            <!-- Toolbar Window Controls -->
             <div style="display:flex; align-items:center; gap:0.35rem; margin-left:auto;">
                 <button type="button" id="toolbar-btn-maximize-doc" class="pane-icon-btn" onclick="toggleMaximizeDoc()" title="Maximize / Restore (Esc)">🗖</button>
                 <button type="button" id="toolbar-btn-fullscreen-doc" class="pane-icon-btn" onclick="toggleFullScreenDoc()" title="Toggle Fullscreen (F11)">⛶</button>
             </div>
         </div>
 
-        <!-- Editor & Live Preview Body -->
-        <div class="confluence-body-split" id="confluence-body-container">
-            <!-- Left: Text Editor -->
-            <div class="confluence-editor-pane" id="editor-column">
-                <textarea id="note-markdown-textarea" class="confluence-textarea" placeholder="Start typing your documentation, interview Q&A, and technical notes in Markdown...&#10;&#10;Use # for headers, ``` for code blocks, and > [!TIP] for callouts." oninput="handleNoteEditorInput()"></textarea>
-            </div>
-
-            <!-- Right: Confluence Rendered Document Preview -->
-            <div class="confluence-preview-pane" id="preview-column">
-                <div class="confluence-rendered-view markdown-body" id="note-rendered-content">
-                    <div style="color:var(--text-muted); padding:2rem; text-align:center;">Preview will appear here...</div>
-                </div>
+        <!-- Word Document Paper Canvas -->
+        <div class="word-canvas-wrapper" id="word-canvas-wrapper" onclick="focusDocumentSheet(event)">
+            <div class="word-document-sheet" id="word-document-sheet" contenteditable="true" spellcheck="true" oninput="handleWordDocInput()">
+                <!-- Editable Word Document Body -->
             </div>
         </div>
     </main>
@@ -241,18 +245,9 @@
     let activeCategory = 'all'; // 'all' or category string
     let isNoteDirty = false;
     let noteAutosaveTimer = null;
-    let currentViewMode = 'split'; // 'split', 'edit', 'preview'
+    let isReadOnlyMode = false;
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Initialize mermaid
-        if (window.mermaid) {
-            mermaid.initialize({
-                startOnLoad: false,
-                theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'default' : 'dark',
-                securityLevel: 'loose'
-            });
-        }
-
         renderNotesTree();
         if (currentNoteId) {
             loadNoteById(currentNoteId);
@@ -262,7 +257,7 @@
             createNewNote('Key Notes', 'Key Notes & Learnings');
         }
 
-        // Global Keyboard Shortcut: Ctrl+S to save, Esc to restore maximized layout
+        // Global Keyboard Shortcut: Ctrl+S to save, Esc to restore maximize
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 if (document.getElementById('notes-doc-pane')) {
@@ -276,21 +271,6 @@
                 }
             }
         });
-
-        // Tab indentation in textarea
-        const textarea = document.getElementById('note-markdown-textarea');
-        if (textarea) {
-            textarea.addEventListener('keydown', function(e) {
-                if (e.key === 'Tab') {
-                    e.preventDefault();
-                    const start = this.selectionStart;
-                    const end = this.selectionEnd;
-                    this.value = this.value.substring(0, start) + '    ' + this.value.substring(end);
-                    this.selectionStart = this.selectionEnd = start + 4;
-                    handleNoteEditorInput();
-                }
-            });
-        }
     });
 
     // Topic Category Switcher
@@ -303,7 +283,6 @@
 
         renderNotesTree(document.getElementById('notes-search-input')?.value || '');
 
-        // If active note is not in this category, switch to the first matching note
         if (cat !== 'all') {
             const matches = allNotes.filter(n => n.category === cat);
             if (matches.length > 0) {
@@ -312,16 +291,14 @@
                     selectNote(matches[0].id);
                 }
             } else {
-                // Prompt or create new note in this category
                 const confirmed = confirm(`No documents found in "${cat}". Would you like to create one now?`);
                 if (confirmed) {
-                    createNewNote(cat, `${cat} - New Document`);
+                    createNewNote(cat, `${cat} - Document`);
                 }
             }
         }
     }
 
-    // Filter notes tree
     function filterNotesTree(q) {
         renderNotesTree(q);
     }
@@ -363,19 +340,16 @@
             return;
         }
 
-        // Group notes
         const pinned = filtered.filter(n => n.is_pinned);
         const unpinned = filtered.filter(n => !n.is_pinned);
 
         let html = '';
 
-        // 1. Pinned Section
         if (pinned.length > 0) {
             html += `<div class="tree-section-header">📌 Pinned (${pinned.length})</div>`;
             html += pinned.map(renderTreeItem).join('');
         }
 
-        // 2. Main Documents Section
         const sectionTitle = activeCategory === 'all' ? 'All Documents' : activeCategory;
         html += `<div class="tree-section-header">📁 ${sectionTitle} (${unpinned.length})</div>`;
         html += unpinned.map(renderTreeItem).join('');
@@ -387,16 +361,14 @@
         const isActive = note.id === currentNoteId;
         const iconMap = {
             'Key Notes': '📝',
-            'Interview Q&A': '🎯',
-            'SQL Notes': '🗄️',
-            'Python Notes': '🐍',
-            'PySpark Notes': '⚡',
-            'Databricks Notes': '🧱',
-            'Cloud (AWS & Azure)': '☁️',
-            'DSA Notes': '🧩',
+            'SQL': '🗄️',
+            'Python': '🐍',
+            'PySpark': '⚡',
+            'Databricks': '🧱',
+            'Cloud': '☁️',
+            'DSA': '🧩',
             'System Design': '📐',
             'HR & Behavioral': '🤝',
-            'Daily Practice': '📅',
             'General': '📄'
         };
         const icon = iconMap[note.category] || '📄';
@@ -415,7 +387,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Quick Actions on tree item -->
                     <div class="tree-item-actions">
                         <button type="button" class="tree-mini-action" onclick="openNoteInViewMode(${note.id}, event)" title="View (Read-Only)">👁️</button>
                         <button type="button" class="tree-mini-action" onclick="openNoteInEditMode(${note.id}, event)" title="Edit">✏️</button>
@@ -436,13 +407,13 @@
     function openNoteInViewMode(noteId, event) {
         if (event) event.stopPropagation();
         selectNote(noteId);
-        setNoteViewMode('preview');
+        setDocMode('view');
     }
 
     function openNoteInEditMode(noteId, event) {
         if (event) event.stopPropagation();
         selectNote(noteId);
-        setNoteViewMode('edit');
+        setDocMode('edit');
     }
 
     function deleteNoteDirect(noteId, event) {
@@ -461,16 +432,33 @@
         document.getElementById('note-date-input').value = note.date_str || new Date().toISOString().slice(0, 10);
         document.getElementById('note-tech-select').value = note.technology || '';
         document.getElementById('note-tags-input').value = note.tags || '';
-        document.getElementById('note-markdown-textarea').value = note.content || '';
+
+        // Load Content into Word Document Sheet
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) {
+            let content = note.content || '';
+            // If the content is markdown formatted, convert to rich HTML for Word editor
+            if (content.startsWith('#') || content.startsWith('>') || content.includes('```') || !content.includes('<')) {
+                if (window.marked) {
+                    try {
+                        sheet.innerHTML = marked.parse(content);
+                    } catch (e) {
+                        sheet.innerHTML = `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
+                    }
+                } else {
+                    sheet.innerHTML = `<p>${escapeHtml(content).replace(/\n/g, '<br>')}</p>`;
+                }
+            } else {
+                sheet.innerHTML = content;
+            }
+        }
 
         updatePinBtnUI(Boolean(note.is_pinned));
-        renderMarkdownPreview();
         renderNotesTree(document.getElementById('notes-search-input')?.value || '');
 
         isNoteDirty = false;
         updateAutosaveIndicator('All changes saved');
 
-        // Update URL query string
         const url = new URL(window.location);
         url.searchParams.set('id', note.id);
         window.history.replaceState({}, '', url);
@@ -500,7 +488,6 @@
     function handleCategorySelectChange() {
         markNoteDirty();
         const selectedCat = document.getElementById('note-category-select').value;
-        // Optionally sync active category tab
         if (activeCategory !== 'all' && activeCategory !== selectedCat) {
             selectTopicCategory(selectedCat);
         }
@@ -514,42 +501,26 @@
         document.getElementById('note-title-input').value = defaultTitle;
         document.getElementById('note-category-select').value = category;
         document.getElementById('note-date-input').value = todayStr;
-        document.getElementById('note-tech-select').value = '';
+        document.getElementById('note-tech-select').value = category === 'Key Notes' ? '' : category;
         document.getElementById('note-tags-input').value = '';
 
-        // Default content based on category
-        let defaultContent = `# ${defaultTitle}\n\n> [!NOTE]\n> Start writing your key points, formulas, or interview preparation notes here.\n\n## 📝 Key Notes & Summary\n- \n\n## 💡 Tips & Best Practices\n- \n`;
-        if (category === 'Interview Q&A') {
-            defaultContent = `# 🎯 Interview Question: [Title / Topic]\n\n**Company / Level:** e.g. Amazon / SDE-2 | Senior Data Engineer\n**Core Topics:** SQL, PySpark, Architecture\n\n---\n\n### ❓ Question\n> Write the complete interview problem statement or question here.\n\n### 💡 Conceptual Approach & Explanation\nExplain your approach, why this solution is optimal, and trade-offs considered.\n\n### 💻 Solution Code\n\`\`\`sql\n-- Solution query\nSELECT * FROM table;\n\`\`\`\n\n### ⏱️ Complexity Analysis\n- **Time Complexity:** $O(N)$\n- **Space Complexity:** $O(1)$\n\n### 🔄 Common Follow-Up Questions\n1. How would you handle 100x scale?\n2. What if data contains duplicates or NULLs?\n`;
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) {
+            sheet.innerHTML = `
+                <h1>${escapeHtml(defaultTitle)}</h1>
+                <p>Start writing your notes, key takeaways, code, or interview preparation here...</p>
+                <div class="doc-callout callout-tip" contenteditable="false">
+                    <div class="callout-header">💡 TIP</div>
+                    <div class="callout-body" contenteditable="true">Use the toolbar buttons above to align text, add checklists, radio buttons, tables, and callouts.</div>
+                </div>
+                <p><br></p>
+            `;
         }
-
-        document.getElementById('note-markdown-textarea').value = defaultContent;
 
         updatePinBtnUI(false);
-        setNoteViewMode('split');
-        renderMarkdownPreview();
+        setDocMode('edit');
         isNoteDirty = true;
         saveCurrentNote(false);
-    }
-
-    async function openTodayDailyNote() {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const existing = allNotes.find(n => n.category === 'Daily Practice' && n.date_str === todayStr);
-        if (existing) {
-            selectNote(existing.id);
-        } else {
-            try {
-                const res = await fetch(`/api/notes/by-date/${todayStr}`);
-                const data = await res.json();
-                if (data.success && data.note) {
-                    allNotes.unshift(data.note);
-                    renderNotesTree();
-                    selectNote(data.note.id);
-                }
-            } catch (err) {
-                createNewNote('Daily Practice', `Daily Practice Notes - ${todayStr}`);
-            }
-        }
     }
 
     function markNoteDirty() {
@@ -558,16 +529,15 @@
         scheduleNoteAutosave();
     }
 
-    function handleNoteEditorInput() {
+    function handleWordDocInput() {
         markNoteDirty();
-        renderMarkdownPreview();
     }
 
     function scheduleNoteAutosave() {
         clearTimeout(noteAutosaveTimer);
         noteAutosaveTimer = setTimeout(() => {
             saveCurrentNote(false);
-        }, 3000); // 3-second debounce
+        }, 2500); // 2.5-second debounce
     }
 
     async function saveCurrentNote(isManual = false) {
@@ -576,7 +546,8 @@
         const date_str = document.getElementById('note-date-input').value;
         const technology = document.getElementById('note-tech-select').value;
         const tags = document.getElementById('note-tags-input').value;
-        const content = document.getElementById('note-markdown-textarea').value;
+        const sheet = document.getElementById('word-document-sheet');
+        const content = sheet ? sheet.innerHTML : '';
         const noteObj = allNotes.find(n => n.id === currentNoteId);
         const is_pinned = noteObj ? (noteObj.is_pinned ? 1 : 0) : 0;
 
@@ -620,7 +591,7 @@
             }
         } catch (err) {
             updateAutosaveIndicator('Save error');
-            console.error('Note save error:', err);
+            console.error('Document save error:', err);
         }
     }
 
@@ -667,197 +638,167 @@
         if (el) el.textContent = text;
     }
 
-    // Markdown Parser & Confluence Live Preview
-    function renderMarkdownPreview() {
-        const textarea = document.getElementById('note-markdown-textarea');
-        const preview = document.getElementById('note-rendered-content');
-        if (!textarea || !preview) return;
+    // View / Edit Mode Switcher
+    function setDocMode(mode) {
+        const sheet = document.getElementById('word-document-sheet');
+        const btnEdit = document.getElementById('btn-mode-edit');
+        const btnView = document.getElementById('btn-mode-view');
+        const toolbar = document.getElementById('word-toolbar');
 
-        let raw = textarea.value;
+        if (mode === 'view') {
+            isReadOnlyMode = true;
+            if (sheet) sheet.setAttribute('contenteditable', 'false');
+            if (btnView) btnView.classList.add('active');
+            if (btnEdit) btnEdit.classList.remove('active');
+            showToast('Switched to View Mode (Read-Only)', 'info', 1500);
+        } else {
+            isReadOnlyMode = false;
+            if (sheet) sheet.setAttribute('contenteditable', 'true');
+            if (btnEdit) btnEdit.classList.add('active');
+            if (btnView) btnView.classList.remove('active');
+            showToast('Switched to Edit Mode', 'info', 1500);
+        }
+    }
 
-        // Transform GitHub/Confluence alert boxes: > [!NOTE], > [!TIP], > [!WARNING], > [!IMPORTANT]
-        raw = raw.replace(/^>\s*\[!NOTE\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
-            const clean = body.replace(/^>\s?/gm, '');
-            return `<div class="confluence-callout callout-note"><div class="callout-title">ℹ️ NOTE</div><div class="callout-content">${clean}</div></div>\n`;
-        });
-        raw = raw.replace(/^>\s*\[!TIP\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
-            const clean = body.replace(/^>\s?/gm, '');
-            return `<div class="confluence-callout callout-tip"><div class="callout-title">💡 TIP</div><div class="callout-content">${clean}</div></div>\n`;
-        });
-        raw = raw.replace(/^>\s*\[!WARNING\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
-            const clean = body.replace(/^>\s?/gm, '');
-            return `<div class="confluence-callout callout-warning"><div class="callout-title">⚠️ WARNING</div><div class="callout-content">${clean}</div></div>\n`;
-        });
-        raw = raw.replace(/^>\s*\[!IMPORTANT\]\s*\n((?:>.*\n?)*)/gim, function(match, body) {
-            const clean = body.replace(/^>\s?/gm, '');
-            return `<div class="confluence-callout callout-important"><div class="callout-title">⚡ IMPORTANT</div><div class="callout-content">${clean}</div></div>\n`;
-        });
+    function focusDocumentSheet(e) {
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet && e.target === document.getElementById('word-canvas-wrapper')) {
+            sheet.focus();
+        }
+    }
 
-        // Parse with marked.js
-        if (window.marked) {
-            try {
-                let html = marked.parse(raw);
-                preview.innerHTML = html;
-            } catch (e) {
-                preview.innerHTML = `<pre>${escapeHtml(raw)}</pre>`;
+    // Word Document Exec Command Helpers
+    function execCmd(command, value = null) {
+        if (isReadOnlyMode) {
+            showToast('Document is in View Mode. Click Edit to make changes.', 'info');
+            return;
+        }
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) sheet.focus();
+        document.execCommand(command, false, value);
+        handleWordDocInput();
+    }
+
+    function formatHeading(tag) {
+        if (isReadOnlyMode) return;
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) sheet.focus();
+        document.execCommand('formatBlock', false, `<${tag}>`);
+        handleWordDocInput();
+    }
+
+    function insertHtmlAtCursor(html) {
+        if (isReadOnlyMode) {
+            showToast('Document is in View Mode. Click Edit to modify.', 'info');
+            return;
+        }
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) sheet.focus();
+
+        const sel = window.getSelection();
+        if (sel.getRangeAt && sel.rangeCount) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+            const el = document.createElement("div");
+            el.innerHTML = html;
+            const frag = document.createDocumentFragment();
+            let node, lastNode;
+            while ((node = el.firstChild)) {
+                lastNode = frag.appendChild(node);
+            }
+            range.insertNode(frag);
+            if (lastNode) {
+                range.setStartAfter(lastNode);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
             }
         } else {
-            preview.innerHTML = `<pre>${escapeHtml(raw)}</pre>`;
+            if (sheet) sheet.innerHTML += html;
         }
-
-        // Render Mermaid Diagrams
-        if (window.mermaid) {
-            const mermaidBlocks = preview.querySelectorAll('pre code.language-mermaid');
-            mermaidBlocks.forEach((codeEl) => {
-                const parent = codeEl.parentElement;
-                const diagramText = codeEl.textContent;
-                const mDiv = document.createElement('div');
-                mDiv.className = 'mermaid';
-                mDiv.textContent = diagramText;
-                parent.replaceWith(mDiv);
-            });
-            try {
-                mermaid.run({ nodes: preview.querySelectorAll('.mermaid') });
-            } catch (err) {}
-        }
+        handleWordDocInput();
     }
 
-    // View Mode Switcher ('split', 'edit', 'preview')
-    function setNoteViewMode(mode) {
-        currentViewMode = mode;
-        const editorCol = document.getElementById('editor-column');
-        const previewCol = document.getElementById('preview-column');
-        const formatControls = document.getElementById('confluence-format-controls');
-
-        ['split', 'edit', 'preview'].forEach(m => {
-            const btn = document.getElementById(`btn-mode-${m}`);
-            if (btn) btn.classList.toggle('active', m === mode);
-        });
-
-        if (mode === 'split') {
-            if (editorCol) {
-                editorCol.style.display = 'block';
-                editorCol.style.width = '50%';
-                editorCol.style.flex = '1';
-            }
-            if (previewCol) {
-                previewCol.style.display = 'block';
-                previewCol.style.width = '50%';
-                previewCol.style.flex = '1';
-            }
-            if (formatControls) formatControls.style.display = 'flex';
-            renderMarkdownPreview();
-        } else if (mode === 'edit') {
-            if (editorCol) {
-                editorCol.style.display = 'block';
-                editorCol.style.width = '100%';
-                editorCol.style.flex = '1';
-            }
-            if (previewCol) previewCol.style.display = 'none';
-            if (formatControls) formatControls.style.display = 'flex';
-        } else if (mode === 'preview') {
-            if (editorCol) editorCol.style.display = 'none';
-            if (previewCol) {
-                previewCol.style.display = 'block';
-                previewCol.style.width = '100%';
-                previewCol.style.flex = '1';
-            }
-            if (formatControls) formatControls.style.display = 'none';
-            renderMarkdownPreview();
-        }
+    function insertCheckbox() {
+        const html = `<div class="doc-checkbox-row"><input type="checkbox" class="doc-checkbox-input" onchange="markNoteDirty()"> <span class="doc-item-text" contenteditable="true">Task item...</span></div><p><br></p>`;
+        insertHtmlAtCursor(html);
     }
 
-    // Formatting Helpers
-    function insertMarkdown(prefix) {
-        const textarea = document.getElementById('note-markdown-textarea');
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const sel = textarea.value.substring(start, end);
-        textarea.value = textarea.value.substring(0, start) + prefix + sel + textarea.value.substring(end);
-        textarea.focus();
-        textarea.selectionStart = textarea.selectionEnd = start + prefix.length + sel.length;
-        handleNoteEditorInput();
+    function insertRadio() {
+        const radioGroup = 'radio_grp_' + Math.floor(Math.random() * 100000);
+        const html = `<div class="doc-radio-row"><input type="radio" name="${radioGroup}" class="doc-radio-input" onchange="markNoteDirty()"> <span class="doc-item-text" contenteditable="true">Radio option...</span></div><p><br></p>`;
+        insertHtmlAtCursor(html);
     }
 
-    function wrapSelection(before, after) {
-        const textarea = document.getElementById('note-markdown-textarea');
-        if (!textarea) return;
-        const start = textarea.selectionStart;
-        const end = textarea.selectionEnd;
-        const sel = textarea.value.substring(start, end);
-        textarea.value = textarea.value.substring(0, start) + before + sel + after + textarea.value.substring(end);
-        textarea.focus();
-        textarea.selectionStart = start + before.length;
-        textarea.selectionEnd = end + before.length;
-        handleNoteEditorInput();
+    function insertInlineCode() {
+        const selection = window.getSelection();
+        const text = selection.toString() || 'code';
+        const html = `<code class="doc-inline-code">${escapeHtml(text)}</code>&nbsp;`;
+        insertHtmlAtCursor(html);
     }
 
     function insertCodeBlock() {
-        wrapSelection('```sql\n', '\n```\n');
+        const html = `<pre class="doc-code-block"><code contenteditable="true">-- Type or paste your code snippet here\nSELECT * FROM table;\n</code></pre><p><br></p>`;
+        insertHtmlAtCursor(html);
     }
 
-    function insertTableTemplate() {
-        const table = `\n| Item / Question | Core Concept | Solution / Approach | Key Complexity |\n| :--- | :--- | :--- | :--- |\n| Q1 | Window Functions | DENSE_RANK() | $O(N \\log N)$ |\n| Q2 | Skew Join | Salting / Broadcast | $O(N)$ |\n\n`;
-        insertMarkdown(table);
+    function insertTable() {
+        const html = `
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th>Header 1</th>
+                        <th>Header 2</th>
+                        <th>Header 3</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Data A1</td>
+                        <td>Data A2</td>
+                        <td>Active</td>
+                    </tr>
+                    <tr>
+                        <td>Data B1</td>
+                        <td>Data B2</td>
+                        <td>Verified</td>
+                    </tr>
+                </tbody>
+            </table>
+            <p><br></p>
+        `;
+        insertHtmlAtCursor(html);
+    }
+
+    function insertHorizontalRule() {
+        insertHtmlAtCursor('<hr class="doc-hr"><p><br></p>');
     }
 
     function insertCallout(type) {
-        const template = `\n> [!${type}]\n> Key takeaway or important rule for this topic.\n\n`;
-        insertMarkdown(template);
-    }
-
-    function toggleTemplateMenu() {
-        const menu = document.getElementById('template-dropdown-menu');
-        if (menu) {
-            menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
-        }
-    }
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.template-dropdown-wrapper')) {
-            const menu = document.getElementById('template-dropdown-menu');
-            if (menu) menu.style.display = 'none';
-        }
-    });
-
-    function applyNoteTemplate(templateKey) {
-        const textarea = document.getElementById('note-markdown-textarea');
-        const menu = document.getElementById('template-dropdown-menu');
-        if (menu) menu.style.display = 'none';
-
-        const templates = {
-            'interview_qa': `\n## 🎯 Interview Question: [Question Title]\n\n**Company / Level:** e.g. Amazon / SDE-2 | Meta / Data Engineer\n**Core Topics:** SQL, PySpark, Distributed Systems\n\n### ❓ Question Statement\n> Explain the problem statement in detail here.\n\n### 💡 Key Insight & Approach\n- **Core Concept:** \n- **Optimization Strategy:** \n\n### 💻 Solution Code\n\`\`\`sql\nSELECT emp_id, department, salary\nFROM employees\nQUALIFY DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) <= 3;\n\`\`\`\n\n### ⏱️ Time & Space Complexity\n- **Time Complexity:** $O(N \\log N)$ for sorting partition\n- **Space Complexity:** $O(N)$\n\n### 🔄 Common Follow-Up Questions\n1. What if data contains NULL values?\n2. How would you handle a broadcast timeout in PySpark?\n`,
-            'key_learnings': `\n## 📝 Key Notes & Core Learnings\n\n> [!NOTE]\n> Central takeaways and patterns learned.\n\n### 1. Conceptual Summary\n- \n\n### 2. Best Practices\n- \n\n### 3. Mistakes & Gotchas to Avoid\n- \n`,
-            'sql_tips': `\n## 🗄️ SQL Optimization & Tuning Notes\n\n> [!TIP]\n> Always verify SARGable predicates in WHERE clauses to use indexes.\n\n### 1. Windowing Syntax Pattern\n\`\`\`sql\nSELECT *,\n       DENSE_RANK() OVER (PARTITION BY dept_id ORDER BY salary DESC) as rank\nFROM employees;\n\`\`\`\n\n### 2. CTE vs Subquery Performance\n- Modern query planners inline CTEs, but explicit indexing on join keys is essential.\n`,
-            'python_concepts': `\n## 🐍 Python Advanced Concepts\n\n### 1. Generators vs Lists (Lazy Evaluation)\n\`\`\`python\ndef stream_records(data):\n    for record in data:\n        if record.get('valid'):\n            yield record\n\`\`\`\n\n### 2. Threading vs Multiprocessing (GIL)\n- Use multiprocessing for CPU-bound tasks, threading/asyncio for I/O-bound tasks.\n`,
-            'pyspark_cheatsheet': `\n## ⚡ PySpark Transformations Cheatsheet\n\n> [!IMPORTANT]\n> Essential PySpark DataFrame operations and best practices.\n\n### 1. Window Aggregations\n\`\`\`python\nfrom pyspark.sql.window import Window\nimport pyspark.sql.functions as F\n\nwin = Window.partitionBy('dept').orderBy(F.desc('salary'))\ndf = df.withColumn('rank', F.row_number().over(win))\n\`\`\`\n\n### 2. Skew Join Optimization\n- Use Broadcast join when one side is small (< 100MB):\n\`\`\`python\nresult = large_df.join(F.broadcast(small_df), 'id', 'inner')\n\`\`\`\n`,
-            'databricks_notes': `\n## 🧱 Databricks Delta Lake Architecture\n\n### 1. ACID Transactions & Time Travel\n\`\`\`sql\nSELECT * FROM delta_table TIMESTAMP AS OF '2026-10-01';\n\`\`\`\n\n### 2. Liquid Clustering\n- Modern replacement for partitioning and Z-ordering:\n\`\`\`sql\nALTER TABLE delta_table CLUSTER BY (customer_id, event_date);\n\`\`\`\n`,
-            'cloud_aws_azure': `\n## ☁️ Cloud Data Architecture (AWS vs Azure)\n\n| Capability | AWS Service | Azure Service | Key Tradeoffs |\n| :--- | :--- | :--- | :--- |\n| Object Storage | Amazon S3 | ADLS Gen2 | ADLS Gen2 hierarchical namespace |\n| Serverless SQL | Athena | Synapse Serverless | Pay per TB scanned |\n| Orchestration | AWS Glue / Step Func | Azure Data Factory | ADF JSON-based activity pipelines |\n`,
-            'dsa_patterns': `\n## 🧩 DSA Pattern & Complexity Notes\n\n> [!TIP]\n> Always verify array bounds and constraints first.\n\n### Pattern: Two Pointers\n- **When to use:** Sorted arrays, pair sums, palindrome checks.\n- **Time:** $O(N)$ | **Space:** $O(1)$\n\n\`\`\`python\ndef two_sum_sorted(nums, target):\n    l, r = 0, len(nums) - 1\n    while l < r:\n        s = nums[l] + nums[r]\n        if s == target: return [l, r]\n        elif s < target: l += 1\n        else: r -= 1\n    return []\n\`\`\`\n`,
-            'system_design': `\n## 📐 System Design Blueprint\n\n\`\`\`mermaid\nflowchart LR\n    Source[\"Raw Sources\"] --> Bronze[\"🥉 Bronze Ingestion\"]\n    Bronze --> Silver[\"🥈 Silver Cleaned\"]\n    Silver --> Gold[\"🥇 Gold Aggregates\"]\n\`\`\`\n`,
-            'hr_star': `\n## 🤝 HR & Behavioral STAR Method Response\n\n### Question:\n> Describe a challenging situation where you dealt with tight deadlines or changing technical requirements.\n\n- **Situation (S):** \n- **Task (T):** \n- **Action (A):** \n- **Result (R):** \n`,
-            'daily_summary': `\n## 🎯 Practice Objectives & Problems\n- [ ] SQL: \n- [ ] Python: \n- [ ] PySpark: \n- [ ] DSA: \n\n## 💡 Key Tips & Techniques Learned\n> [!TIP]\n> Write the most valuable shortcut or trick you learned today.\n`
+        const titles = {
+            'NOTE': 'ℹ️ NOTE',
+            'TIP': '💡 TIP',
+            'WARNING': '⚠️ WARNING',
+            'IMPORTANT': '⚡ IMPORTANT'
         };
-
-        if (templates[templateKey]) {
-            textarea.value += '\n' + templates[templateKey];
-            handleNoteEditorInput();
-            showToast('Template appended to document!', 'info');
-        }
+        const typeLower = type.toLowerCase();
+        const html = `
+            <div class="doc-callout callout-${typeLower}">
+                <div class="callout-header">${titles[type] || 'ℹ️ NOTE'}</div>
+                <div class="callout-body" contenteditable="true">Important information or key rule here...</div>
+            </div>
+            <p><br></p>
+        `;
+        insertHtmlAtCursor(html);
     }
 
-    function copyCurrentNoteMarkdown() {
-        const textarea = document.getElementById('note-markdown-textarea');
-        if (textarea && textarea.value) {
-            navigator.clipboard.writeText(textarea.value);
-            showToast('Document markdown copied to clipboard!', 'info');
+    function copyDocumentText() {
+        const sheet = document.getElementById('word-document-sheet');
+        if (sheet) {
+            const text = sheet.innerText || sheet.textContent || '';
+            navigator.clipboard.writeText(text);
+            showToast('Document text copied to clipboard!', 'info');
         }
-    }
-
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 
     // Window Controls: Maximize / Restore & Fullscreen
@@ -879,12 +820,12 @@
                 toolbarBtn.textContent = '🗗';
                 toolbarBtn.title = 'Restore standard layout (Esc)';
             }
-            showToast('Maximized: Full-width documentation & editor (Press Esc to restore)', 'info', 2200);
+            showToast('Maximized: Full-screen Document View (Press Esc to restore)', 'info', 2200);
         } else {
             if (maxBtn) {
                 maxBtn.classList.remove('active');
                 maxBtn.innerHTML = '<span id="maximize-doc-icon">🗖</span> <span id="maximize-doc-text">Maximize</span>';
-                maxBtn.title = 'Maximize Editor & Document / Restore (Esc)';
+                maxBtn.title = 'Maximize Document View / Restore (Esc)';
             }
             if (toolbarBtn) {
                 toolbarBtn.classList.remove('active');
@@ -909,6 +850,11 @@
                 });
             }
         }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     }
 </script>
 {% endblock %}

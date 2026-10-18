@@ -13,16 +13,14 @@ notes_bp = Blueprint("notes", __name__)
 
 NOTE_CATEGORIES = [
     "Key Notes",
-    "Interview Q&A",
-    "SQL Notes",
-    "Python Notes",
-    "PySpark Notes",
-    "Databricks Notes",
-    "Cloud (AWS & Azure)",
-    "DSA Notes",
+    "SQL",
+    "Python",
+    "PySpark",
+    "Databricks",
+    "Cloud",
+    "DSA",
     "System Design",
     "HR & Behavioral",
-    "Daily Practice",
     "General"
 ]
 
