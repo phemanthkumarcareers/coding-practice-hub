@@ -22,6 +22,7 @@ Access your local application at port `5000`:
 | :--- | :--- | :--- |
 | **🏠 Dashboard** | [http://localhost:5000/](http://localhost:5000/) | Overview, 8 KPI cards, 6/6 daily progress & streak tracking |
 | **💻 Practice Workspace** | [http://localhost:5000/practice](http://localhost:5000/practice) | Full-width Monaco Editor, multi-file workspace, console output & live execution |
+| **📚 Documentation** | [http://localhost:5000/documentation](http://localhost:5000/documentation) | Confluence Knowledge Base: Key Notes, Interview Q&A, Tech Notes, Cloud & Revision Hub |
 | **📜 Practice History** | [http://localhost:5000/history](http://localhost:5000/history) | Calendar & table history, multi-criteria filters & grouping |
 | **📊 Datasets Manager** | [http://localhost:5000/datasets](http://localhost:5000/datasets) | Upload CSV/JSON/Parquet, DuckDB table explorer & code snippets |
 | **📈 Reports & Analytics** | [http://localhost:5000/reports](http://localhost:5000/reports) | Performance charts, completion/success rates, & activity trends |
@@ -127,6 +128,37 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   ```sql
   SELECT * FROM sample_employees.csv;
   ```
+
+### 8. Confluence-Style Documentation & Interview Preparation Hub
+- **Dedicated Knowledge Workspace (`/documentation`)**:
+  - Full-featured documentation platform inspired by Confluence, designed for interview preparation, revision notes, and day-to-day lessons learned.
+  - Accessible via the **`📚 Documentation`** sidebar navigation link, direct URL `http://localhost:5000/documentation` (or alias `/notes`), and inside the code editor via `Ctrl + J`.
+- **Dedicated Topic Tabs & Editors**:
+  - **📝 Key Notes**: Core lessons, conceptual takeaways, and critical daily practice insights.
+  - **🎯 Interview Questions & Answers**: Question bank for technical interviews with complete questions, answers, code solutions, time/space complexity, and follow-ups.
+  - **🗄️ SQL Notes**: Advanced window functions, SARGable predicates, query execution plans, CTEs, and QUALIFY filtering.
+  - **🐍 Python Notes**: Generators, memory footprint, decorators, OOP patterns, and multiprocessing/GIL.
+  - **⚡ PySpark Notes**: Spark transformations, actions, broadcast joins, skew handling, and windowing.
+  - **🧱 Databricks Notes**: Delta Lake ACID logs, time travel, liquid clustering, Auto Loader, and Unity Catalog.
+  - **☁️ Cloud (AWS & Azure)**: Side-by-side data engineering service mapping (S3 vs ADLS Gen2, Athena vs Synapse Serverless, Glue vs ADF, EMR vs Azure Databricks).
+  - **🧩 DSA Notes**: Top algorithmic patterns (Two Pointers, Sliding Window, Binary Search) with Big-O complexity tables.
+  - **📐 System Design**: Medallion lakehouse architecture (Bronze, Silver, Gold), streaming ingestion pipelines, and interactive **Mermaid.js** flowcharts.
+  - **🤝 HR & Behavioral**: Structured responses using the **STAR** framework (Situation, Task, Action, Result) with common leadership and conflict scenarios.
+  - **📅 Daily Practice**: Chronological daily logs linked to practice dates.
+- **Three Viewing Modes for Seamless Revision & Editing**:
+  - **`👁️ View (Doc)`**: Clean, read-only reading mode tailored for interview revision with formatted markdown, styled code blocks, rendered tables, and interactive Mermaid diagrams.
+  - **`✏️ Edit (Markdown)`**: Focused full-screen markdown editor equipped with formatting toolbars and syntax helpers.
+  - **`🗖 Split View`**: Side-by-side editing with real-time live preview.
+- **Document Actions & Quick Controls**:
+  - Instant `+ New Doc` creation with category auto-selection.
+  - Quick action buttons on every document row in the sidebar tree: `👁️` View (Read-Only), `✏️` Edit, `🗑️` Delete, and `📌` Pin.
+  - Real-time autosave with debounce status indicator, `Ctrl + S` instant save shortcut, and 1-click clipboard copy.
+  - Rich callout boxes: `> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`, and `> [!IMPORTANT]`.
+  - Prebuilt template inserter for 1-click generation of interview questions, system design blueprints, and tech cheatsheets.
+- **Embedded Practice Workspace Drawer (`Ctrl + J`)**:
+  - Access your notes and documentation directly inside the code editor without navigating away.
+  - Toggle using the **`📚 Docs`** button in the header, the `📚` quick button in the editor toolbar, or the global shortcut **`Ctrl + J`**.
+  - One-click **`↗ Full Page`** button to open the full documentation hub in a new tab.
 
 ---
 

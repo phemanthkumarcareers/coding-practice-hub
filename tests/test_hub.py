@@ -408,14 +408,14 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertIn(b"action-btn-delete", tech_res.data)
 
     def test_20_key_notes_crud(self):
-        # 1. Create a new note
+        # 1. Create a new Interview Q&A note
         note_payload = {
-            "title": "Unit Test SQL Optimization Note",
-            "category": "Technology Tips",
+            "title": "Unit Test Spark Skew Join Q&A",
+            "category": "Interview Q&A",
             "date_str": "2026-11-05",
-            "technology": "SQL",
-            "tags": "sql, indexing, performance",
-            "content": "# SQL Tips\n- Use covering indexes\n- Avoid SELECT *",
+            "technology": "PySpark",
+            "tags": "pyspark, skew, interview, salting",
+            "content": "# Q: How to fix data skew?\n**Answer:** Use salting or broadcast join.",
             "is_pinned": 1
         }
         res_create = self.client.post("/api/notes/save", json=note_payload)
@@ -424,15 +424,15 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertTrue(data_create["success"])
         note_id = data_create["note"]["id"]
         self.assertIsNotNone(note_id)
-        self.assertEqual(data_create["note"]["title"], "Unit Test SQL Optimization Note")
+        self.assertEqual(data_create["note"]["title"], "Unit Test Spark Skew Join Q&A")
 
         # 2. Read note by ID
         res_get = self.client.get(f"/api/notes/{note_id}")
         self.assertEqual(res_get.status_code, 200)
         data_get = res_get.get_json()
         self.assertTrue(data_get["success"])
-        self.assertEqual(data_get["note"]["category"], "Technology Tips")
-        self.assertEqual(data_get["note"]["technology"], "SQL")
+        self.assertEqual(data_get["note"]["category"], "Interview Q&A")
+        self.assertEqual(data_get["note"]["technology"], "PySpark")
 
         # 3. List notes and verify presence
         res_list = self.client.get("/api/notes/list")
@@ -445,19 +445,19 @@ class TestCodingPracticeHub(unittest.TestCase):
         # 4. Update the note
         update_payload = {
             "id": note_id,
-            "title": "Updated SQL Optimization Note",
-            "category": "Technology Tips",
+            "title": "Updated Spark Skew Join Q&A",
+            "category": "Interview Q&A",
             "date_str": "2026-11-05",
-            "technology": "SQL",
-            "tags": "sql, indexing, explain",
-            "content": "# Updated SQL Tips\n- Run EXPLAIN ANALYZE",
+            "technology": "PySpark",
+            "tags": "pyspark, skew, aqe",
+            "content": "# Q: How to fix data skew?\n**Answer:** Enable AQE and salting.",
             "is_pinned": 0
         }
         res_update = self.client.post("/api/notes/save", json=update_payload)
         self.assertEqual(res_update.status_code, 200)
         data_update = res_update.get_json()
         self.assertTrue(data_update["success"])
-        self.assertEqual(data_update["note"]["title"], "Updated SQL Optimization Note")
+        self.assertEqual(data_update["note"]["title"], "Updated Spark Skew Join Q&A")
 
         # 5. Delete note
         res_del = self.client.post("/api/notes/delete", json={"id": note_id})
@@ -480,12 +480,17 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(note["category"], "Daily Practice")
 
     def test_22_notes_page_render(self):
-        res = self.client.get("/notes")
-        self.assertEqual(res.status_code, 200)
-        self.assertIn(b"Key Notes", res.data)
-        self.assertIn(b"confluence-workspace", res.data)
-        self.assertIn(b"notes-tree-sidebar", res.data)
-        self.assertIn(b"confluence-doc-pane", res.data)
+        # Test /documentation endpoint
+        res_doc = self.client.get("/documentation")
+        self.assertEqual(res_doc.status_code, 200)
+        self.assertIn(b"Documentation", res_doc.data)
+        self.assertIn(b"confluence-workspace", res_doc.data)
+        self.assertIn(b"doc-topic-tabs-bar", res_doc.data)
+
+        # Test /notes alias endpoint
+        res_notes = self.client.get("/notes")
+        self.assertEqual(res_notes.status_code, 200)
+        self.assertIn(b"Documentation", res_notes.data)
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,18 +12,21 @@ from models.db import (
 notes_bp = Blueprint("notes", __name__)
 
 NOTE_CATEGORIES = [
-    "Daily Practice",
-    "SQL",
-    "Python",
-    "PySpark",
-    "Databricks",
-    "DSA",
+    "Key Notes",
+    "Interview Q&A",
+    "SQL Notes",
+    "Python Notes",
+    "PySpark Notes",
+    "Databricks Notes",
+    "Cloud (AWS & Azure)",
+    "DSA Notes",
     "System Design",
-    "Interview Tips",
-    "Cheat Sheets",
+    "HR & Behavioral",
+    "Daily Practice",
     "General"
 ]
 
+@notes_bp.route("/documentation")
 @notes_bp.route("/notes")
 def notes_view():
     note_id_arg = request.args.get("id")

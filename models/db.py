@@ -123,17 +123,26 @@ def init_db():
         today_str = date.today().isoformat()
         starter_notes = [
             (
-                f"Daily Practice Notes - {today_str}",
-                "Daily Practice",
+                "Key Notes & Core Learnings",
+                "Key Notes",
                 today_str,
-                "SQL",
-                "daily, practice, tips",
-                "# Daily Practice Notes\n\n> [!NOTE]\n> Record your daily practice insights, problem-solving approaches, and interview takeaways here.\n\n## 🎯 Today's Goals & Focus Areas\n- [ ] SQL: Advanced window functions and analytical queries\n- [ ] Python: Pandas data transformation and vectorized operations\n- [ ] PySpark: Dataframe joins, aggregation patterns, and caching\n- [ ] DSA: Sliding window or binary search problem\n\n## 💡 Key Tips & Syntax Learned\n- **SQL CTEs:** Always filter early in the CTE before doing expensive joins.\n- **DuckDB Tip:** You can query CSV files directly with `SELECT * FROM 'data.csv'`.\n\n## 📝 Personal Notes & Questions\n- Need to review partitioning vs clustering performance differences.",
+                "General",
+                "learnings, takeaways, core, revision",
+                "# 📝 Key Notes & Core Learnings\n\n> [!NOTE]\n> Central repository for core lessons, conceptual takeaways, and critical insights gathered across daily practice sessions.\n\n## 💡 Core Principles\n- **Write for production first**: Always consider edge cases (NULLs, empty sets, skew, network timeouts).\n- **Measure before optimizing**: Always inspect query execution plans (`EXPLAIN ANALYZE` in SQL, `.explain(True)` in PySpark) before applying optimizations.\n- **Keep schemas explicit**: Relying on automatic schema inference in pipelines creates production drift risks.\n\n## 📌 Revision Anchors\n- [ ] Review broadcast join threshold (default 10MB, safe up to 100MB in PySpark).\n- [ ] Revisit QUALIFY clause syntax for filtering window functions cleanly.\n- [ ] Practice 2-pointer and sliding window template implementations.",
+                1
+            ),
+            (
+                "Top Technical & Data Engineering Interview Q&A",
+                "Interview Q&A",
+                today_str,
+                "General",
+                "interview, questions, answers, preparation",
+                "# 🎯 Top Technical & Data Engineering Interview Q&A\n\n> [!TIP]\n> Curated bank of real-world interview questions and structured answers for revision.\n\n---\n\n### Q1: What is the difference between `ROW_NUMBER()`, `RANK()`, and `DENSE_RANK()`?\n**Answer:**\n- `ROW_NUMBER()`: Assigns a unique sequential integer to each row within a partition, never producing ties (e.g., 1, 2, 3, 4).\n- `RANK()`: Assigns the same rank to identical values, but skips the next numbers according to tie count (e.g., 1, 2, 2, 4).\n- `DENSE_RANK()`: Assigns identical ranks to ties without skipping subsequent ranks (e.g., 1, 2, 2, 3).\n\n```sql\nSELECT val,\n       ROW_NUMBER() OVER (ORDER BY val DESC) AS rn,\n       RANK() OVER (ORDER BY val DESC)       AS rk,\n       DENSE_RANK() OVER (ORDER BY val DESC) AS drk\nFROM (VALUES (100), (90), (90), (80)) t(val);\n```\n\n---\n\n### Q2: How does Spark handle data skew and what strategies mitigate it?\n**Answer:**\nData skew happens when partitions receive uneven amounts of data due to high-cardinality keys (e.g., NULL values or popular merchant IDs).\n**Mitigation Strategies:**\n1. **Salting**: Append random integer suffixes (e.g., `key_0` to `key_9`) to divide the hot key across multiple partitions during join, then replicate the right table.\n2. **Broadcast Hash Join**: If one table is small, eliminate shuffling completely with `broadcast(small_df)`.\n3. **Adaptive Query Execution (AQE)**: Enable `spark.sql.adaptive.skewJoin.enabled = true` in Spark 3.x+ to split oversized skewed partitions automatically.\n\n---\n\n### Q3: What is the Medallion Architecture in Modern Data Lakehouses?\n**Answer:**\n- **Bronze Layer (Raw)**: Raw append-only immutable data ingested directly from sources (APIs, CDC, Kafka) in native formats with metadata.\n- **Silver Layer (Cleansed / Conformed)**: Cleaned, deduplicated, enriched, and validated data with business schema enforcement.\n- **Gold Layer (Curated / Aggregated)**: Business-level aggregated reporting tables, star schemas, and KPIs ready for BI tools and ML models.",
                 1
             ),
             (
                 "SQL Query Optimization & Performance Tips",
-                "SQL",
+                "SQL Notes",
                 today_str,
                 "SQL",
                 "sql, performance, tips, indexing",
@@ -141,22 +150,76 @@ def init_db():
                 1
             ),
             (
-                "PySpark Common Patterns & Transformations Cheatsheet",
-                "PySpark",
+                "Python Core Concepts, Generators & OOP",
+                "Python Notes",
                 today_str,
-                "PySpark",
-                "pyspark, spark, cheatsheet, bigdata",
-                "# PySpark Common Patterns & Transformations Cheatsheet\n\n> [!IMPORTANT]\n> Essential PySpark DataFrame operations and best practices.\n\n### 1. Safe Aggregations\n```python\nfrom pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\n# Window specification\nwin_spec = Window.partitionBy('department').orderBy(F.col('salary').desc())\n\ndf_ranked = df.withColumn('rank', F.dense_rank().over(win_spec))\n```\n\n### 2. Handling Skewed Joins\n- Use **Broadcast Joins** when one table is small (< 100MB):\n```python\njoined_df = large_df.join(F.broadcast(small_df), 'lookup_id', 'left')\n```",
+                "Python",
+                "python, generators, decorators, memory",
+                "# 🐍 Python Core Concepts & Architecture Notes\n\n### 1. Generators vs Lists (Memory Efficiency)\n- Lists store all elements in memory ($O(N)$ space).\n- Generators yield one item at a time lazily ($O(1)$ space).\n```python\n# Generator expression\ngen = (x * 2 for x in range(1_000_000))\nprint(next(gen))  # Evaluated on demand\n```\n\n### 2. Decorators Pattern\n```python\nimport time\nfrom functools import wraps\n\ndef timeit(func):\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.perf_counter()\n        result = func(*args, **kwargs)\n        elapsed = time.perf_counter() - start\n        print(f'{func.__name__} took {elapsed:.4f}s')\n        return result\n    return wrapper\n```",
                 0
             ),
             (
+                "PySpark Common Patterns & Transformations Cheatsheet",
+                "PySpark Notes",
+                today_str,
+                "PySpark",
+                "pyspark, spark, cheatsheet, bigdata",
+                "# PySpark Common Patterns & Transformations Cheatsheet\n\n> [!IMPORTANT]\n> Essential PySpark DataFrame operations and best practices.\n\n### 1. Safe Aggregations\n```python\nfrom pyspark.sql import functions as F\nfrom pyspark.sql.window import Window\n\nwin_spec = Window.partitionBy('department').orderBy(F.col('salary').desc())\ndf_ranked = df.withColumn('rank', F.dense_rank().over(win_spec))\n```\n\n### 2. Handling Skewed Joins\n- Use **Broadcast Joins** when one table is small (< 100MB):\n```python\njoined_df = large_df.join(F.broadcast(small_df), 'lookup_id', 'left')\n```",
+                1
+            ),
+            (
+                "Databricks Lakehouse, Delta Lake & Unity Catalog",
+                "Databricks Notes",
+                today_str,
+                "Databricks",
+                "databricks, delta, lakehouse, unity-catalog",
+                "# 🧱 Databricks & Delta Lake Architecture Notes\n\n### 1. Delta Lake Core Features\n- **ACID Transactions**: Stored via `_delta_log/` transaction logs JSON + checkpoint parquet files.\n- **Time Travel**: Query previous snapshots:\n```sql\nSELECT * FROM employees TIMESTAMP AS OF '2026-10-01';\nSELECT * FROM employees VERSION AS OF 12;\n```\n- **Liquid Clustering**: Modern replacement for partitioning and Z-ordering (`CLUSTER BY (col1, col2)`).\n\n### 2. Auto Loader (`cloudFiles`)\n- Efficiently ingests new files incrementally from cloud storage (S3/ADLS) with automatic schema evolution.",
+                0
+            ),
+            (
+                "Cloud Data Architecture: AWS vs Azure Comparison",
+                "Cloud (AWS & Azure)",
+                today_str,
+                "General",
+                "cloud, aws, azure, architecture, interview",
+                "# ☁️ Cloud Data Architecture: AWS vs Azure Comparison\n\n> [!NOTE]\n> Comprehensive service mapping for cloud data engineering interviews.\n\n| Capability | AWS Service | Azure Service | Key Notes |\n| :--- | :--- | :--- | :--- |\n| **Object Storage** | Amazon S3 | Azure Data Lake Storage (ADLS) Gen2 | Hierarchical namespace in ADLS Gen2 vs flat S3 |\n| **Serverless SQL** | Amazon Athena | Azure Synapse Serverless SQL | Presto/Trino-based query over S3/ADLS files |\n| **ETL Orchestration** | AWS Glue / Step Functions | Azure Data Factory (ADF) / Synapse Pipelines | ADF uses copy activities + data flows |\n| **Managed Spark** | Amazon EMR / Glue Spark | Azure Databricks / Azure Synapse Spark | Databricks standard across both clouds |\n| **Cloud Data Warehouse** | Amazon Redshift | Azure Synapse Dedicated SQL Pool | Columnar MPP storage with partition distribution |\n| **Event Streaming** | Amazon Kinesis / MSK (Kafka) | Azure Event Hubs | Kafka-compatible ingestion endpoints |",
+                1
+            ),
+            (
                 "DSA Patterns & Time Complexity Reference",
-                "DSA",
+                "DSA Notes",
                 today_str,
                 "DSA",
                 "dsa, algorithms, interview, patterns",
                 "# DSA Patterns & Time Complexity Reference\n\n> [!TIP]\n> Quick cheat sheet for identifying algorithmic patterns based on problem constraints.\n\n| Input Size (N) | Target Time Complexity | Likely Algorithms / Patterns |\n| :--- | :--- | :--- |\n| $N \\le 10$ | $O(N!), O(2^N)$ | Backtracking, Recursion, Permutations |\n| $N \\le 10^3$ | $O(N^2)$ | 2D Dynamic Programming, Nested Loops |\n| $N \\le 10^5$ | $O(N \\log N)$ | Sorting, Divide & Conquer, Heap / PriorityQueue |\n| $N \\le 10^6$ | $O(N)$ | Two Pointers, Sliding Window, Hash Map, Monotonic Stack |\n| Sorted Array | $O(\\log N)$ | Binary Search |\n\n### Core Templates\n#### Two Pointers (Opposite Ends)\n```python\nleft, right = 0, len(nums) - 1\nwhile left < right:\n    curr_sum = nums[left] + nums[right]\n    if curr_sum == target:\n        return [left, right]\n    elif curr_sum < target:\n        left += 1\n    else:\n        right -= 1\n```",
                 1
+            ),
+            (
+                "System Design: Medallion Architecture Blueprint",
+                "System Design",
+                today_str,
+                "System Design",
+                "system-design, architecture, medallion, pipeline",
+                "# 📐 System Design: Medallion Architecture Blueprint\n\n```mermaid\nflowchart LR\n    Sources[\"Data Sources\\n(APIs, Kafka, DBs)\"] --> Bronze[\"🥉 Bronze\\nRaw Ingestion\"]\n    Bronze --> Silver[\"🥈 Silver\\nCleaned & Conformed\"]\n    Silver --> Gold[\"🥇 Gold\\nBusiness Aggregates\"]\n    Gold --> Consumers[\"Consumers\\n(BI, ML, Apps)\"]\n```\n\n### 1. Functional Requirements\n- Ingest 10M events/day with < 5 minute latency.\n- Deduplicate events by `event_id` and handle late-arriving records up to 24 hours.\n- Support historical analytical reporting and ad-hoc slicing.",
+                0
+            ),
+            (
+                "HR & Behavioral Interview Preparation (STAR Method)",
+                "HR & Behavioral",
+                today_str,
+                "General",
+                "hr, behavioral, star, interview, leadership",
+                "# 🤝 HR & Behavioral Interview Preparation (STAR Method)\n\n> [!TIP]\n> Structure every behavioral response using the **STAR** framework: Situation, Task, Action, Result.\n\n### 1. STAR Framework Structure\n- **Situation (20%)**: Context, project background, scope, and timeline.\n- **Task (15%)**: What was your specific responsibility or problem to solve?\n- **Action (50%)**: What concrete technical/collaborative actions did you take? Use 'I', not just 'we'.\n- **Result (15%)**: Quantifiable outcome (e.g., 'reduced pipeline runtime by 45%', 'saved \\$12k/month').\n\n### 2. Common Scenarios to Prepare\n1. A time you handled ambiguous requirements from stakeholders.\n2. Resolving a critical production outage or data quality pipeline break.\n3. Handling disagreement with a peer or engineering manager.",
+                0
+            ),
+            (
+                f"Daily Practice Notes - {today_str}",
+                "Daily Practice",
+                today_str,
+                "SQL",
+                "daily, practice, tips",
+                "# Daily Practice Notes\n\n> [!NOTE]\n> Record your daily practice insights, problem-solving approaches, and interview takeaways here.\n\n## 🎯 Today's Goals & Focus Areas\n- [ ] SQL: Advanced window functions and analytical queries\n- [ ] Python: Pandas data transformation and vectorized operations\n- [ ] PySpark: Dataframe joins, aggregation patterns, and caching\n- [ ] DSA: Sliding window or binary search problem",
+                0
             )
         ]
         for note in starter_notes:
