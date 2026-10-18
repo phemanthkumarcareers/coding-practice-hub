@@ -43,6 +43,74 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
 
 ---
 
+## 📦 Complete Software Prerequisites & Local Installation Guide
+
+Follow these steps to set up and run the application from scratch on any local machine (Windows, macOS, or Linux).
+
+### 1. System Requirements & Prerequisites
+- **Python**: Version `3.10`, `3.11`, or `3.12` (tested and recommended on Python `3.12`).
+  - Download: [https://www.python.org/downloads/](https://www.python.org/downloads/)
+  - *Windows*: Ensure the **"Add python.exe to PATH"** checkbox is checked during installation.
+- **Java JDK (Required for PySpark execution)**:
+  - **Java 17 LTS**: [Eclipse Adoptium Temurin 17 LTS](https://adoptium.net/temurin/releases/?version=17) or Microsoft Build of OpenJDK 17.
+  - Set `JAVA_HOME` environment variable (e.g. `C:\Program Files\Eclipse Adoptium\jdk-17.0.x-hotspot`).
+  - *Note:* The application automatically scans standard directories (`C:\Program Files\Eclipse Adoptium`, `C:\Program Files\Java`, `C:\Program Files\Microsoft`) to auto-discover your Java installation if `JAVA_HOME` is not manually set.
+- **Git**: [https://git-scm.com/downloads](https://git-scm.com/downloads)
+
+### 2. Step-by-Step Installation Instructions
+
+#### Step 1: Clone the Repository
+```bash
+git clone https://github.com/phemanthkumarcareers/coding-practice-hub.git
+cd coding-practice-hub
+```
+
+#### Step 2: Create a Python Virtual Environment
+Creating an isolated virtual environment prevents library conflicts:
+- **Windows (PowerShell / Command Prompt)**:
+  ```powershell
+  python -m venv venv
+  .\venv\Scripts\activate
+  ```
+- **macOS / Linux**:
+  ```bash
+  python3 -m venv venv
+  source venv/bin/activate
+  ```
+
+#### Step 3: Upgrade Pip & Install All Python Dependencies
+All required dependencies are defined in `requirements.txt`:
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+#### 📋 Dependencies Breakdown (`requirements.txt`):
+| Package | Version | Purpose in Application |
+| :--- | :--- | :--- |
+| **`Flask`** | `>=3.0.0` | Core WSGI web framework, REST routing, template rendering & session management |
+| **`duckdb`** | `>=1.0.0` | Embedded in-process analytical SQL database engine with multi-DB & direct CSV querying |
+| **`pandas`** | `>=2.0.0` | High-performance DataFrame manipulation & tabular data parsing in Python workspace |
+| **`pyarrow`** | `>=14.0.0` | Columnar memory format, Parquet file processing, and DuckDB/Pandas zero-copy exchange |
+| **`pyspark`** | `>=3.5.0` | Apache Spark Python API for local distributed computing, DataFrame transformations & Spark SQL |
+| **`tabulate`** | `>=0.9.0` | Formatted console tables and clean multi-column stdout printing |
+| **`python-dateutil`** | `>=2.8.0` | Date manipulation, streak counter intervals, and calendar tracking |
+| **`Werkzeug`** | `>=3.0.0` | Secure filename handling, request routing, and web server WSGI utilities |
+| **`Jinja2`** | `>=3.1.0` | Server-side templating engine for responsive UI layouts |
+
+#### Step 4: Verify Environment & Diagnostics
+Run the automated test suite to verify that your local environment is correctly configured:
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
+You should see all 22 tests passing with `OK`.
+
+#### Step 5: Start the Application Server
+- **Option A**: Double-click `run.bat` (Windows).
+- **Option B**: Run `python app.py` and open [http://localhost:5000/](http://localhost:5000/) in your browser.
+
+---
+
 ## 💻 Layout & Navigation Features
 
 ### 1. Left Vertical Sidebar (Maximized Screen Height & Collapsible)
@@ -155,6 +223,9 @@ Then open: **[http://localhost:5000/](http://localhost:5000/)**
   - Real-time autosave with debounce status indicator, `Ctrl + S` instant save shortcut, and 1-click clipboard copy.
   - Rich callout boxes: `> [!NOTE]`, `> [!TIP]`, `> [!WARNING]`, and `> [!IMPORTANT]`.
   - Prebuilt template inserter for 1-click generation of interview questions, system design blueprints, and tech cheatsheets.
+  - **Window Controls (Maximize, Restore & Fullscreen)**:
+    - **`🗖 Maximize / 🗗 Restore`**: Expand the document pane to occupy the entire screen in focus mode, hiding the sidebar for immersive revision (toggle via top header button or toolbar icon). Pressing `Esc` immediately restores the standard view.
+    - **`⛶ Fullscreen`**: Expand into true edge-to-edge browser fullscreen (`F11` / Fullscreen button).
 - **Embedded Practice Workspace Drawer (`Ctrl + J`)**:
   - Access your notes and documentation directly inside the code editor without navigating away.
   - Toggle using the **`📚 Docs`** button in the header, the `📚` quick button in the editor toolbar, or the global shortcut **`Ctrl + J`**.

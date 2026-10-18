@@ -97,6 +97,12 @@
                     <button type="button" class="btn btn-secondary btn-sm" onclick="copyCurrentNoteMarkdown()" title="Copy Markdown to Clipboard">
                         📋 Copy
                     </button>
+                    <button type="button" id="btn-maximize-doc" class="btn btn-secondary btn-sm" onclick="toggleMaximizeDoc()" title="Maximize Editor & Document / Restore (Esc)">
+                        <span id="maximize-doc-icon">🗖</span> <span id="maximize-doc-text">Maximize</span>
+                    </button>
+                    <button type="button" id="btn-fullscreen-doc" class="btn btn-secondary btn-sm btn-fullscreen-trigger" onclick="toggleFullScreenDoc()" title="Toggle Fullscreen (F11)">
+                        <span class="fullscreen-icon">⛶</span> <span class="fullscreen-text">Fullscreen</span>
+                    </button>
                     <button type="button" class="btn btn-outline-danger btn-sm" onclick="deleteCurrentNote()" title="Delete this document">
                         🗑️ Delete
                     </button>
@@ -201,6 +207,12 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Window Controls (Maximize / Restore, Fullscreen) -->
+            <div style="display:flex; align-items:center; gap:0.35rem; margin-left:auto;">
+                <button type="button" id="toolbar-btn-maximize-doc" class="pane-icon-btn" onclick="toggleMaximizeDoc()" title="Maximize / Restore (Esc)">🗖</button>
+                <button type="button" id="toolbar-btn-fullscreen-doc" class="pane-icon-btn" onclick="toggleFullScreenDoc()" title="Toggle Fullscreen (F11)">⛶</button>
+            </div>
         </div>
 
         <!-- Editor & Live Preview Body -->
@@ -250,12 +262,17 @@
             createNewNote('Key Notes', 'Key Notes & Learnings');
         }
 
-        // Global Keyboard Shortcut: Ctrl+S to save
+        // Global Keyboard Shortcut: Ctrl+S to save, Esc to restore maximized layout
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 if (document.getElementById('notes-doc-pane')) {
                     e.preventDefault();
                     saveCurrentNote(true);
+                }
+            } else if (e.key === 'Escape') {
+                const workspace = document.querySelector('.confluence-workspace');
+                if (workspace && workspace.classList.contains('doc-maximized')) {
+                    toggleMaximizeDoc();
                 }
             }
         });
@@ -841,6 +858,57 @@
     function escapeHtml(text) {
         if (!text) return '';
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // Window Controls: Maximize / Restore & Fullscreen
+    function toggleMaximizeDoc() {
+        const workspace = document.querySelector('.confluence-workspace');
+        const maxBtn = document.getElementById('btn-maximize-doc');
+        const toolbarBtn = document.getElementById('toolbar-btn-maximize-doc');
+        if (!workspace) return;
+
+        const isMax = workspace.classList.toggle('doc-maximized');
+        if (isMax) {
+            if (maxBtn) {
+                maxBtn.classList.add('active');
+                maxBtn.innerHTML = '<span id="maximize-doc-icon">🗗</span> <span id="maximize-doc-text">Restore</span>';
+                maxBtn.title = 'Restore standard layout (Esc)';
+            }
+            if (toolbarBtn) {
+                toolbarBtn.classList.add('active');
+                toolbarBtn.textContent = '🗗';
+                toolbarBtn.title = 'Restore standard layout (Esc)';
+            }
+            showToast('Maximized: Full-width documentation & editor (Press Esc to restore)', 'info', 2200);
+        } else {
+            if (maxBtn) {
+                maxBtn.classList.remove('active');
+                maxBtn.innerHTML = '<span id="maximize-doc-icon">🗖</span> <span id="maximize-doc-text">Maximize</span>';
+                maxBtn.title = 'Maximize Editor & Document / Restore (Esc)';
+            }
+            if (toolbarBtn) {
+                toolbarBtn.classList.remove('active');
+                toolbarBtn.textContent = '🗖';
+                toolbarBtn.title = 'Maximize / Restore (Esc)';
+            }
+            showToast('Standard View Restored', 'info', 1500);
+        }
+    }
+
+    function toggleFullScreenDoc() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().then(() => {
+                showToast('Entered Fullscreen Mode (Press Esc or F11 to exit)', 'info', 2000);
+            }).catch(err => {
+                console.error('Fullscreen request failed:', err);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen().then(() => {
+                    showToast('Exited Fullscreen Mode', 'info', 1500);
+                });
+            }
+        }
     }
 </script>
 {% endblock %}

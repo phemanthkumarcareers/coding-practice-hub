@@ -2525,6 +2525,29 @@ html[data-theme="light"] .ripple-effect {
   background: var(--bg-primary);
 }
 
+/* Maximize Documentation & Editor Focus Mode */
+.confluence-workspace.doc-maximized {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  grid-template-columns: 1fr !important;
+  background: var(--bg-primary);
+}
+
+.confluence-workspace.doc-maximized .confluence-sidebar {
+  display: none !important;
+}
+
+.confluence-workspace.doc-maximized #btn-maximize-doc.active,
+.confluence-workspace.doc-maximized #toolbar-btn-maximize-doc.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
 @media (max-width: 900px) {
   .confluence-workspace {
     grid-template-columns: 1fr;
