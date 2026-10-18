@@ -1220,7 +1220,7 @@ async function switchTech(techName) {
     createOrUpdateEditor(initialCode, lang);
 
     // Render Output
-    renderOutput(p.latest_output, p.latest_error, p.duration_ms);
+    renderOutput(p.latest_output, p.latest_error, p.duration_ms, null, { isSwitch: true, tech: techName });
 
     // If System Design, trigger mermaid preview
     if (techName === 'System Design') {
@@ -1704,7 +1704,12 @@ async function runCurrentCode(runAll = false) {
         p.duration_ms = data.duration_ms;
 
         updateStatusBadge(p.status);
-        renderOutput(data.output, data.error, data.duration_ms, data.structured_result);
+        renderOutput(data.output, data.error, data.duration_ms, data.structured_result, {
+            append: true,
+            status: data.status,
+            sessionMode: data.session_mode,
+            tech: activeTechnology
+        });
 
         // Update live database tables if returned
         if (data.updated_schemas) {
@@ -1721,7 +1726,11 @@ async function runCurrentCode(runAll = false) {
 
     } catch (err) {
         console.error('Run error:', err);
-        renderOutput('', `Client-side execution request error: ${err.message}`, 0);
+        renderOutput('', `Client-side execution request error: ${err.message}`, 0, null, {
+            append: true,
+            status: 'FAILED',
+            tech: activeTechnology
+        });
         updateStatusBadge('FAILED');
     } finally {
         if (runBtn) {
@@ -1757,17 +1766,116 @@ async function restartSparkSession() {
 }
 window.restartSparkSession = restartSparkSession;
 
-// Render Output Console with Sticky Table Header in Scroll Wrapper
-function renderOutput(stdout, stderr, durationMs, structuredResult) {
+let consoleRunIndex = 0;
+
+// Render Output Console with Timestamped Multi-Run Logging and Structured Display
+function renderOutput(stdout, stderr, durationMs, structuredResult, options = {}) {
     const container = document.getElementById('output-console');
     if (!container) return;
 
     const timerBadge = document.getElementById('output-duration-badge');
-    if (timerBadge) timerBadge.textContent = durationMs ? `${durationMs} ms` : '';
 
+    // If switching technology or fresh reset
+    if (options.isSwitch) {
+        consoleRunIndex = 0;
+        container.innerHTML = '';
+
+        if (!stdout && !stderr && (!structuredResult || !structuredResult.columns)) {
+            container.innerHTML = '<div class="console-placeholder" style="color:var(--text-muted); font-size:0.82rem;">Ready. Click Run to execute code.</div>';
+            if (timerBadge) timerBadge.textContent = '';
+            return;
+        }
+
+        // Display existing saved practice output
+        const entry = document.createElement('div');
+        entry.className = 'console-run-entry';
+
+        const header = document.createElement('div');
+        header.className = 'console-run-header';
+        header.innerHTML = `
+            <div class="console-run-header-left">
+                <span class="console-run-badge badge-saved">💾 Last Saved Snapshot</span>
+                <span class="console-run-badge badge-tech">${options.tech || activeTechnology}</span>
+                <span class="console-run-badge badge-time">${durationMs ? `${durationMs} ms` : ''}</span>
+            </div>
+            <button type="button" class="console-run-copy-btn" title="Copy this output" onclick="copyRunOutput(this)">📋 Copy</button>
+        `;
+        entry.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'console-run-body';
+        _renderOutputBody(body, stdout, stderr, structuredResult);
+        entry.appendChild(body);
+
+        container.appendChild(entry);
+        if (timerBadge) timerBadge.textContent = durationMs ? `Last: ${durationMs} ms` : '';
+        return;
+    }
+
+    // If appending a new execution run
+    if (options.append) {
+        // Remove empty placeholders if any
+        const placeholder = container.querySelector('.console-placeholder');
+        if (placeholder || container.textContent.includes('Ready. Click Run') || container.textContent.includes('Console cleared.')) {
+            container.innerHTML = '';
+        }
+
+        consoleRunIndex++;
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const tech = options.tech || activeTechnology;
+        const isSuccess = options.status !== 'FAILED' && !stderr;
+        const statusBadgeClass = isSuccess ? 'badge-success' : 'badge-failed';
+        const statusText = isSuccess ? `✓ ${durationMs || 0} ms` : `✗ Failed (${durationMs || 0} ms)`;
+        const warmBadge = (options.sessionMode === 'WARM') ? ' • ⚡ WARM' : '';
+
+        const entry = document.createElement('div');
+        entry.className = 'console-run-entry';
+
+        const header = document.createElement('div');
+        header.className = 'console-run-header';
+        header.innerHTML = `
+            <div class="console-run-header-left">
+                <span class="console-run-badge badge-num">Run #${consoleRunIndex}</span>
+                <span class="console-run-badge badge-time">🕒 ${timeStr}</span>
+                <span class="console-run-badge badge-tech">${tech}${warmBadge}</span>
+                <span class="console-run-badge ${statusBadgeClass}">${statusText}</span>
+            </div>
+            <button type="button" class="console-run-copy-btn" title="Copy this run output" onclick="copyRunOutput(this)">📋 Copy</button>
+        `;
+        entry.appendChild(header);
+
+        const body = document.createElement('div');
+        body.className = 'console-run-body';
+        _renderOutputBody(body, stdout, stderr, structuredResult);
+        entry.appendChild(body);
+
+        container.appendChild(entry);
+
+        if (timerBadge) {
+            timerBadge.textContent = `${durationMs || 0} ms (${timeStr})`;
+        }
+
+        // Auto-scroll to newly appended run
+        setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+        }, 50);
+        return;
+    }
+
+    // Fallback one-shot render (backward compatibility)
     container.innerHTML = '';
+    const body = document.createElement('div');
+    body.className = 'console-run-body';
+    _renderOutputBody(body, stdout, stderr, structuredResult);
+    container.appendChild(body);
+    if (timerBadge) timerBadge.textContent = durationMs ? `${durationMs} ms` : '';
+}
 
+function _renderOutputBody(container, stdout, stderr, structuredResult) {
+    let hasContent = false;
     if (structuredResult && structuredResult.columns && structuredResult.columns.length > 0) {
+        hasContent = true;
         const scrollWrapper = document.createElement('div');
         scrollWrapper.className = 'table-scroll-wrapper';
 
@@ -1802,30 +1910,53 @@ function renderOutput(stdout, stderr, durationMs, structuredResult) {
 
         const summary = document.createElement('div');
         summary.style.marginTop = '0.5rem';
-        summary.style.fontSize = '0.8rem';
+        summary.style.fontSize = '0.78rem';
         summary.style.color = 'var(--text-secondary)';
-        summary.textContent = `Rows returned: ${structuredResult.row_count} ${structuredResult.truncated ? '(truncated for display)' : ''} | DB Context: ${structuredResult.active_database || 'main'}`;
+        summary.textContent = `Rows returned: ${structuredResult.row_count} ${structuredResult.truncated ? '(truncated for display)' : ''} | DB: ${structuredResult.active_database || 'main'}`;
         container.appendChild(summary);
-    } else {
-        if (stdout) {
-            const outDiv = document.createElement('div');
-            outDiv.textContent = stdout;
-            container.appendChild(outDiv);
-        }
+    } else if (stdout) {
+        hasContent = true;
+        const outDiv = document.createElement('div');
+        outDiv.textContent = stdout;
+        container.appendChild(outDiv);
     }
 
     if (stderr) {
+        hasContent = true;
         const errDiv = document.createElement('div');
         errDiv.className = 'output-error shake-error';
-        errDiv.style.marginTop = stdout ? '0.75rem' : '0';
+        errDiv.style.marginTop = stdout ? '0.65rem' : '0';
         errDiv.textContent = stderr;
         container.appendChild(errDiv);
     }
 
-    if (!stdout && !stderr && (!structuredResult || !structuredResult.columns)) {
-        container.innerHTML = '<span style="color:var(--text-muted);">Ready. Click Run to execute code.</span>';
+    if (!hasContent) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.style.color = 'var(--text-muted)';
+        emptyDiv.style.fontSize = '0.8rem';
+        emptyDiv.textContent = '(Execution completed with no output)';
+        container.appendChild(emptyDiv);
     }
 }
+
+// Copy single run output to clipboard
+async function copyRunOutput(btn) {
+    const entry = btn.closest('.console-run-entry');
+    if (!entry) return;
+    const body = entry.querySelector('.console-run-body');
+    const text = body ? (body.innerText || body.textContent || '') : '';
+    if (!text.trim()) {
+        showToast('No output to copy in this run', 'info', 1200);
+        return;
+    }
+    try {
+        await navigator.clipboard.writeText(text);
+        showToast('Run output copied to clipboard! 📋', 'success', 1500);
+    } catch (e) {
+        showToast('Copy failed: ' + e.message, 'error');
+    }
+}
+window.copyRunOutput = copyRunOutput;
 
 // Render System Design Preview
 function renderSystemDesignPreview(markdownText) {
@@ -2033,15 +2164,16 @@ function toggleConsolePane() {
 function clearConsoleOutput() {
     const container = document.getElementById('output-console');
     if (container) {
-        container.innerHTML = '<span style="color:var(--text-muted);">Console cleared. Ready.</span>';
+        container.innerHTML = '<div class="console-placeholder" style="color:var(--text-muted); font-size:0.82rem;">Console cleared. Ready. Click Run to execute code.</div>';
     }
+    consoleRunIndex = 0;
     const timerBadge = document.getElementById('output-duration-badge');
     if (timerBadge) timerBadge.textContent = '';
     const sysContainer = document.getElementById('system-design-preview-container');
     if (sysContainer) {
         sysContainer.innerHTML = '<div style="color:var(--text-muted); padding:1rem;">Architecture diagrams and notes will render live here.</div>';
     }
-    showToast('Console output cleared', 'info', 1200);
+    showToast('Console cleared', 'info', 1200);
 }
 
 // Copy Console Content to Clipboard (Structured, Text, or Design Preview)
