@@ -22,6 +22,21 @@ settings_bp = Blueprint("settings", __name__)
 def settings_view():
     current_settings = get_all_settings()
     env_info = pyspark_service.check_environment()
+
+    # Auto-populate java_home and spark_home if not yet set in database
+    detected_java = env_info.get("detected_java_home") or env_info.get("java_home", "")
+    detected_spark = env_info.get("detected_spark_home") or env_info.get("spark_home", "")
+
+    if not current_settings.get("java_home") and detected_java:
+        current_settings["java_home"] = detected_java
+        set_setting("java_home", detected_java)
+
+    if not current_settings.get("spark_home") and detected_spark:
+        current_settings["spark_home"] = detected_spark
+        set_setting("spark_home", detected_spark)
+
+    env_info["detected_java_home"] = detected_java
+    env_info["detected_spark_home"] = detected_spark
     env_info["detected_python"] = sys.executable
     env_info["python_version"] = sys.version.split()[0]
     env_info["sqlite_path"] = str(SQLITE_PATH)

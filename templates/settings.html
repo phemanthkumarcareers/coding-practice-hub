@@ -71,15 +71,37 @@
         </div>
 
         <div>
-            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">JAVA_HOME:</label>
-            <input type="text" id="setting-java-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('java_home', '') }}" placeholder="e.g. C:\Program Files\Java\jdk-17">
-            <span style="font-size:0.75rem; color:var(--text-muted);">Required if running local Spark / PySpark.</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                <label style="font-size:0.8rem; font-weight:600;">JAVA_HOME:</label>
+                {% if env_info.detected_java_home %}
+                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="document.getElementById('setting-java-home').value = '{{ env_info.detected_java_home|replace('\\', '\\\\') }}'">🔄 Auto-Fill</button>
+                {% endif %}
+            </div>
+            <input type="text" id="setting-java-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('java_home', '') or env_info.detected_java_home }}" placeholder="e.g. C:\Program Files\Eclipse Adoptium\jdk-17.0.x-hotspot">
+            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:0.25rem;">
+                {% if env_info.detected_java_home %}
+                    Detected JVM Path: <code style="color:var(--accent-primary); word-break:break-all;">{{ env_info.detected_java_home }}</code>
+                {% else %}
+                    Required for running PySpark and local Apache Spark execution.
+                {% endif %}
+            </span>
         </div>
 
         <div>
-            <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">SPARK_HOME:</label>
-            <input type="text" id="setting-spark-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('spark_home', '') }}" placeholder="e.g. C:\spark">
-            <span style="font-size:0.75rem; color:var(--text-muted);">Optional custom Spark distribution home path.</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.3rem;">
+                <label style="font-size:0.8rem; font-weight:600;">SPARK_HOME:</label>
+                {% if env_info.detected_spark_home %}
+                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.72rem; padding:0.15rem 0.45rem;" onclick="document.getElementById('setting-spark-home').value = '{{ env_info.detected_spark_home|replace('\\', '\\\\') }}'">🔄 Auto-Fill</button>
+                {% endif %}
+            </div>
+            <input type="text" id="setting-spark-home" class="meta-input" style="width:100%; font-family:var(--font-mono);" value="{{ settings.get('spark_home', '') or env_info.detected_spark_home }}" placeholder="e.g. C:\spark or PySpark package path">
+            <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:0.25rem;">
+                {% if env_info.detected_spark_home %}
+                    Detected Spark Path: <code style="color:var(--accent-primary); word-break:break-all;">{{ env_info.detected_spark_home }}</code>
+                {% else %}
+                    Optional custom Spark distribution home path.
+                {% endif %}
+            </span>
         </div>
 
         <div>
@@ -100,12 +122,14 @@
     </div>
 </div>
 
-<!-- Storage Locations -->
+<!-- Storage & Environment Paths Locations -->
 <div class="section-box">
     <div class="section-title">
-        <span>Storage Paths</span>
+        <span>Storage & Environment Paths</span>
     </div>
-    <div style="font-size:0.82rem; font-family:var(--font-mono); display:flex; flex-direction:column; gap:0.4rem; color:var(--text-secondary);">
+    <div style="font-size:0.82rem; font-family:var(--font-mono); display:flex; flex-direction:column; gap:0.45rem; color:var(--text-secondary);">
+        <div><strong>JAVA_HOME:</strong> <span style="color:var(--accent-primary);">{{ settings.get('java_home', '') or env_info.detected_java_home or 'Not Set' }}</span></div>
+        <div><strong>SPARK_HOME:</strong> <span style="color:var(--accent-primary);">{{ settings.get('spark_home', '') or env_info.detected_spark_home or 'Not Set' }}</span></div>
         <div><strong>SQLite App DB:</strong> {{ env_info.sqlite_path }}</div>
         <div><strong>DuckDB Engine DB:</strong> {{ env_info.duckdb_path }}</div>
         <div><strong>Datasets Uploads:</strong> {{ env_info.uploads_dir }}</div>

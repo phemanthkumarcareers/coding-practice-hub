@@ -117,6 +117,12 @@ def init_db():
     for key, val in DEFAULT_SETTINGS.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (key, val))
 
+    # Auto-update empty java_home and spark_home if detected on system
+    for key in ["java_home", "spark_home"]:
+        detected_val = DEFAULT_SETTINGS.get(key, "")
+        if detected_val:
+            cursor.execute("UPDATE settings SET value = ? WHERE key = ? AND (value IS NULL OR value = '')", (detected_val, key))
+
     # Populate starter Key Notes if table is empty
     cursor.execute("SELECT COUNT(*) as cnt FROM key_notes")
     if cursor.fetchone()["cnt"] == 0:

@@ -26,11 +26,44 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 BACKUPS_DIR = BASE_DIR / "backups"
 BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
 
+def detect_java_home() -> str:
+    """Auto-detect Java 17 / OpenJDK / Eclipse Adoptium installation directory."""
+    if os.environ.get("JAVA_HOME") and Path(os.environ["JAVA_HOME"]).exists():
+        return os.environ["JAVA_HOME"]
+    candidates = [
+        Path("C:/Program Files/Eclipse Adoptium"),
+        Path("C:/Program Files/Java"),
+        Path("C:/Program Files/Microsoft")
+    ]
+    for base in candidates:
+        if base.exists():
+            for sub in sorted(base.iterdir(), reverse=True):
+                java_bin = sub / "bin" / ("java.exe" if os.name == "nt" else "java")
+                if java_bin.exists():
+                    return str(sub)
+    return ""
+
+def detect_spark_home() -> str:
+    """Auto-detect PySpark / Spark installation directory."""
+    if os.environ.get("SPARK_HOME") and Path(os.environ["SPARK_HOME"]).exists():
+        return os.environ["SPARK_HOME"]
+    try:
+        import pyspark
+        p = Path(pyspark.__file__).parent
+        if p.exists():
+            return str(p)
+    except Exception:
+        pass
+    for p in [Path("C:/spark"), Path("C:/opt/spark"), Path("/opt/spark")]:
+        if p.exists():
+            return str(p)
+    return ""
+
 # Configuration Defaults
 DEFAULT_SETTINGS = {
     "python_executable": "python",
-    "java_home": os.environ.get("JAVA_HOME", ""),
-    "spark_home": os.environ.get("SPARK_HOME", ""),
+    "java_home": detect_java_home(),
+    "spark_home": detect_spark_home(),
     "pyspark_config": "--master local[*]",
     "execution_timeout": "15",
     "theme": "dark",

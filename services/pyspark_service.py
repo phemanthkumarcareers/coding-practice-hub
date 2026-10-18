@@ -63,6 +63,24 @@ class PySparkService:
         if env_status["pyspark_installed"] and env_status["java_installed"]:
             env_status["ready"] = True
 
+        # 3. Check Spark Home & Auto-discover if not explicitly set
+        if not env_status["spark_home"]:
+            try:
+                import pyspark
+                p = Path(pyspark.__file__).parent
+                if p.exists():
+                    env_status["spark_home"] = str(p)
+            except Exception:
+                pass
+            if not env_status["spark_home"]:
+                for sp in [Path("C:/spark"), Path("C:/opt/spark"), Path("/opt/spark")]:
+                    if sp.exists():
+                        env_status["spark_home"] = str(sp)
+                        break
+
+        env_status["detected_java_home"] = env_status.get("java_home", "")
+        env_status["detected_spark_home"] = env_status.get("spark_home", "")
+
         return env_status
 
     def execute_pyspark(self, code: str, custom_timeout: int = None) -> dict:
