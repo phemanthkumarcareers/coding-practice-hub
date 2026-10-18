@@ -22,7 +22,7 @@
         <!-- Date Picker in Practice Sidebar -->
         <div class="practice-sidebar-date">
             <label style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.04em; margin-bottom:0.25rem; display:block;">Session Date:</label>
-            <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" style="width:100%; font-size:0.8rem; padding:0.35rem 0.5rem;" onchange="window.location.href='/practice?date=' + this.value;">
+            <input type="date" id="session-date-picker" value="{{ session.date }}" class="meta-input" style="width:100%; font-size:0.8rem; padding:0.35rem 0.5rem;" onchange="window.location.href='/practice?date=' + this.value + (typeof activeTechnology !== 'undefined' && activeTechnology ? '&tech=' + encodeURIComponent(activeTechnology) : '');">
         </div>
 
         <!-- IDEs Navigation List -->
@@ -382,7 +382,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/practice.js') }}?v=2.6"></script>
+<script src="{{ url_for('static', filename='js/practice.js') }}?v=2.7"></script>
 <script>
     const sessionData = {{ session|tojson }};
     const initialTech = "{{ selected_tech }}";

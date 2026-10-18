@@ -843,6 +843,13 @@ function switchActiveFile(targetFileName) {
         openTabFileNames.push(targetFileName);
     }
 
+    try {
+        localStorage.setItem(`cph_last_file_${activeTechnology}`, targetFileName);
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('file', targetFileName);
+        window.history.replaceState({ file: targetFileName }, '', currentUrl.toString());
+    } catch (e) {}
+
     const code = currentProjectFiles[activeFileName] || '';
     const lang = getLanguageForFile(activeFileName, activeTechnology);
 
@@ -1009,6 +1016,9 @@ function startInlineTabRename(oldFileName, titleSpan, tab) {
 // Database Selector & Creation (For DuckDB SQL)
 async function loadDatabasesList() {
     try {
+        const savedDb = localStorage.getItem('cph_last_sql_db');
+        if (savedDb) activeDatabaseName = savedDb;
+
         const res = await fetch('/api/practice/databases');
         const data = await res.json();
         if (data.success && data.databases) {
@@ -1026,6 +1036,9 @@ async function loadDatabasesList() {
 
                 selectEl.onchange = (e) => {
                     activeDatabaseName = e.target.value;
+                    try {
+                        localStorage.setItem('cph_last_sql_db', activeDatabaseName);
+                    } catch (e) {}
                     showToast(`Switched active database context to '${activeDatabaseName}'`, 'info');
                 };
             }
@@ -1132,6 +1145,18 @@ async function switchTech(techName) {
 
     activeTechnology = techName;
 
+    // Persist active tech to localStorage and cookie, update URL
+    try {
+        localStorage.setItem('cph_last_practice_tech', techName);
+        document.cookie = `cph_last_practice_tech=${encodeURIComponent(techName)}; path=/; max-age=2592000; SameSite=Lax`;
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('tech', techName);
+        if (typeof sessionData !== 'undefined' && sessionData && sessionData.date) {
+            currentUrl.searchParams.set('date', sessionData.date);
+        }
+        window.history.replaceState({ tech: techName }, '', currentUrl.toString());
+    } catch (e) {}
+
     // Update tab UI (both sidebar tech buttons and any header tabs)
     document.querySelectorAll('.sidebar-tech-btn, .tech-tab').forEach(btn => {
         if (btn.getAttribute('data-tech') === techName) {
@@ -1201,9 +1226,24 @@ async function switchTech(techName) {
         if (openTabFileNames.length === 0) {
             openTabFileNames = [Object.keys(extra.files)[0]];
         }
-        activeFileName = (extra.active_file && (extra.active_file in currentProjectFiles))
-            ? extra.active_file
-            : openTabFileNames[0];
+        let candidateFile = null;
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const fileFromUrl = urlParams.get('file');
+            const fileFromStorage = localStorage.getItem(`cph_last_file_${techName}`);
+            if (fileFromUrl && (fileFromUrl in currentProjectFiles)) {
+                candidateFile = fileFromUrl;
+            } else if (fileFromStorage && (fileFromStorage in currentProjectFiles)) {
+                candidateFile = fileFromStorage;
+            }
+        } catch (e) {}
+
+        if (!candidateFile) {
+            candidateFile = (extra.active_file && (extra.active_file in currentProjectFiles))
+                ? extra.active_file
+                : openTabFileNames[0];
+        }
+        activeFileName = candidateFile || openTabFileNames[0];
     } else {
         currentProjectFiles = { [defaultFile]: p.code || "" };
         openTabFileNames = [defaultFile];
@@ -1274,7 +1314,13 @@ function setupSpecializedUI(tech, extra) {
 
     // Toggle Spark session reset button and trigger background warm-up
     const sparkRestartBtn = document.getElementById('btn-spark-restart');
-    const currentPySparkMode = extra.pyspark_mode || 'spark';
+    let currentPySparkMode = extra.pyspark_mode;
+    if (!currentPySparkMode) {
+        try {
+            currentPySparkMode = localStorage.getItem('cph_pyspark_mode');
+        } catch (e) {}
+    }
+    if (!currentPySparkMode) currentPySparkMode = 'spark';
 
     if (tech === 'PySpark') {
         if (pysparkModeToolbar) pysparkModeToolbar.style.display = 'inline-flex';
@@ -1779,6 +1825,9 @@ async function runCurrentCode(runAll = false) {
 // Handle switching execution mode in PySpark editor
 function onPySparkModeChange(mode) {
     const sparkRestartBtn = document.getElementById('btn-spark-restart');
+    try {
+        localStorage.setItem('cph_pyspark_mode', mode);
+    } catch (e) {}
     const p = practicesMap[activePracticeId];
     if (p) {
         let extra = {};
@@ -2589,8 +2638,25 @@ async function initPracticePage(sessionData, initialTech, initialWorkspaceMode =
     // Load Monaco
     await initMonaco();
 
-    // Select initial tab
-    await switchTech(initialTech || 'SQL');
+    // Select initial tab: priority 1) URL query param, 2) localStorage, 3) initialTech from server, 4) SQL
+    const validTechs = ['SQL', 'Python', 'PySpark', 'Databricks', 'DSA', 'System Design'];
+    let chosenTech = initialTech;
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlTech = urlParams.get('tech');
+        const savedTech = localStorage.getItem('cph_last_practice_tech');
+        const practiceIdParam = urlParams.get('practice_id');
+
+        if (practiceIdParam) {
+            chosenTech = initialTech;
+        } else if (urlTech && validTechs.includes(urlTech)) {
+            chosenTech = urlTech;
+        } else if (savedTech && validTechs.includes(savedTech)) {
+            chosenTech = savedTech;
+        }
+    } catch (e) {}
+
+    await switchTech(chosenTech || 'SQL');
 
     // Apply view mode settings
     applyWorkspaceViewMode();

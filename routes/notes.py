@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, make_response
 from datetime import date
 from models.db import (
     list_key_notes,
@@ -46,17 +46,26 @@ def notes_view():
         if cat_notes:
             active_note = cat_notes[0]
 
+    # If no explicit note specified, check cookie for last viewed note
+    if not active_note:
+        saved_note_id = request.cookies.get("cph_last_note_id")
+        if saved_note_id and saved_note_id.isdigit():
+            active_note = get_key_note_by_id(int(saved_note_id))
+
     if not active_note and len(notes) > 0:
         active_note = notes[0]
 
-    return render_template(
+    resp = make_response(render_template(
         "notes.html",
         notes=notes,
         active_note=active_note,
         categories=NOTE_CATEGORIES,
         technologies=TECHNOLOGIES,
         today_date=date.today().isoformat()
-    )
+    ))
+    if active_note:
+        resp.set_cookie("cph_last_note_id", str(active_note["id"]), max_age=30*86400, samesite="Lax")
+    return resp
 
 @notes_bp.route("/api/notes/list")
 def api_list_notes():

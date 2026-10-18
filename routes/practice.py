@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, date
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, make_response
 from models.db import (
     get_connection,
     get_or_create_daily_session,
@@ -46,7 +46,11 @@ def practice_workspace():
     conn.close()
 
     if not target_tech:
-        target_tech = "SQL"
+        saved_tech = request.cookies.get("cph_last_practice_tech")
+        if saved_tech in TECHNOLOGIES:
+            target_tech = saved_tech
+        else:
+            target_tech = "SQL"
 
     if target_tech in ("PySpark", "Databricks"):
         pyspark_service.warmup_background()
@@ -54,7 +58,7 @@ def practice_workspace():
     # Get databases for SQL selector
     databases = duckdb_service.list_databases()
 
-    return render_template(
+    resp = make_response(render_template(
         "practice.html",
         session=session,
         technologies=TECHNOLOGIES,
@@ -63,7 +67,9 @@ def practice_workspace():
         initial_practice_id=initial_practice_id,
         databases=databases,
         mode=mode_arg
-    )
+    ))
+    resp.set_cookie("cph_last_practice_tech", target_tech, max_age=30*86400, samesite="Lax")
+    return resp
 
 @practice_bp.route("/api/pyspark/warmup", methods=["POST"])
 def warmup_pyspark():

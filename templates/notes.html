@@ -243,8 +243,35 @@
     let isReadOnlyMode = false;
 
     document.addEventListener('DOMContentLoaded', () => {
+        // Restore saved topic category
+        try {
+            const savedCat = localStorage.getItem('cph_last_note_category');
+            if (savedCat && (savedCat === 'all' || {{ categories|tojson }}.includes(savedCat))) {
+                activeCategory = savedCat;
+                document.querySelectorAll('.topic-tab').forEach(btn => {
+                    btn.classList.toggle('active', btn.getAttribute('data-cat') === savedCat);
+                });
+            }
+        } catch (e) {}
+
         renderNotesTree();
-        if (currentNoteId) {
+
+        // Priority for opening note: 1) URL query param 'id', 2) currentNoteId from server/cookie, 3) localStorage
+        let targetId = currentNoteId;
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlId = urlParams.get('id') ? parseInt(urlParams.get('id'), 10) : null;
+            const savedId = localStorage.getItem('cph_last_note_id') ? parseInt(localStorage.getItem('cph_last_note_id'), 10) : null;
+            if (urlId && allNotes.some(n => n.id === urlId)) {
+                targetId = urlId;
+            } else if (savedId && allNotes.some(n => n.id === savedId)) {
+                targetId = savedId;
+            }
+        } catch (e) {}
+
+        if (targetId && allNotes.some(n => n.id === targetId)) {
+            loadNoteById(targetId);
+        } else if (currentNoteId && allNotes.some(n => n.id === currentNoteId)) {
             loadNoteById(currentNoteId);
         } else if (allNotes.length > 0) {
             loadNoteById(allNotes[0].id);
@@ -282,6 +309,10 @@
     // Topic Category Switcher
     async function selectTopicCategory(cat) {
         activeCategory = cat;
+        try {
+            localStorage.setItem('cph_last_note_category', cat);
+            document.cookie = `cph_last_note_category=${encodeURIComponent(cat)}; path=/; max-age=2592000; SameSite=Lax`;
+        } catch (e) {}
         // Update tabs active state
         document.querySelectorAll('.topic-tab').forEach(btn => {
             btn.classList.toggle('active', btn.getAttribute('data-cat') === cat);
@@ -455,9 +486,13 @@
         isNoteDirty = false;
         updateAutosaveIndicator('All changes saved');
 
-        const url = new URL(window.location);
-        url.searchParams.set('id', note.id);
-        window.history.replaceState({}, '', url);
+        try {
+            localStorage.setItem('cph_last_note_id', String(note.id));
+            document.cookie = `cph_last_note_id=${note.id}; path=/; max-age=2592000; SameSite=Lax`;
+            const url = new URL(window.location);
+            url.searchParams.set('id', note.id);
+            window.history.replaceState({ noteId: note.id }, '', url);
+        } catch (e) {}
     }
 
     function updatePinBtnUI(isPinned) {
@@ -619,6 +654,10 @@
                 if (allNotes.length > 0) {
                     loadNoteById(allNotes[0].id);
                 } else {
+                    try {
+                        localStorage.removeItem('cph_last_note_id');
+                        document.cookie = 'cph_last_note_id=; path=/; max-age=0; SameSite=Lax';
+                    } catch (e) {}
                     createNewNote();
                 }
             } else {

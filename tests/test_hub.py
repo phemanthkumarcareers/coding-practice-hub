@@ -576,6 +576,21 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertTrue(data_stdin["success"])
         self.assertIn("INTERVIEW INPUT: department_id=42", data_stdin["output"])
 
+    def test_refresh_persistence(self):
+        """Verify cookies and session restoration for refresh on practice and notes."""
+        # 1. Notes sets cph_last_note_id cookie
+        res_notes = self.client.get("/notes")
+        self.assertEqual(res_notes.status_code, 200)
+        set_cookie_header = res_notes.headers.get("Set-Cookie", "")
+        self.assertIn("cph_last_note_id", set_cookie_header)
+
+        # 2. Practice restores PySpark from cookie if query arg not provided
+        self.client.set_cookie("cph_last_practice_tech", "PySpark")
+        res_practice = self.client.get("/practice")
+        self.assertEqual(res_practice.status_code, 200)
+        html = res_practice.get_data(as_text=True)
+        self.assertIn('const initialTech = "PySpark";', html)
+
 if __name__ == "__main__":
     unittest.main()
 
