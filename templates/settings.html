@@ -143,19 +143,19 @@
         <span>Backup & Restore Practice Data</span>
     </div>
     <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
-        Generate full zip snapshots including your SQLite database, DuckDB database, uploaded datasets, and custom workspace files to protect months of practice history.
+        Generate full replica zip archives of your entire application — including all dashboard daily sessions, coding practices & solutions across all editors, Key Notes & interview documentation, multi-file workspace projects, uploaded datasets, and DuckDB databases. When restored here or on any other computer, it reproduces your exact workspace.
     </p>
 
     <div style="display:flex; gap:1.5rem; flex-wrap:wrap; margin-bottom:1.5rem;">
         <div style="flex:1; min-width:280px; background:var(--bg-tertiary); padding:1rem; border-radius:6px; border:1px solid var(--border-color);">
-            <div style="font-weight:600; margin-bottom:0.4rem;">Create Backup</div>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Creates a timestamped compressed ZIP archive in the <code>backups/</code> folder.</p>
+            <div style="font-weight:600; margin-bottom:0.4rem;">Create Complete Backup</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Creates a timestamped compressed ZIP archive containing all databases, notes, practices, multi-file code, and datasets.</p>
             <button class="btn btn-primary" onclick="createBackup()">📦 Create Backup Now</button>
         </div>
 
         <div style="flex:1; min-width:280px; background:var(--bg-tertiary); padding:1rem; border-radius:6px; border:1px solid var(--border-color);">
-            <div style="font-weight:600; margin-bottom:0.4rem;">Restore From Backup</div>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Restores database and uploaded files. Requires user confirmation.</p>
+            <div style="font-weight:600; margin-bottom:0.4rem;">Restore From Uploaded Backup</div>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.8rem;">Upload a previously exported <code>.zip</code> backup file from this or another system to restore a complete replica.</p>
             <div style="display:flex; gap:0.5rem; align-items:center;">
                 <input type="file" id="backup-file-input" accept=".zip" class="meta-input" style="flex:1;">
                 <button class="btn btn-danger" onclick="restoreBackup()">↺ Restore</button>
@@ -168,7 +168,7 @@
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Backup File</th>
+                    <th>Backup Archive</th>
                     <th>Size</th>
                     <th>Actions</th>
                 </tr>
@@ -179,7 +179,10 @@
                     <td><code>{{ b.filename }}</code></td>
                     <td>{{ b.size_kb }} KB</td>
                     <td>
-                        <a href="/api/backup/download/{{ b.filename }}" class="btn btn-secondary btn-sm">⬇ Download</a>
+                        <div style="display:flex; gap:0.4rem;">
+                            <a href="/api/backup/download/{{ b.filename }}" class="btn btn-secondary btn-sm" title="Download backup zip to disk">⬇ Download</a>
+                            <button type="button" class="btn btn-danger btn-sm" onclick="restoreExistingBackup('{{ b.filename }}')" title="Restore system to this snapshot">↺ Restore</button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -243,8 +246,8 @@
         }
 
         const confirmed = await showAppConfirm({
-            title: 'Restore Practice Snapshot',
-            message: 'WARNING: Restoring will overwrite existing practice data with the backup contents. Are you sure you wish to proceed?',
+            title: 'Restore Complete Practice Replica',
+            message: 'WARNING: Restoring will overwrite existing dashboard sessions, practice code, notes & documentation, datasets, and workspace files with the backup contents. Are you sure you wish to proceed?',
             confirmText: 'Restore & Overwrite',
             isDanger: true,
             icon: '⚠️'
@@ -256,7 +259,7 @@
         const formData = new FormData();
         formData.append('backup_file', input.files[0]);
 
-        showToast('Restoring backup snapshot...', 'info');
+        showToast('Restoring complete practice replica...', 'info', 5000);
         try {
             const res = await fetch('/api/backup/restore', {
                 method: 'POST',
@@ -264,10 +267,37 @@
             });
             const data = await res.json();
             if (data.success) {
-                showToast('Restoration completed! Reloading...', 'success');
-                setTimeout(() => window.location.reload(), 1200);
+                showToast(data.message || 'Restoration completed! Reloading...', 'success', 3500);
+                setTimeout(() => window.location.reload(), 1600);
             } else {
-                showToast('Restore failed: ' + data.error, 'error');
+                showToast('Restore failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        } catch (err) {
+            showToast('Restore error: ' + err.message, 'error');
+        }
+    }
+
+    async function restoreExistingBackup(filename) {
+        const confirmed = await showAppConfirm({
+            title: `Restore Backup: ${filename}`,
+            message: `WARNING: Restoring will overwrite existing practice sessions, questions, notes, multi-file code, datasets, and settings with the contents of '${filename}'. Are you sure you wish to proceed?`,
+            confirmText: 'Restore & Overwrite',
+            isDanger: true,
+            icon: '⚠️'
+        });
+        if (!confirmed) return;
+
+        showToast(`Restoring replica from '${filename}'...`, 'info', 5000);
+        try {
+            const res = await fetch(`/api/backup/restore_existing/${encodeURIComponent(filename)}`, {
+                method: 'POST'
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Restoration completed! Reloading...', 'success', 3500);
+                setTimeout(() => window.location.reload(), 1600);
+            } else {
+                showToast('Restore failed: ' + (data.error || 'Unknown error'), 'error');
             }
         } catch (err) {
             showToast('Restore error: ' + err.message, 'error');

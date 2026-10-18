@@ -492,8 +492,48 @@ class TestCodingPracticeHub(unittest.TestCase):
         self.assertEqual(res_notes.status_code, 200)
         self.assertIn(b"Documentation", res_notes.data)
 
+    def test_23_backup_and_restore_cycle(self):
+        # 1. Create a backup via backup_service
+        backup_file = backup_service.create_backup("test_replica_backup.zip")
+        self.assertTrue(backup_file.exists())
+        self.assertTrue(backup_file.name.endswith(".zip"))
+
+        try:
+            # 2. Verify zip file contents
+            import zipfile
+            with zipfile.ZipFile(backup_file, "r") as zf:
+                namelist = zf.namelist()
+                self.assertIn("manifest.json", namelist)
+                self.assertIn("database/app.db", namelist)
+                manifest_data = json.loads(zf.read("manifest.json").decode("utf-8"))
+                self.assertEqual(manifest_data.get("manifest_version"), "2.0")
+                self.assertIn("stats", manifest_data)
+
+            # 3. Test existing backup list endpoint
+            res_list = self.client.get("/api/backup/list")
+            self.assertEqual(res_list.status_code, 200)
+            data_list = res_list.get_json()
+            self.assertTrue(data_list["success"])
+            file_names = [b["filename"] for b in data_list["backups"]]
+            self.assertIn("test_replica_backup.zip", file_names)
+
+            # 4. Test restore existing backup endpoint
+            res_restore = self.client.post("/api/backup/restore_existing/test_replica_backup.zip")
+            self.assertEqual(res_restore.status_code, 200)
+            data_restore = res_restore.get_json()
+            self.assertTrue(data_restore["success"])
+            self.assertIn("Replica restored successfully", data_restore["message"])
+            self.assertIn("counts", data_restore)
+        finally:
+            if backup_file.exists():
+                try:
+                    backup_file.unlink()
+                except Exception:
+                    pass
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
