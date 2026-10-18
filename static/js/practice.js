@@ -2606,13 +2606,13 @@ function toggleMaximizeEditor() {
     if (maxBtn) {
         if (isMax) {
             maxBtn.classList.add('active');
-            maxBtn.innerHTML = '<span id="maximize-icon">🗗</span> <span id="maximize-text">Restore</span>';
+            maxBtn.innerHTML = '🗗';
             maxBtn.title = 'Restore standard layout (Esc)';
             showToast('Maximized: 70% Coding Screen | 30% Output Console (Press Esc to restore)', 'info', 2200);
         } else {
             maxBtn.classList.remove('active');
-            maxBtn.innerHTML = '<span id="maximize-icon">🗖</span> <span id="maximize-text">Maximize</span>';
-            maxBtn.title = 'Maximize Editor & Console (70/30 Split)';
+            maxBtn.innerHTML = '🗖';
+            maxBtn.title = 'Maximize Editor / Focus Mode';
             showToast('Standard View Restored', 'info', 1500);
         }
     }
