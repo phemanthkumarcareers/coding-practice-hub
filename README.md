@@ -51,21 +51,65 @@ Follow these steps to set up and run the application from scratch on any local m
 - **Python**: Version `3.10`, `3.11`, or `3.12` (tested and recommended on Python `3.12`).
   - Download: [https://www.python.org/downloads/](https://www.python.org/downloads/)
   - *Windows*: Ensure the **"Add python.exe to PATH"** checkbox is checked during installation.
-- **Java JDK (Required for PySpark execution)**:
-  - **Java 17 LTS**: [Eclipse Adoptium Temurin 17 LTS](https://adoptium.net/temurin/releases/?version=17) or Microsoft Build of OpenJDK 17.
-  - Set `JAVA_HOME` environment variable (e.g. `C:\Program Files\Eclipse Adoptium\jdk-17.0.x-hotspot`).
-  - *Note:* The application automatically scans standard directories (`C:\Program Files\Eclipse Adoptium`, `C:\Program Files\Java`, `C:\Program Files\Microsoft`) to auto-discover your Java installation if `JAVA_HOME` is not manually set.
+- **Java Virtual Machine (JVM / JDK 17 LTS)** (Required for PySpark & Apache Spark execution):
+  - **Eclipse Adoptium Temurin 17 LTS**: Free, open-source enterprise OpenJDK distribution maintained by the Eclipse Foundation.
+  - Download: [https://adoptium.net/temurin/releases/?version=17](https://adoptium.net/temurin/releases/?version=17)
+  - PySpark requires Java to launch the underlying Apache Spark JVM execution engine.
 - **Git**: [https://git-scm.com/downloads](https://git-scm.com/downloads)
 
 ### 2. Step-by-Step Installation Instructions
 
-#### Step 1: Clone the Repository
+#### Step 1: Install Java (JVM) — Eclipse Adoptium Temurin 17 LTS (Required for PySpark)
+Apache Spark and PySpark run on top of the Java Virtual Machine (JVM). To practice PySpark transformations, DataFrame APIs, and Spark SQL locally, Java 17 LTS must be installed:
+
+1. **Download Eclipse Adoptium Temurin 17 LTS**:
+   - Go to: [https://adoptium.net/temurin/releases/?version=17](https://adoptium.net/temurin/releases/?version=17)
+   - Select your Operating System (**Windows**, **macOS**, or **Linux**) and Architecture (**x64** or **aarch64/ARM**).
+   - Download the standard **JDK (.msi on Windows, .pkg on macOS, or .tar.gz/.deb on Linux)**.
+
+2. **Windows Installation Instructions (.msi)**:
+   - Double-click the downloaded `.msi` file to launch the setup wizard.
+   - On the **"Custom Setup"** screen, you will see a list of feature components:
+     - ⚠️ **Important**: Click on **"Set JAVA_HOME variable"** and choose **"Will be installed on local hard drive"**.
+     - ⚠️ **Important**: Ensure **"Add to PATH"** is set to **"Will be installed on local hard drive"**.
+   - Click **Next** and **Install**.
+
+3. **macOS Installation (via Homebrew or PKG)**:
+   ```bash
+   brew install --cask temurin@17
+   ```
+
+4. **Linux Installation (Ubuntu / Debian)**:
+   ```bash
+   sudo apt update
+   sudo apt install openjdk-17-jdk -y
+   ```
+
+5. **Verify Java / JVM in your Terminal**:
+   Open a new PowerShell / Command Prompt / Terminal window and verify:
+   ```bash
+   java -version
+   ```
+   You should see output similar to:
+   ```text
+   openjdk version "17.0.x" 2026-xx-xx
+   OpenJDK Runtime Environment Temurin-17.0.x+x (build 17.0.x+x)
+   OpenJDK 64-Bit Server VM Temurin-17.0.x+x (build 17.0.x+x, mixed mode, sharing)
+   ```
+
+> [!TIP]
+> **Automatic Java Discovery in the App**:
+> Even if you forgot to set the `JAVA_HOME` environment variable, the application automatically scans standard directories on launch (`C:\Program Files\Eclipse Adoptium`, `C:\Program Files\Java`, `C:\Program Files\Microsoft`) to auto-discover your Java installation and inject it into PySpark sessions dynamically. You can also view live Java status anytime on the **Settings & Diagnostics** page (`/settings`).
+
+---
+
+#### Step 2: Clone the Repository
 ```bash
 git clone https://github.com/phemanthkumarcareers/coding-practice-hub.git
 cd coding-practice-hub
 ```
 
-#### Step 2: Create a Python Virtual Environment
+#### Step 3: Create a Python Virtual Environment
 Creating an isolated virtual environment prevents library conflicts:
 - **Windows (PowerShell / Command Prompt)**:
   ```powershell
@@ -78,7 +122,7 @@ Creating an isolated virtual environment prevents library conflicts:
   source venv/bin/activate
   ```
 
-#### Step 3: Upgrade Pip & Install All Python Dependencies
+#### Step 4: Upgrade Pip & Install All Python Dependencies
 All required dependencies are defined in `requirements.txt`:
 ```bash
 python -m pip install --upgrade pip
@@ -92,20 +136,20 @@ pip install -r requirements.txt
 | **`duckdb`** | `>=1.0.0` | Embedded in-process analytical SQL database engine with multi-DB & direct CSV querying |
 | **`pandas`** | `>=2.0.0` | High-performance DataFrame manipulation & tabular data parsing in Python workspace |
 | **`pyarrow`** | `>=14.0.0` | Columnar memory format, Parquet file processing, and DuckDB/Pandas zero-copy exchange |
-| **`pyspark`** | `>=3.5.0` | Apache Spark Python API for local distributed computing, DataFrame transformations & Spark SQL |
+| **`pyspark`** | `>=3.5.0` | Apache Spark Python API for local distributed computing, DataFrame transformations & Spark SQL (requires JVM) |
 | **`tabulate`** | `>=0.9.0` | Formatted console tables and clean multi-column stdout printing |
 | **`python-dateutil`** | `>=2.8.0` | Date manipulation, streak counter intervals, and calendar tracking |
 | **`Werkzeug`** | `>=3.0.0` | Secure filename handling, request routing, and web server WSGI utilities |
 | **`Jinja2`** | `>=3.1.0` | Server-side templating engine for responsive UI layouts |
 
-#### Step 4: Verify Environment & Diagnostics
+#### Step 5: Verify Environment & Diagnostics
 Run the automated test suite to verify that your local environment is correctly configured:
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
 You should see all 22 tests passing with `OK`.
 
-#### Step 5: Start the Application Server
+#### Step 6: Start the Application Server
 - **Option A**: Double-click `run.bat` (Windows).
 - **Option B**: Run `python app.py` and open [http://localhost:5000/](http://localhost:5000/) in your browser.
 
