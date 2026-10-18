@@ -1856,16 +1856,16 @@ function renderOutput(stdout, stderr, durationMs, structuredResult, options = {}
         _renderOutputBody(body, stdout, stderr, structuredResult);
         entry.appendChild(body);
 
-        container.appendChild(entry);
+        container.prepend(entry);
 
         if (timerBadge) {
             timerBadge.textContent = `${durationMs || 0} ms (${timeStr})`;
         }
 
-        // Auto-scroll to newly appended run
+        // Auto-scroll to top so newest output on top is immediately visible
         setTimeout(() => {
-            container.scrollTop = container.scrollHeight;
-        }, 50);
+            container.scrollTop = 0;
+        }, 30);
         return;
     }
 
