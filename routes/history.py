@@ -168,3 +168,39 @@ def filter_history():
         "grouped": grouped_data,
         "items": results
     })
+
+@history_bp.route("/api/session/delete", methods=["POST"])
+def delete_session():
+    data = request.get_json() or {}
+    session_id = data.get("session_id")
+    if not session_id:
+        return jsonify({"success": False, "error": "Missing session_id"}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    s_row = cursor.execute("SELECT id, date FROM daily_sessions WHERE id = ?", (session_id,)).fetchone()
+    if not s_row:
+        conn.close()
+        return jsonify({"success": False, "error": "Session record not found"}), 404
+
+    session_date = s_row["date"]
+
+    # Cascade delete executions, tags, practices, and session
+    cursor.execute("SELECT id FROM practices WHERE session_id = ?", (session_id,))
+    practice_ids = [r["id"] for r in cursor.fetchall()]
+    for pid in practice_ids:
+        cursor.execute("DELETE FROM executions WHERE practice_id = ?", (pid,))
+        cursor.execute("DELETE FROM practice_tags WHERE practice_id = ?", (pid,))
+
+    cursor.execute("DELETE FROM practices WHERE session_id = ?", (session_id,))
+    cursor.execute("DELETE FROM daily_sessions WHERE id = ?", (session_id,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": f"Practice session for {session_date} deleted successfully.",
+        "deleted_session_id": session_id
+    })
+

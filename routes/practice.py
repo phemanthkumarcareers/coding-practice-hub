@@ -19,6 +19,9 @@ def practice_workspace():
     date_arg = request.args.get("date")
     practice_id_arg = request.args.get("practice_id")
     target_tech = request.args.get("tech")
+    mode_arg = request.args.get("mode", "edit").lower()
+    if mode_arg not in ("view", "edit"):
+        mode_arg = "edit"
 
     conn = get_connection()
     session = None
@@ -55,7 +58,8 @@ def practice_workspace():
         statuses=STATUSES,
         selected_tech=target_tech,
         initial_practice_id=initial_practice_id,
-        databases=databases
+        databases=databases,
+        mode=mode_arg
     )
 
 @practice_bp.route("/api/practice/databases")
@@ -132,6 +136,64 @@ def save_practice():
         })
 
     return jsonify({"success": True, "message": "Saved"})
+
+@practice_bp.route("/api/practice/delete", methods=["POST"])
+def delete_practice():
+    data = request.get_json() or {}
+    practice_id = data.get("practice_id")
+    if not practice_id:
+        return jsonify({"success": False, "error": "Missing practice_id"}), 400
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    p_row = cursor.execute("SELECT id, session_id, technology, title FROM practices WHERE id = ?", (practice_id,)).fetchone()
+    if not p_row:
+        conn.close()
+        return jsonify({"success": False, "error": "Practice record not found"}), 404
+
+    session_id = p_row["session_id"]
+    tech = p_row["technology"]
+    title = p_row["title"]
+
+    # Delete executions associated with this practice
+    cursor.execute("DELETE FROM executions WHERE practice_id = ?", (practice_id,))
+    # Delete practice tags
+    cursor.execute("DELETE FROM practice_tags WHERE practice_id = ?", (practice_id,))
+    # Delete the practice record itself
+    cursor.execute("DELETE FROM practices WHERE id = ?", (practice_id,))
+
+    # Check remaining practices in the daily session
+    cursor.execute("SELECT COUNT(*) as cnt FROM practices WHERE session_id = ?", (session_id,))
+    remaining = cursor.fetchone()["cnt"]
+
+    if remaining == 0:
+        cursor.execute("DELETE FROM daily_sessions WHERE id = ?", (session_id,))
+    else:
+        # Re-evaluate session status & completion count
+        cursor.execute("SELECT status FROM practices WHERE session_id = ?", (session_id,))
+        statuses = [r["status"] for r in cursor.fetchall()]
+        completed_count = sum(1 for s in statuses if s == 'COMPLETED')
+        if completed_count == len(statuses) and len(statuses) > 0:
+            s_status = 'COMPLETED'
+        elif completed_count > 0 or any(s in ['IN PROGRESS', 'SUCCESS', 'FAILED'] for s in statuses):
+            s_status = 'IN PROGRESS'
+        else:
+            s_status = 'NOT STARTED'
+        cursor.execute("""
+            UPDATE daily_sessions
+            SET completed_count = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        """, (completed_count, s_status, session_id))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "success": True,
+        "message": f"Practice record '{title or tech}' deleted successfully.",
+        "deleted_id": practice_id,
+        "session_remaining": remaining
+    })
 
 @practice_bp.route("/api/practice/run", methods=["POST"])
 def run_practice():

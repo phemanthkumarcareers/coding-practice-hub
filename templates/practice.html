@@ -67,6 +67,10 @@
         <div id="autosave-indicator" class="autosave-status">
             <span>All changes saved</span>
         </div>
+
+        <div id="view-mode-badge" class="view-mode-indicator" style="display:none;" title="Read-Only View Mode - Click 'Edit' to make changes">
+            <span>👁️ Read-Only View</span>
+        </div>
     </div>
 
     <div class="workspace-actions">
@@ -96,6 +100,10 @@
 
         <button id="btn-fullscreen-workspace" class="btn btn-secondary btn-sm btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen (F11)">
             <span class="fullscreen-icon">⛶</span> <span class="fullscreen-text">Fullscreen</span>
+        </button>
+
+        <button id="btn-switch-to-edit" class="btn btn-primary btn-sm" style="display:none;" onclick="enableEditMode()" title="Unlock workspace for editing">
+            ✏️ Edit
         </button>
 
         <button id="btn-save" class="btn btn-secondary btn-sm" title="Save current changes (Ctrl+S)">
@@ -352,8 +360,9 @@
 <script>
     const sessionData = {{ session|tojson }};
     const initialTech = "{{ selected_tech }}";
+    const initialWorkspaceMode = "{{ mode or 'edit' }}";
     document.addEventListener('DOMContentLoaded', () => {
-        initPracticePage(sessionData, initialTech);
+        initPracticePage(sessionData, initialTech, initialWorkspaceMode);
     });
 </script>
 {% endblock %}

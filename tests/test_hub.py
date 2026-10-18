@@ -350,8 +350,66 @@ class TestCodingPracticeHub(unittest.TestCase):
         conn.close()
         self.assertEqual(e_row["code_snapshot"], selected_code)
 
+    def test_17_delete_practice_endpoint(self):
+        import uuid
+        sess = get_or_create_daily_session("2026-11-01")
+        p = sess["practices"][0]
+        p_id = p["id"]
+
+        # Insert a dummy execution
+        conn = get_connection()
+        conn.execute("INSERT INTO executions (practice_id, code_snapshot, status) VALUES (?, 'select 1', 'SUCCESS')", (p_id,))
+        conn.commit()
+        conn.close()
+
+        # Delete practice
+        res = self.client.post("/api/practice/delete", json={"practice_id": p_id})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data["success"])
+
+        # Verify practice and execution are gone
+        conn = get_connection()
+        p_check = conn.execute("SELECT id FROM practices WHERE id = ?", (p_id,)).fetchone()
+        e_check = conn.execute("SELECT id FROM executions WHERE practice_id = ?", (p_id,)).fetchall()
+        conn.close()
+        self.assertIsNone(p_check)
+        self.assertEqual(len(e_check), 0)
+
+    def test_18_delete_session_endpoint(self):
+        sess = get_or_create_daily_session("2026-11-02")
+        s_id = sess["id"]
+
+        # Delete entire session
+        res = self.client.post("/api/session/delete", json={"session_id": s_id})
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data["success"])
+
+        # Verify session and its practices are gone
+        conn = get_connection()
+        s_check = conn.execute("SELECT id FROM daily_sessions WHERE id = ?", (s_id,)).fetchone()
+        p_check = conn.execute("SELECT id FROM practices WHERE session_id = ?", (s_id,)).fetchall()
+        conn.close()
+        self.assertIsNone(s_check)
+        self.assertEqual(len(p_check), 0)
+
+    def test_19_practice_view_mode(self):
+        res = self.client.get("/practice?mode=view")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b"Read-Only View", res.data)
+        self.assertIn(b"btn-switch-to-edit", res.data)
+
+        # Tech view should also load with the 3 action buttons
+        tech_res = self.client.get("/history/tech/SQL")
+        self.assertEqual(tech_res.status_code, 200)
+        self.assertIn(b"action-btn-view", tech_res.data)
+        self.assertIn(b"action-btn-edit", tech_res.data)
+        self.assertIn(b"action-btn-delete", tech_res.data)
+
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

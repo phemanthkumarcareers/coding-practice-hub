@@ -128,10 +128,18 @@
                             {{ s.completed_count }} / 6
                         </span>
                     </td>
-                    <td>
-                        <a href="{{ url_for('practice.practice_workspace', date=s.date) }}" class="btn btn-secondary btn-sm">
-                            Open Session
-                        </a>
+                    <td style="white-space:nowrap;">
+                        <div style="display:flex; gap:0.4rem; align-items:center;">
+                            <a href="{{ url_for('practice.practice_workspace', date=s.date, mode='view') }}" class="btn btn-secondary btn-sm action-btn-view" title="View Session (Read-only)">
+                                👁️ View
+                            </a>
+                            <a href="{{ url_for('practice.practice_workspace', date=s.date, mode='edit') }}" class="btn btn-secondary btn-sm action-btn-edit" title="Edit Session">
+                                ✏️ Edit
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger action-btn-delete" onclick="deleteSessionItem({{ s.id }}, '{{ s.date }}', this)" title="Delete Daily Session">
+                                🗑️ Delete
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -184,10 +192,18 @@
                     ${s.completed_count || 0} / 6
                 </span>
             </td>
-            <td>
-                <a href="/practice?date=${encodeURIComponent(s.date)}" class="btn btn-secondary btn-sm">
-                    Open Session
-                </a>
+            <td style="white-space:nowrap;">
+                <div style="display:flex; gap:0.4rem; align-items:center;">
+                    <a href="/practice?date=${encodeURIComponent(s.date)}&mode=view" class="btn btn-secondary btn-sm action-btn-view" title="View Session (Read-only)">
+                        👁️ View
+                    </a>
+                    <a href="/practice?date=${encodeURIComponent(s.date)}&mode=edit" class="btn btn-secondary btn-sm action-btn-edit" title="Edit Session">
+                        ✏️ Edit
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-danger action-btn-delete" onclick="deleteSessionItem(${s.id}, '${escapeHtml(s.date)}', this)" title="Delete Daily Session">
+                        🗑️ Delete
+                    </button>
+                </div>
             </td>
         </tr>`;
     }
@@ -283,6 +299,53 @@
         document.getElementById('filter-difficulty').value = '';
         document.getElementById('filter-group-by').value = 'date';
         filterSessions();
+    }
+
+    async function deleteSessionItem(sessionId, sessionDate, btn) {
+        const confirmed = await showAppConfirm({
+            title: 'Delete Practice Session',
+            message: `Are you sure you want to permanently delete the entire practice session for ${sessionDate}? All associated practice records and execution snapshots will be removed.`,
+            confirmText: 'Delete Session',
+            isDanger: true,
+            icon: '🗑️'
+        });
+        if (!confirmed) return;
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Deleting...';
+
+        try {
+            const res = await fetch('/api/session/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`Session for ${sessionDate} deleted successfully!`, 'success');
+                const row = btn.closest('tr');
+                if (row) {
+                    row.style.transition = 'all 0.3s ease';
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateX(20px)';
+                    setTimeout(() => {
+                        row.remove();
+                        const idx = allSessions.findIndex(s => s.id === sessionId);
+                        if (idx !== -1) allSessions.splice(idx, 1);
+                        const countBadge = document.getElementById('sessions-count-badge');
+                        if (countBadge) countBadge.textContent = `${allSessions.length} session(s)`;
+                    }, 300);
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '🗑️ Delete';
+                showToast(data.error || 'Failed to delete session', 'error');
+            }
+        } catch (err) {
+            btn.disabled = false;
+            btn.innerHTML = '🗑️ Delete';
+            showToast('Network error while deleting: ' + err.message, 'error');
+        }
     }
 </script>
 {% endblock %}

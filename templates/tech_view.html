@@ -61,10 +61,18 @@
                     <td><span class="badge badge-{{ p.status|replace(' ', '-') }}">{{ p.status }}</span></td>
                     <td>{{ p.execution_count }} attempts</td>
                     <td>{{ p.duration_ms }} ms</td>
-                    <td>
-                        <a href="{{ url_for('practice.practice_workspace', practice_id=p.id, tech=tech_name) }}" class="btn btn-secondary btn-sm">
-                            View / Edit
-                        </a>
+                    <td style="white-space:nowrap;">
+                        <div style="display:flex; gap:0.4rem; align-items:center;">
+                            <a href="{{ url_for('practice.practice_workspace', practice_id=p.id, tech=tech_name, mode='view') }}" class="btn btn-secondary btn-sm action-btn-view" title="View Practice (Read-only)">
+                                👁️ View
+                            </a>
+                            <a href="{{ url_for('practice.practice_workspace', practice_id=p.id, tech=tech_name, mode='edit') }}" class="btn btn-secondary btn-sm action-btn-edit" title="Edit Practice">
+                                ✏️ Edit
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger action-btn-delete" onclick="deletePracticeItem({{ p.id }}, '{{ (p.title or tech_name)|replace('\'', '\\\'') }} ({{ p.session_date }})', this)" title="Delete Practice Record">
+                                🗑️ Delete
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -73,3 +81,63 @@
     {% endif %}
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+async function deletePracticeItem(practiceId, practiceName, btn) {
+    const confirmed = await showAppConfirm({
+        title: 'Delete Practice Record',
+        message: `Are you sure you want to permanently delete practice record "${practiceName}"? This will delete all code and execution snapshots.`,
+        confirmText: 'Delete Record',
+        isDanger: true,
+        icon: '🗑️'
+    });
+    if (!confirmed) return;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Deleting...';
+
+    try {
+        const res = await fetch('/api/practice/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ practice_id: practiceId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Practice record deleted successfully!', 'success');
+            const row = btn.closest('tr');
+            if (row) {
+                row.style.transition = 'all 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    row.remove();
+                    const tbody = document.querySelector('table.data-table tbody');
+                    const remainingRows = tbody ? tbody.querySelectorAll('tr').length : 0;
+                    const countEl = document.querySelector('.section-title span');
+                    if (countEl) {
+                        countEl.textContent = `{{ tech_name }} Practice Records (${remainingRows})`;
+                    }
+                    if (remainingRows === 0) {
+                        const box = document.querySelector('.section-box');
+                        if (box) {
+                            box.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);">No practices recorded for {{ tech_name }} yet.</div>';
+                        }
+                    }
+                }, 300);
+            }
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '🗑️ Delete';
+            showToast(data.error || 'Failed to delete practice record', 'error');
+        }
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '🗑️ Delete';
+        showToast('Network error while deleting: ' + err.message, 'error');
+    }
+}
+</script>
+{% endblock %}
+

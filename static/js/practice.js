@@ -6,6 +6,7 @@ let monacoEditor = null;
 let isDirty = false;
 let autoSaveTimer = null;
 let practicesMap = {}; // id -> practice object
+let isWorkspaceReadOnly = false; // Mode toggle: true = View Mode (readonly), false = Edit Mode
 
 // Multi-File Project State (For Python / DSA / Databricks)
 let currentProjectFiles = { "main.py": "" };
@@ -58,6 +59,7 @@ function createOrUpdateEditor(code, language) {
             automaticLayout: true,
             fontSize: 14,
             tabSize: 4,
+            readOnly: isWorkspaceReadOnly,
             minimap: { enabled: false },
             scrollBeyondLastLine: false,
             lineNumbers: 'on',
@@ -68,6 +70,7 @@ function createOrUpdateEditor(code, language) {
         window.monacoEditorInstance = monacoEditor;
 
         monacoEditor.onDidChangeModelContent(() => {
+            if (isWorkspaceReadOnly) return;
             isDirty = true;
             // Update active file buffer for all technologies
             currentProjectFiles[activeFileName] = monacoEditor.getValue();
@@ -86,6 +89,10 @@ function createOrUpdateEditor(code, language) {
 
         // Ctrl+S: Save
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+            if (isWorkspaceReadOnly) {
+                showToast('Workspace is currently in Read-Only View mode. Click "✏️ Edit" to make changes.', 'info', 2500);
+                return;
+            }
             saveCurrentPractice(false);
         });
 
@@ -110,10 +117,72 @@ function createOrUpdateEditor(code, language) {
     } else {
         const model = monacoEditor.getModel();
         monaco.editor.setModelLanguage(model, language);
+        monacoEditor.updateOptions({ readOnly: isWorkspaceReadOnly });
         if (monacoEditor.getValue() !== code) {
             monacoEditor.setValue(code);
         }
     }
+}
+
+// Toggle & Apply Read-Only View Mode vs Full Edit Mode
+function enableEditMode() {
+    isWorkspaceReadOnly = false;
+    applyWorkspaceViewMode();
+    showToast('Switched to Edit mode. You can now modify and save changes.', 'success', 2500);
+    const url = new URL(window.location);
+    url.searchParams.set('mode', 'edit');
+    window.history.replaceState({}, '', url);
+}
+
+function applyWorkspaceViewMode() {
+    const isView = isWorkspaceReadOnly;
+
+    // Monaco Editor
+    if (monacoEditor) {
+        monacoEditor.updateOptions({ readOnly: isView });
+    }
+
+    // Top action buttons
+    const btnSave = document.getElementById('btn-save');
+    const btnComplete = document.getElementById('btn-save-complete');
+    const btnReset = document.getElementById('btn-reset');
+    const btnEdit = document.getElementById('btn-switch-to-edit');
+    const viewBadge = document.getElementById('view-mode-badge');
+    const autosaveIndicator = document.getElementById('autosave-indicator');
+
+    if (btnSave) btnSave.style.display = isView ? 'none' : 'inline-flex';
+    if (btnComplete) btnComplete.style.display = isView ? 'none' : 'inline-flex';
+    if (btnReset) btnReset.style.display = isView ? 'none' : 'inline-flex';
+    if (btnEdit) btnEdit.style.display = isView ? 'inline-flex' : 'none';
+    if (viewBadge) viewBadge.style.display = isView ? 'inline-flex' : 'none';
+    if (autosaveIndicator) {
+        autosaveIndicator.textContent = isView ? '👁️ Read-Only View' : (isDirty ? 'Unsaved changes' : 'All changes saved');
+    }
+
+    // Metadata inputs
+    const titleEl = document.getElementById('meta-title');
+    const diffEl = document.getElementById('meta-difficulty');
+    const topicEl = document.getElementById('meta-topic');
+    const tagsEl = document.getElementById('meta-tags');
+    const questionEl = document.getElementById('meta-question');
+    const notesEl = document.getElementById('meta-notes');
+
+    if (titleEl) titleEl.readOnly = isView;
+    if (diffEl) diffEl.disabled = isView;
+    if (topicEl) topicEl.readOnly = isView;
+    if (tagsEl) tagsEl.readOnly = isView;
+    if (questionEl) questionEl.readOnly = isView;
+    if (notesEl) notesEl.readOnly = isView;
+
+    // DSA fields
+    ['dsa-constraints', 'dsa-time-complexity', 'dsa-space-complexity', 'dsa-test-cases'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.readOnly = isView;
+    });
+
+    // System Design field
+    const sysDesign = document.getElementById('system-design-markdown');
+    if (sysDesign) sysDesign.readOnly = isView;
 }
 
 // Multi-File Project Workspace Helpers (Enabled for ALL technologies)
@@ -206,51 +275,57 @@ function renderMultiFileTabs() {
             }
         };
 
-        // Inline rename
-        titleSpan.onclick = (e) => {
-            e.stopPropagation();
-            if (activeFileName !== fname) {
-                switchActiveFile(fname);
-            }
-            startInlineTabRename(fname, titleSpan, tab);
-        };
+        // Inline rename (only in edit mode)
+        if (!isWorkspaceReadOnly) {
+            titleSpan.onclick = (e) => {
+                e.stopPropagation();
+                if (activeFileName !== fname) {
+                    switchActiveFile(fname);
+                }
+                startInlineTabRename(fname, titleSpan, tab);
+            };
+        }
 
         tab.appendChild(titleSpan);
 
-        // Remove Tab Button "×" (Removes tab from workspace, does NOT delete file)
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'file-tab-close';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.title = `Close tab (File remains saved in workspace)`;
-        closeBtn.onclick = (e) => {
-            e.stopPropagation();
-            removeTabFromWorkspace(fname);
-        };
-        tab.appendChild(closeBtn);
+        // Remove Tab Button "×" (Removes tab from workspace, only in edit mode)
+        if (!isWorkspaceReadOnly) {
+            const closeBtn = document.createElement('span');
+            closeBtn.className = 'file-tab-close';
+            closeBtn.innerHTML = '&times;';
+            closeBtn.title = `Close tab (File remains saved in workspace)`;
+            closeBtn.onclick = (e) => {
+                e.stopPropagation();
+                removeTabFromWorkspace(fname);
+            };
+            tab.appendChild(closeBtn);
 
-        // Right-click context menu: Close Tab or Permanently Delete File
-        tab.oncontextmenu = (e) => {
-            e.preventDefault();
-            showTabContextMenu(e, fname);
-        };
+            // Right-click context menu: Close Tab or Permanently Delete File
+            tab.oncontextmenu = (e) => {
+                e.preventDefault();
+                showTabContextMenu(e, fname);
+            };
+        }
 
         bar.appendChild(tab);
 
-        if (inlineRenamingFile === fname) {
+        if (inlineRenamingFile === fname && !isWorkspaceReadOnly) {
             setTimeout(() => {
                 startInlineTabRename(fname, titleSpan, tab);
             }, 10);
         }
     });
 
-    // 3. "+ New File" Button
-    const newBtn = document.createElement('button');
-    newBtn.type = 'button';
-    newBtn.className = 'btn-new-file';
-    newBtn.innerHTML = '<span>+ New File</span>';
-    newBtn.title = 'Create new file directly in workspace';
-    newBtn.onclick = createNewFileTabDirect;
-    bar.appendChild(newBtn);
+    // 3. "+ New File" Button (only in edit mode)
+    if (!isWorkspaceReadOnly) {
+        const newBtn = document.createElement('button');
+        newBtn.type = 'button';
+        newBtn.className = 'btn-new-file';
+        newBtn.innerHTML = '<span>+ New File</span>';
+        newBtn.title = 'Create new file directly in workspace';
+        newBtn.onclick = createNewFileTabDirect;
+        bar.appendChild(newBtn);
+    }
 }
 
 // Remove Tab from editor view (File remains saved in currentProjectFiles)
@@ -1153,6 +1228,7 @@ async function switchTech(techName) {
     }
 
     isDirty = false;
+    applyWorkspaceViewMode();
 }
 
 function updateStatusBadge(status) {
@@ -1242,6 +1318,7 @@ function gatherExtraMetadata() {
 
 // Autosave Scheduler
 function scheduleAutosave() {
+    if (isWorkspaceReadOnly) return;
     const indicator = document.getElementById('autosave-indicator');
     if (indicator) {
         indicator.innerHTML = '<span style="color:var(--text-muted);">● Unsaved changes</span>';
@@ -1255,7 +1332,7 @@ function scheduleAutosave() {
 
 // Save Practice
 async function saveCurrentPractice(markCompleted = false) {
-    if (!activePracticeId) return;
+    if (!activePracticeId || isWorkspaceReadOnly) return;
 
     const indicator = document.getElementById('autosave-indicator');
     if (indicator) indicator.textContent = 'Saving...';
@@ -2157,15 +2234,25 @@ window.addEventListener('beforeunload', (e) => {
 });
 
 // Main Setup for Practice page
-async function initPracticePage(sessionData, initialTech) {
+async function initPracticePage(sessionData, initialTech, initialWorkspaceMode = 'edit') {
     sessionData.practices.forEach(p => {
         practicesMap[p.id] = p;
     });
+
+    // Check mode: either passed in or present in query string (?mode=view)
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    if (modeParam === 'view' || initialWorkspaceMode === 'view') {
+        isWorkspaceReadOnly = true;
+    } else {
+        isWorkspaceReadOnly = false;
+    }
 
     ['meta-title', 'meta-difficulty', 'meta-topic', 'meta-tags', 'meta-question', 'meta-notes'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', () => {
+                if (isWorkspaceReadOnly) return;
                 isDirty = true;
                 scheduleAutosave();
             });
@@ -2176,6 +2263,7 @@ async function initPracticePage(sessionData, initialTech) {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', () => {
+                if (isWorkspaceReadOnly) return;
                 isDirty = true;
                 scheduleAutosave();
             });
@@ -2190,6 +2278,10 @@ async function initPracticePage(sessionData, initialTech) {
     document.getElementById('btn-toggle-sql-explorer')?.addEventListener('click', toggleDuckDBExplorer);
 
     document.getElementById('btn-reset')?.addEventListener('click', async () => {
+        if (isWorkspaceReadOnly) {
+            showToast('Workspace is in Read-Only View mode. Click "✏️ Edit" to make changes.', 'info', 2500);
+            return;
+        }
         const ok = await showAppConfirm({
             title: 'Reset Code Workspace',
             message: 'Are you sure you want to reset the current editor code? This will not delete your past execution history snapshots.',
@@ -2215,6 +2307,9 @@ async function initPracticePage(sessionData, initialTech) {
 
     // Select initial tab
     await switchTech(initialTech || 'SQL');
+
+    // Apply view mode settings
+    applyWorkspaceViewMode();
 }
 
 // Maximize Editor / Focus Mode Controller
