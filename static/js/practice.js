@@ -1269,6 +1269,17 @@ function setupSpecializedUI(tech, extra) {
     if (standardOutput) standardOutput.style.display = 'flex';
     if (sqlDbToolbar) sqlDbToolbar.style.display = 'none';
 
+    // Toggle Spark session reset button and trigger background warm-up
+    const sparkRestartBtn = document.getElementById('btn-spark-restart');
+    if (sparkRestartBtn) {
+        if (tech === 'PySpark' || (tech === 'Databricks' && (!extra.subtype || extra.subtype !== 'SQL'))) {
+            sparkRestartBtn.style.display = 'inline-block';
+            fetch('/api/pyspark/warmup', { method: 'POST' }).catch(() => {});
+        } else {
+            sparkRestartBtn.style.display = 'none';
+        }
+    }
+
     if (tech === 'DSA') {
         if (dsaPanel) {
             dsaPanel.style.display = 'block';
@@ -1702,7 +1713,8 @@ async function runCurrentCode(runAll = false) {
         }
 
         if (data.status === 'SUCCESS') {
-            showToast(`Execution succeeded (${data.duration_ms}ms)`, 'success');
+            const modeText = data.session_mode === 'WARM' ? ' • ⚡ Warm Spark' : '';
+            showToast(`Execution succeeded (${data.duration_ms}ms${modeText})`, 'success');
         } else {
             showToast('Execution finished with errors', 'error');
         }
@@ -1718,6 +1730,32 @@ async function runCurrentCode(runAll = false) {
         }
     }
 }
+
+// Restart PySpark / Databricks SparkSession daemon
+async function restartSparkSession() {
+    const btn = document.getElementById('btn-spark-restart');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '🔄 Restarting...';
+    }
+    try {
+        const res = await fetch('/api/pyspark/restart', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('PySpark session restarted successfully (warm & clean)', 'success', 2500);
+        } else {
+            showToast(data.message || 'PySpark session restart failed', 'error');
+        }
+    } catch (err) {
+        showToast('Error restarting Spark session: ' + err.message, 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🔄 Reset Spark';
+        }
+    }
+}
+window.restartSparkSession = restartSparkSession;
 
 // Render Output Console with Sticky Table Header in Scroll Wrapper
 function renderOutput(stdout, stderr, durationMs, structuredResult) {

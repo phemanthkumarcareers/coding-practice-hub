@@ -48,6 +48,9 @@ def practice_workspace():
     if not target_tech:
         target_tech = "SQL"
 
+    if target_tech in ("PySpark", "Databricks"):
+        pyspark_service.warmup_background()
+
     # Get databases for SQL selector
     databases = duckdb_service.list_databases()
 
@@ -61,6 +64,16 @@ def practice_workspace():
         databases=databases,
         mode=mode_arg
     )
+
+@practice_bp.route("/api/pyspark/warmup", methods=["POST"])
+def warmup_pyspark():
+    pyspark_service.warmup_background()
+    return jsonify({"success": True})
+
+@practice_bp.route("/api/pyspark/restart", methods=["POST"])
+def restart_pyspark():
+    res = pyspark_service.restart_session()
+    return jsonify(res)
 
 @practice_bp.route("/api/practice/databases")
 def get_databases():
@@ -326,6 +339,10 @@ def run_practice():
     if s_row:
         update_session_completion_status(s_row["session_id"])
 
+    session_mode = None
+    if technology == "PySpark":
+        session_mode = res.get("session_mode", "WARM")
+
     return jsonify({
         "success": True,
         "status": run_status,
@@ -334,7 +351,8 @@ def run_practice():
         "error": error_text,
         "structured_result": structured_result,
         "practice_status": new_status,
-        "updated_schemas": updated_schemas
+        "updated_schemas": updated_schemas,
+        "session_mode": session_mode
     })
 
 @practice_bp.route("/api/practice/executions/<int:practice_id>")
