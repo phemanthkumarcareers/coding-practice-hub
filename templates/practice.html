@@ -50,15 +50,6 @@
                     </li>
                 {% endfor %}
             </ul>
-
-            <!-- Quick Navigation to Documentation -->
-            <div style="margin-top:0.8rem; padding-top:0.6rem; border-top:1px solid var(--border-subtle);">
-                <button type="button" class="sidebar-tech-btn btn-keynotes-tab" data-tech="Key Notes" onclick="toggleWorkspaceKeyNotesDrawer()" title="Documentation & Prep Notes Drawer (Ctrl+J)">
-                    <span class="tech-btn-icon">📚</span>
-                    <span class="tech-btn-name">Documentation</span>
-                    <span class="badge" style="font-size:0.65rem; background:rgba(59,130,246,0.15); color:#60a5fa; margin-left:auto; padding:0.15rem 0.4rem;">Docs</span>
-                </button>
-            </div>
         </div>
     </aside>
 
@@ -104,10 +95,6 @@
 
         <button id="btn-exec-history" class="btn btn-secondary btn-sm" title="View execution attempts history">
             📜 History
-        </button>
-
-        <button id="btn-toggle-key-notes" class="btn btn-secondary btn-sm" onclick="toggleWorkspaceKeyNotesDrawer()" title="View and write Documentation & Prep Notes for this Practice (Ctrl+J)">
-            📚 Docs
         </button>
 
         <button id="btn-reset" class="btn btn-secondary btn-sm" title="Reset code workspace">
@@ -250,13 +237,12 @@
             <div class="editor-quick-controls">
                 <span class="editor-shortcut-hint">Ctrl+Enter: Run Statement | Ctrl+Shift+Enter: Run All | Ctrl+S: Save</span>
                 <button type="button" id="btn-toggle-console" class="pane-icon-btn btn-console-toggle active" onclick="toggleConsolePane()" title="Toggle Console Output Log (Hide / Show)">📺</button>
-                <button type="button" id="btn-quick-notes" class="pane-icon-btn" onclick="toggleWorkspaceKeyNotesDrawer()" title="Toggle Documentation & Prep Notes Drawer (Ctrl+J)">📚</button>
                 <button type="button" id="btn-maximize-editor" class="pane-icon-btn" onclick="toggleMaximizeEditor()" title="Maximize Editor / Restore (Zen Mode)">🗖</button>
                 <button type="button" class="pane-icon-btn btn-fullscreen-trigger" onclick="toggleFullScreen()" title="Toggle Fullscreen">⛶</button>
             </div>
         </div>
 
-        <!-- Editor Body (With Collapsible Left Folder Explorer Drawer & Right Notes Drawer) -->
+        <!-- Editor Body (With Collapsible Left Folder Explorer Drawer) -->
         <div class="editor-split-body" id="editor-split-body">
             <div id="editor-explorer-drawer" class="editor-explorer-drawer" style="display:none;">
                 <div class="explorer-drawer-header">
@@ -284,45 +270,6 @@
                         <button type="button" class="btn btn-primary btn-sm" onclick="createNewFileTabDirect()">+ New File</button>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="toggleEditorExplorer()">📁 Files Explorer</button>
                     </div>
-                </div>
-            </div>
-
-            <!-- Collapsible Right Documentation & Prep Notes Drawer in Editor Workspace -->
-            <div id="workspace-notes-drawer" class="workspace-notes-drawer" style="display:none;">
-                <div class="notes-drawer-header">
-                    <div style="display:flex; align-items:center; gap:0.4rem; overflow:hidden;">
-                        <span style="font-size:1.1rem;">📚</span>
-                        <span style="font-weight:700; font-size:0.9rem; color:var(--text-primary); white-space:nowrap;">Documentation & Prep Notes</span>
-                        <span id="drawer-note-date-badge" class="badge" style="font-size:0.68rem; background:rgba(59,130,246,0.15); color:#60a5fa;">{{ session.date }}</span>
-                    </div>
-                    <div style="display:flex; gap:0.35rem; align-items:center;">
-                        <a href="{{ url_for('notes.notes_view', date=session.date) }}" class="drawer-mini-btn" target="_blank" title="Open full Documentation Hub">
-                            ↗ Full Page
-                        </a>
-                        <button type="button" class="drawer-mini-btn" onclick="saveWorkspaceNotes(true)" title="Save Notes">
-                            💾 Save
-                        </button>
-                        <button type="button" class="drawer-mini-btn" onclick="toggleWorkspaceKeyNotesDrawer()" title="Close Notes Drawer">
-                            &times;
-                        </button>
-                    </div>
-                </div>
-
-                <div class="notes-drawer-toolbar">
-                    <div style="display:flex; gap:0.25rem;">
-                        <button type="button" class="drawer-mode-btn active" id="drawer-notes-btn-edit" onclick="setDrawerNotesMode('edit')">✏️ Edit</button>
-                        <button type="button" class="drawer-mode-btn" id="drawer-notes-btn-preview" onclick="setDrawerNotesMode('preview')">👁️ Preview</button>
-                    </div>
-                    <div style="display:flex; gap:0.3rem; align-items:center;">
-                        <button type="button" class="drawer-tool-btn" onclick="insertDrawerNoteText('\n### 💡 Tip: ')" title="Insert Tip">💡 Tip</button>
-                        <button type="button" class="drawer-tool-btn" onclick="insertDrawerNoteText('\n- [ ] ')" title="Task Item">☑ Task</button>
-                        <span id="drawer-notes-autosave" style="font-size:0.72rem; color:var(--text-muted); margin-left:auto;">Saved</span>
-                    </div>
-                </div>
-
-                <div class="notes-drawer-body">
-                    <textarea id="workspace-notes-textarea" class="workspace-notes-textarea" placeholder="Write key notes, formulas, interview tips, or problem solving steps for this practice..." oninput="handleWorkspaceNotesInput()"></textarea>
-                    <div id="workspace-notes-preview" class="workspace-notes-preview markdown-body" style="display:none;"></div>
                 </div>
             </div>
         </div>
